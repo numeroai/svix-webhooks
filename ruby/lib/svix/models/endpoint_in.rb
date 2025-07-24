@@ -6,7 +6,6 @@ module Svix
   class EndpointIn
     # List of message channels this endpoint listens to (omit for all).
     attr_accessor :channels
-    attr_accessor :connector_id
     attr_accessor :description
     attr_accessor :disabled
     attr_accessor :filter_types
@@ -25,7 +24,6 @@ module Svix
 
     ALL_FIELD ||= [
       "channels",
-      "connector_id",
       "description",
       "disabled",
       "filter_types",
@@ -58,7 +56,6 @@ module Svix
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
       attrs["channels"] = attributes["channels"]
-      attrs["connector_id"] = attributes["connectorId"]
       attrs["description"] = attributes["description"]
       attrs["disabled"] = attributes["disabled"]
       attrs["filter_types"] = attributes["filterTypes"]
@@ -75,7 +72,6 @@ module Svix
     def serialize
       out = Hash.new
       out["channels"] = Svix::serialize_primitive(@channels) if @channels
-      out["connectorId"] = Svix::serialize_primitive(@connector_id) if @connector_id
       out["description"] = Svix::serialize_primitive(@description) if @description
       out["disabled"] = Svix::serialize_primitive(@disabled) if @disabled
       out["filterTypes"] = Svix::serialize_primitive(@filter_types) if @filter_types
