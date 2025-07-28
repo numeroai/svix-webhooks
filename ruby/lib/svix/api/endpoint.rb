@@ -25,9 +25,15 @@ module Svix
 
     def create(app_id, endpoint_in, options = {})
       options = options.transform_keys(&:to_s)
+
+      connector_id = options["connector_id"]
+      
+      path = "/api/v1/app/#{app_id}/endpoint"
+      path += "?connector_id=#{connector_id}" if connector_id
+
       res = @client.execute_request(
         "POST",
-        "/api/v1/app/#{app_id}/endpoint",
+        path,
         headers: {
           "idempotency-key" => options["idempotency-key"]
         },
