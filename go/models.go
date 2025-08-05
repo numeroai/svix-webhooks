@@ -31,6 +31,8 @@ type (
 	DashboardAccessOut                        = models.DashboardAccessOut
 	DocusignConfig                            = models.DocusignConfig
 	DocusignConfigOut                         = models.DocusignConfigOut
+	EasypostConfig                            = models.EasypostConfig
+	EasypostConfigOut                         = models.EasypostConfigOut
 	EndpointCreatedEvent                      = models.EndpointCreatedEvent
 	EndpointCreatedEventData                  = models.EndpointCreatedEventData
 	EndpointDeletedEvent                      = models.EndpointDeletedEvent
@@ -50,8 +52,8 @@ type (
 	EndpointSecretOut                         = models.EndpointSecretOut
 	EndpointSecretRotateIn                    = models.EndpointSecretRotateIn
 	EndpointStats                             = models.EndpointStats
-	EndpointTransformationIn                  = models.EndpointTransformationIn
 	EndpointTransformationOut                 = models.EndpointTransformationOut
+	EndpointTransformationPatch               = models.EndpointTransformationPatch
 	EndpointUpdate                            = models.EndpointUpdate
 	EndpointUpdatedEvent                      = models.EndpointUpdatedEvent
 	EndpointUpdatedEventData                  = models.EndpointUpdatedEventData
@@ -126,6 +128,8 @@ type (
 	PollingEndpointConsumerSeekOut            = models.PollingEndpointConsumerSeekOut
 	PollingEndpointMessageOut                 = models.PollingEndpointMessageOut
 	PollingEndpointOut                        = models.PollingEndpointOut
+	PortIoConfig                              = models.PortIoConfig
+	PortIoConfigOut                           = models.PortIoConfigOut
 	RecoverIn                                 = models.RecoverIn
 	RecoverOut                                = models.RecoverOut
 	ReplayIn                                  = models.ReplayIn
@@ -146,6 +150,8 @@ type (
 	SvixConfigOut                             = models.SvixConfigOut
 	TelnyxConfig                              = models.TelnyxConfig
 	TelnyxConfigOut                           = models.TelnyxConfigOut
+	VapiConfig                                = models.VapiConfig
+	VapiConfigOut                             = models.VapiConfigOut
 	VeriffConfig                              = models.VeriffConfig
 	VeriffConfigOut                           = models.VeriffConfigOut
 	ZoomConfig                                = models.ZoomConfig

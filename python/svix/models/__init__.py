@@ -27,6 +27,8 @@ from .cron_config import CronConfig
 from .dashboard_access_out import DashboardAccessOut
 from .docusign_config import DocusignConfig
 from .docusign_config_out import DocusignConfigOut
+from .easypost_config import EasypostConfig
+from .easypost_config_out import EasypostConfigOut
 from .endpoint_created_event import EndpointCreatedEvent
 from .endpoint_created_event_data import EndpointCreatedEventData
 from .endpoint_deleted_event import EndpointDeletedEvent
@@ -46,8 +48,8 @@ from .endpoint_patch import EndpointPatch
 from .endpoint_secret_out import EndpointSecretOut
 from .endpoint_secret_rotate_in import EndpointSecretRotateIn
 from .endpoint_stats import EndpointStats
-from .endpoint_transformation_in import EndpointTransformationIn
 from .endpoint_transformation_out import EndpointTransformationOut
+from .endpoint_transformation_patch import EndpointTransformationPatch
 from .endpoint_update import EndpointUpdate
 from .endpoint_updated_event import EndpointUpdatedEvent
 from .endpoint_updated_event_data import EndpointUpdatedEventData
@@ -126,6 +128,8 @@ from .polling_endpoint_consumer_seek_in import PollingEndpointConsumerSeekIn
 from .polling_endpoint_consumer_seek_out import PollingEndpointConsumerSeekOut
 from .polling_endpoint_message_out import PollingEndpointMessageOut
 from .polling_endpoint_out import PollingEndpointOut
+from .port_io_config import PortIoConfig
+from .port_io_config_out import PortIoConfigOut
 from .recover_in import RecoverIn
 from .recover_out import RecoverOut
 from .replay_in import ReplayIn
@@ -146,6 +150,8 @@ from .svix_config import SvixConfig
 from .svix_config_out import SvixConfigOut
 from .telnyx_config import TelnyxConfig
 from .telnyx_config_out import TelnyxConfigOut
+from .vapi_config import VapiConfig
+from .vapi_config_out import VapiConfigOut
 from .veriff_config import VeriffConfig
 from .veriff_config_out import VeriffConfigOut
 from .zoom_config import ZoomConfig
@@ -180,6 +186,8 @@ __all__ = [
     "DashboardAccessOut",
     "DocusignConfig",
     "DocusignConfigOut",
+    "EasypostConfig",
+    "EasypostConfigOut",
     "EndpointCreatedEvent",
     "EndpointCreatedEventData",
     "EndpointDeletedEvent",
@@ -199,8 +207,8 @@ __all__ = [
     "EndpointSecretOut",
     "EndpointSecretRotateIn",
     "EndpointStats",
-    "EndpointTransformationIn",
     "EndpointTransformationOut",
+    "EndpointTransformationPatch",
     "EndpointUpdate",
     "EndpointUpdatedEvent",
     "EndpointUpdatedEventData",
@@ -275,6 +283,8 @@ __all__ = [
     "PollingEndpointConsumerSeekOut",
     "PollingEndpointMessageOut",
     "PollingEndpointOut",
+    "PortIoConfig",
+    "PortIoConfigOut",
     "RecoverIn",
     "RecoverOut",
     "ReplayIn",
@@ -295,6 +305,8 @@ __all__ = [
     "SvixConfigOut",
     "TelnyxConfig",
     "TelnyxConfigOut",
+    "VapiConfig",
+    "VapiConfigOut",
     "VeriffConfig",
     "VeriffConfigOut",
     "ZoomConfig",

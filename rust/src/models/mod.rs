@@ -28,6 +28,8 @@ pub mod cron_config;
 pub mod dashboard_access_out;
 pub mod docusign_config;
 pub mod docusign_config_out;
+pub mod easypost_config;
+pub mod easypost_config_out;
 pub mod endpoint_created_event;
 pub mod endpoint_created_event_data;
 pub mod endpoint_deleted_event;
@@ -47,8 +49,8 @@ pub mod endpoint_patch;
 pub mod endpoint_secret_out;
 pub mod endpoint_secret_rotate_in;
 pub mod endpoint_stats;
-pub mod endpoint_transformation_in;
 pub mod endpoint_transformation_out;
+pub mod endpoint_transformation_patch;
 pub mod endpoint_update;
 pub mod endpoint_updated_event;
 pub mod endpoint_updated_event_data;
@@ -123,6 +125,8 @@ pub mod polling_endpoint_consumer_seek_in;
 pub mod polling_endpoint_consumer_seek_out;
 pub mod polling_endpoint_message_out;
 pub mod polling_endpoint_out;
+pub mod port_io_config;
+pub mod port_io_config_out;
 pub mod recover_in;
 pub mod recover_out;
 pub mod replay_in;
@@ -143,6 +147,8 @@ pub mod svix_config;
 pub mod svix_config_out;
 pub mod telnyx_config;
 pub mod telnyx_config_out;
+pub mod vapi_config;
+pub mod vapi_config_out;
 pub mod veriff_config;
 pub mod veriff_config_out;
 pub mod zoom_config;
@@ -183,6 +189,8 @@ pub use self::{
     dashboard_access_out::DashboardAccessOut,
     docusign_config::DocusignConfig,
     docusign_config_out::DocusignConfigOut,
+    easypost_config::EasypostConfig,
+    easypost_config_out::EasypostConfigOut,
     endpoint_created_event::EndpointCreatedEvent,
     endpoint_created_event_data::EndpointCreatedEventData,
     endpoint_deleted_event::EndpointDeletedEvent,
@@ -202,8 +210,8 @@ pub use self::{
     endpoint_secret_out::EndpointSecretOut,
     endpoint_secret_rotate_in::EndpointSecretRotateIn,
     endpoint_stats::EndpointStats,
-    endpoint_transformation_in::EndpointTransformationIn,
     endpoint_transformation_out::EndpointTransformationOut,
+    endpoint_transformation_patch::EndpointTransformationPatch,
     endpoint_update::EndpointUpdate,
     endpoint_updated_event::EndpointUpdatedEvent,
     endpoint_updated_event_data::EndpointUpdatedEventData,
@@ -278,6 +286,8 @@ pub use self::{
     polling_endpoint_consumer_seek_out::PollingEndpointConsumerSeekOut,
     polling_endpoint_message_out::PollingEndpointMessageOut,
     polling_endpoint_out::PollingEndpointOut,
+    port_io_config::PortIoConfig,
+    port_io_config_out::PortIoConfigOut,
     recover_in::RecoverIn,
     recover_out::RecoverOut,
     replay_in::ReplayIn,
@@ -298,6 +308,8 @@ pub use self::{
     svix_config_out::SvixConfigOut,
     telnyx_config::TelnyxConfig,
     telnyx_config_out::TelnyxConfigOut,
+    vapi_config::VapiConfig,
+    vapi_config_out::VapiConfigOut,
     veriff_config::VeriffConfig,
     veriff_config_out::VeriffConfigOut,
     zoom_config::ZoomConfig,
