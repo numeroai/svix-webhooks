@@ -1,3 +1,4 @@
+# this file is @generated
 {% set excluded_resources = ["environment", "health", "ingest"] -%}
 
 {%- for resource in api.resources -%}
@@ -11,7 +12,7 @@
     {%- endif -%}
 {% endfor %}
 
-{% for type in types -%}
+{% for type in api.types -%}
 from ..models import {{ type | to_upper_camel_case }}
 {% endfor %}
 from .svix import Svix, SvixAsync, SvixOptions, DEFAULT_SERVER_URL
@@ -37,7 +38,7 @@ __all__ = [
 {% endfor %}
 {# hardcode this until we fix empty openapi structs #}
     "BackgroundTaskData",
-{% for type in types -%}
+{% for type in api.types -%}
     "{{ type | to_upper_camel_case }}",
 {% endfor -%}
 ]

@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.71.0
+* Bridge: Add `http` output to `receivers`
+  * See [`bridge/svix-bridge.example.receivers.yaml`](./bridge/svix-bridge.example.receivers.yaml) for a usage example
+
+## Version 1.70.1
+* Libs/All: Re-add `endpoint.transformationPartialUpdate` as a deprecated operation
+  * It was removed through a rename in the previous version, which should not have happened
+
 ## Version 1.70.0
 * CLI: Add `svix seed` command to create testing resources (thanks @KranzAklilu)
 * Libs/Go: Fix request retries not working (thanks @mixnblend!)

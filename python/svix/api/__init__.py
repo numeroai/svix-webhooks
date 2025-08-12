@@ -1,3 +1,5 @@
+# this file is @generated
+
 from ..models import (
     AdobeSignConfig,
     AdobeSignConfigOut,
@@ -48,6 +50,7 @@ from ..models import (
     EndpointSecretOut,
     EndpointSecretRotateIn,
     EndpointStats,
+    EndpointTransformationIn,
     EndpointTransformationOut,
     EndpointTransformationPatch,
     EndpointUpdate,
@@ -345,6 +348,7 @@ __all__ = [
     "EndpointSecretOut",
     "EndpointSecretRotateIn",
     "EndpointStats",
+    "EndpointTransformationIn",
     "EndpointTransformationOut",
     "EndpointTransformationPatch",
     "EndpointUpdate",
