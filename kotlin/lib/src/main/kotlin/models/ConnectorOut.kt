@@ -6,20 +6,22 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ConnectorOut(
+    val allowedEventTypes: Set<String>? = null,
     val createdAt: Instant,
     val description: String,
-    val featureFlag: String? = null,
     val featureFlags: Set<String>? = null,
-    val filterTypes: Set<String>? = null,
     /** The Connector's ID. */
     val id: String,
     val instructions: String,
-    val instructionsLink: String? = null,
     val kind: ConnectorKind,
-    val logo: String,
+    val logo: String? = null,
     val name: String,
     /** The Environment's ID. */
     val orgId: String,
+    val productType: ConnectorProduct,
     val transformation: String,
+    val transformationUpdatedAt: Instant,
+    /** The Connector's UID. */
+    val uid: String? = null,
     val updatedAt: Instant,
 )

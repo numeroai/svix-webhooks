@@ -1,36 +1,47 @@
 // this file is @generated
 
 import {
-  IngestEndpointHeadersIn,
+  type IngestEndpointHeadersIn,
   IngestEndpointHeadersInSerializer,
 } from "../models/ingestEndpointHeadersIn";
 import {
-  IngestEndpointHeadersOut,
+  type IngestEndpointHeadersOut,
   IngestEndpointHeadersOutSerializer,
 } from "../models/ingestEndpointHeadersOut";
-import { IngestEndpointIn, IngestEndpointInSerializer } from "../models/ingestEndpointIn";
 import {
-  IngestEndpointOut,
+  type IngestEndpointIn,
+  IngestEndpointInSerializer,
+} from "../models/ingestEndpointIn";
+import {
+  type IngestEndpointOut,
   IngestEndpointOutSerializer,
 } from "../models/ingestEndpointOut";
 import {
-  IngestEndpointSecretIn,
+  type IngestEndpointSecretIn,
   IngestEndpointSecretInSerializer,
 } from "../models/ingestEndpointSecretIn";
 import {
-  IngestEndpointSecretOut,
+  type IngestEndpointSecretOut,
   IngestEndpointSecretOutSerializer,
 } from "../models/ingestEndpointSecretOut";
 import {
-  IngestEndpointUpdate,
+  type IngestEndpointTransformationOut,
+  IngestEndpointTransformationOutSerializer,
+} from "../models/ingestEndpointTransformationOut";
+import {
+  type IngestEndpointTransformationPatch,
+  IngestEndpointTransformationPatchSerializer,
+} from "../models/ingestEndpointTransformationPatch";
+import {
+  type IngestEndpointUpdate,
   IngestEndpointUpdateSerializer,
 } from "../models/ingestEndpointUpdate";
 import {
-  ListResponseIngestEndpointOut,
+  type ListResponseIngestEndpointOut,
   ListResponseIngestEndpointOutSerializer,
 } from "../models/listResponseIngestEndpointOut";
-import { Ordering } from "../models/ordering";
-import { HttpMethod, SvixRequest, SvixRequestContext } from "../request";
+import type { Ordering } from "../models/ordering";
+import { HttpMethod, SvixRequest, type SvixRequestContext } from "../request";
 
 export interface IngestEndpointListOptions {
   /** Limit the number of returned items */
@@ -63,9 +74,11 @@ export class IngestEndpoint {
     );
 
     request.setPathParam("source_id", sourceId);
-    request.setQueryParam("limit", options?.limit);
-    request.setQueryParam("iterator", options?.iterator);
-    request.setQueryParam("order", options?.order);
+    request.setQueryParams({
+      limit: options?.limit,
+      iterator: options?.iterator,
+      order: options?.order,
+    });
 
     return request.send(
       this.requestCtx,
@@ -219,6 +232,47 @@ export class IngestEndpoint {
     request.setHeaderParam("idempotency-key", options?.idempotencyKey);
     request.setBody(
       IngestEndpointSecretInSerializer._toJsonObject(ingestEndpointSecretIn)
+    );
+
+    return request.sendNoResponseBody(this.requestCtx);
+  }
+
+  /** Get the transformation code associated with this ingest endpoint. */
+  public getTransformation(
+    sourceId: string,
+    endpointId: string
+  ): Promise<IngestEndpointTransformationOut> {
+    const request = new SvixRequest(
+      HttpMethod.GET,
+      "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation"
+    );
+
+    request.setPathParam("source_id", sourceId);
+    request.setPathParam("endpoint_id", endpointId);
+
+    return request.send(
+      this.requestCtx,
+      IngestEndpointTransformationOutSerializer._fromJsonObject
+    );
+  }
+
+  /** Set or unset the transformation code associated with this ingest endpoint. */
+  public setTransformation(
+    sourceId: string,
+    endpointId: string,
+    ingestEndpointTransformationPatch: IngestEndpointTransformationPatch
+  ): Promise<void> {
+    const request = new SvixRequest(
+      HttpMethod.PATCH,
+      "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation"
+    );
+
+    request.setPathParam("source_id", sourceId);
+    request.setPathParam("endpoint_id", endpointId);
+    request.setBody(
+      IngestEndpointTransformationPatchSerializer._toJsonObject(
+        ingestEndpointTransformationPatch
+      )
     );
 
     return request.sendNoResponseBody(this.requestCtx);

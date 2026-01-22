@@ -3,7 +3,7 @@ name: Rust Lib Security
 on:
   push:
     branches:
-    - main
+      - main
     paths:
       - 'rust/**/Cargo.toml'
       - 'rust/**/Cargo.lock'
@@ -18,7 +18,7 @@ jobs:
   security_audit:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: rust/Cargo.toml

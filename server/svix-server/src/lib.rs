@@ -4,17 +4,11 @@
 #![warn(clippy::all)]
 #![forbid(unsafe_code)]
 
-use std::{
-    borrow::Cow,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        LazyLock,
-    },
-    time::Duration,
-};
+use std::{borrow::Cow, sync::LazyLock, time::Duration};
 
 use aide::axum::ApiRouter;
 use cfg::ConfigurationInner;
+use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{metrics::SdkMeterProvider, runtime::Tokio};
 use queue::TaskQueueProducer;
@@ -23,6 +17,7 @@ use sea_orm::DatabaseConnection;
 use sentry::integrations::tracing::EventFilter;
 use svix_ksuid::{KsuidLike, KsuidMs};
 use tokio::net::TcpListener;
+use tokio_util::sync::CancellationToken;
 use tower::layer::layer_fn;
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
@@ -57,7 +52,22 @@ pub mod worker;
 
 const CRATE_NAME: &str = env!("CARGO_CRATE_NAME");
 
-pub static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
+static SHUTTING_DOWN_TOKEN: LazyLock<CancellationToken> = LazyLock::new(CancellationToken::new);
+
+/// Has someone requested shutdown?
+pub fn is_shutting_down() -> bool {
+    SHUTTING_DOWN_TOKEN.is_cancelled()
+}
+
+/// Request a CancellationToken for the application shut down
+pub fn shutting_down_token() -> CancellationToken {
+    SHUTTING_DOWN_TOKEN.clone()
+}
+
+/// Shut down the application
+pub fn start_shut_down() {
+    SHUTTING_DOWN_TOKEN.cancel();
+}
 
 pub static INSTANCE_ID: LazyLock<String> =
     LazyLock::new(|| hex::encode(KsuidMs::new(None, None).to_string()));
@@ -86,12 +96,12 @@ async fn graceful_shutdown_handler() {
     }
 
     tracing::info!("Received shutdown signal. Shutting down gracefully...");
-    SHUTTING_DOWN.store(true, Ordering::SeqCst)
+    start_shut_down();
 }
 
 pub async fn run(cfg: Configuration) {
     let _metrics = setup_metrics(&cfg);
-    run_with_prefix(None, cfg, None).await
+    run_with_prefix(cfg.queue_prefix.clone(), cfg, None).await
 }
 
 #[derive(Clone)]
@@ -181,7 +191,7 @@ pub async fn run_with_prefix(
     let with_worker = cfg.worker_enabled;
     let listen_address = cfg.listen_address;
 
-    let (server, worker_loop, expired_message_cleaner_loop) = tokio::join!(
+    let ((), worker_loop, expired_message_cleaner_loop) = tokio::join!(
         async {
             if with_api {
                 let listener = match listener {
@@ -192,15 +202,13 @@ pub async fn run_with_prefix(
                 };
                 tracing::debug!("API: Listening on {}", listener.local_addr().unwrap());
 
-                let incoming = hyper::server::conn::AddrIncoming::from_listener(listener)?;
-                axum::Server::builder(incoming)
-                    .serve(svc)
+                axum::serve(listener, svc)
                     .with_graceful_shutdown(graceful_shutdown_handler())
                     .await
+                    .unwrap();
             } else {
                 tracing::debug!("API: off");
                 graceful_shutdown_handler().await;
-                Ok(())
             }
         },
         async {
@@ -231,7 +239,6 @@ pub async fn run_with_prefix(
         }
     );
 
-    server.expect("Error initializing server");
     worker_loop.expect("Error initializing worker");
     expired_message_cleaner_loop.expect("Error initializing expired message cleaner")
 }
@@ -268,7 +275,7 @@ pub fn setup_tracing(
             .tonic()
             .with_endpoint(addr);
 
-        let tracer = opentelemetry_otlp::new_pipeline()
+        let provider = opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(exporter)
             .with_trace_config(
@@ -287,6 +294,13 @@ pub fn setup_tracing(
             )
             .install_batch(Tokio)
             .unwrap();
+
+        // Based on the private `build_batch_with_exporter` method from opentelemetry-otlp
+        let tracer = provider
+            .tracer_builder("opentelemetry-otlp")
+            .with_schema_url(opentelemetry_semantic_conventions::SCHEMA_URL)
+            .build();
+
         tracing_opentelemetry::layer().with_tracer(tracer)
     });
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use hyper_util::{client::legacy::Client as HyperClient, rt::TokioExecutor};
 
@@ -8,7 +8,9 @@ const CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct SvixOptions {
     pub debug: bool,
+
     pub server_url: Option<String>,
+
     /// Timeout for HTTP requests.
     ///
     /// The timeout is applied from when the request starts connecting until
@@ -16,7 +18,8 @@ pub struct SvixOptions {
     /// out.
     ///
     /// Default: 15 seconds.
-    pub timeout: Option<std::time::Duration>,
+    pub timeout: Option<Duration>,
+
     /// Number of retries
     ///
     /// The number of times the client will retry if a server-side error
@@ -24,6 +27,20 @@ pub struct SvixOptions {
     ///
     /// Default: 2
     pub num_retries: Option<u32>,
+
+    /// Retry Schedule in milliseconds
+    ///
+    /// List of delays to wait before each retry attempt.
+    /// Takes precedence over `num_retries`.
+    pub retry_schedule: Option<Vec<Duration>>,
+
+    /// Proxy address.
+    ///
+    /// Currently `http://` and `https://` proxies using `HTTP CONNECT`, as well
+    /// as `socks5://` and `socks5h://` URLs are supported. The difference
+    /// between the last two is that DNS resolution also goes through the proxy
+    /// for `socks5h`, but not for `socks5`.
+    pub proxy_address: Option<String>,
 }
 
 impl Default for SvixOptions {
@@ -31,8 +48,10 @@ impl Default for SvixOptions {
         Self {
             debug: false,
             server_url: None,
-            timeout: Some(std::time::Duration::from_secs(15)),
+            timeout: Some(Duration::from_secs(15)),
             num_retries: None,
+            retry_schedule: None,
+            proxy_address: None,
         }
     }
 }
@@ -50,12 +69,14 @@ impl Svix {
 
         let cfg = Arc::new(Configuration {
             user_agent: Some(format!("svix-libs/{CRATE_VERSION}/rust")),
-            client: HyperClient::builder(TokioExecutor::new()).build(crate::default_connector()),
+            client: HyperClient::builder(TokioExecutor::new())
+                .build(crate::make_connector(options.proxy_address)),
             timeout: options.timeout,
             // These fields will be set by `with_token` below
             base_path: String::new(),
             bearer_access_token: None,
             num_retries: options.num_retries.unwrap_or(2),
+            retry_schedule: options.retry_schedule,
         });
         let svix = Self {
             cfg,
@@ -89,6 +110,7 @@ impl Svix {
             client: self.cfg.client.clone(),
             timeout: self.cfg.timeout,
             num_retries: self.cfg.num_retries,
+            retry_schedule: self.cfg.retry_schedule.clone(),
         });
 
         Self {

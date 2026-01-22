@@ -17,6 +17,12 @@ ignore = [
     "RUSTSEC-2024-0370",
     # TODO: Wait for dependencies to upgrade off of paste
     "RUSTSEC-2024-0436",
+    # rustls-pemfile is unmaintained, but we only use it for parsing system
+    # certificates. This is not a serious attack vector for our use case.
+    # TODO: Upgrade rustls-native-certs to 0.8.x to get rid of this.
+    "RUSTSEC-2025-0134",
+    # bincode (depended on by deno) is unmaintained
+    "RUSTSEC-2025-0141"
 ]
 
 [licenses]
@@ -24,8 +30,10 @@ allow = [
     "Apache-2.0",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
     "ISC",
     "MIT",
+    "MIT-0", # MIT No Attribution
     "MPL-2.0",
     "OpenSSL",
     "Unicode-3.0",
@@ -68,7 +76,8 @@ allow = []
 deny = [
     # Versions containing the binary blob
     # See: https://github.com/serde-rs/serde/issues/2538
-    { name = "serde_derive", version = ">1.0.171, <1.0.184"}
+    { name = "serde_derive", version = ">1.0.171, <1.0.184"},
+    { name = "axum", version = "<0.7" },
 ]
 skip = []
 skip-tree = []

@@ -1,5 +1,79 @@
 # Changelog
 
+## Version 1.84.0
+* Libs/(JavaScript Python): Updated webhook verification logic to use official standard webhooks packages
+* Cli: support disabling TLS verification when relaying requests (`svix listen`)
+
+
+## Version 1.83.0
+* Server: Add `status_text` field to `MessageAttemptOut` to match Svix Cloud
+  * Makes current versions of the SDKs work with endpoints using this type again
+* Libs/PHP: Add `MessageIn::createRaw`, allows you to create a raw (non-json) message
+
+## Version 1.82.0
+* Libs/All: Add support for connector UIDs
+* CLI: Add support for the Connector API
+* CLI: Add `-v --verbose` flag
+* CLI: Fix a bug in config file saving
+* Server: Allow specifying queue prefix (thanks @turip)
+
+## Version 1.81.0
+* Libs/All: Add support for the new [Connector API](https://api.svix.com/docs#tag/Connector)
+  (see also [the corresponding docs section](https://docs.svix.com/connectors))
+* CLI: Fix `svix listen` failing with "Could not automatically determine the process-level CryptoProvider"
+
+## Version 1.80.0
+* Libs/PHP added support for `$svix->application->getOrCreate`
+
+## Version 1.79.0
+* Libs/Kotlin: Add `SvixOptions` to the `com.svix.kotlin` namespace
+  * The un-namespaced symbol is kept as a `typealias` for backwards compatibility
+* Libs/Javascript: Add option to configure the fetch method
+* Server: Add support for creating applications in the `POST /api/v1/app/{app_id}/msg` and the `POST /api/v1/auth/app-portal-access/{app_id}` API calls
+
+## Version 1.78.0
+* Libs/Python: Fix bug preventing the generic webhook ingest source from being deserialized
+* Libs/Python: Add API for the new [Svix Stream](https://www.svix.com/stream/)
+
+## Version 1.77.0
+* Libs/All: Add API for the new [Svix Stream](https://www.svix.com/stream/)
+* Libs/PHP: Fix bug causing empty objects to be serialized as `[]` instead of `{}`
+* Libs/Rust: Upgrade rustls dependency version (thanks @GodTamIt)
+* Server: DB refactor, improves performance of a few API endpoints
+
+## Version 1.76.1
+* Libs/Go: Fix bug causing 422 errors on `message.create` with messages created using the `NewMessageInRaw` helper
+
+## Version 1.76.0
+* Libs/PHP: Added support for the full Svix SDK!
+
+## Version 1.75.1
+* Libs/Go: Fix bug preventing `time.time` query params from serializing correctly
+* Libs/All: Allow deleting endpoint headers through new `deleteHeaders` field in `EndpointHeadersPatchIn`
+
+## Version 1.75.0
+* Bridge, CLI, Server: Modify Dockerfiles to use cache mounts for improved build time; these now require Docker 1.2 or later to build
+* Libs/JS: Add support for custom retry schedule (thanks @KranzAklilu)
+
+## Version 1.74.1
+* Bridge, CLI: Fix installation of ca-certificates in Docker images
+  * These images were broken as of v1.72.0
+
+## Version 1.74.0
+* Libs/Rust: Add support for custom retry schedule (thanks @KranzAklilu)
+* Libs/Rust: Add support for connecting to the API through a proxy
+* Server: Upgrade some core dependencies
+* Bridge: Add support for connecting to the Svix API through a proxy
+
+## Version 1.73.0
+* Libs/(Java and Kotlin): Fix bug causing runtime exceptions when unknown fields were sent from the server
+
+## Version 1.72.0
+* Libs/JavaScript: Use native `fetch` API
+* Server: Upgrade Docker base image to Debian Trixie
+* Bridge: Add a default `user-agent` to requests made by the new `http` output
+* Bridge: Upgrade Docker base image to Debian Trixie
+
 ## Version 1.71.0
 * Bridge: Add `http` output to `receivers`
   * See [`bridge/svix-bridge.example.receivers.yaml`](./bridge/svix-bridge.example.receivers.yaml) for a usage example
@@ -261,7 +335,7 @@ This version contains a big overhaul of the client libraries, with improved typi
 * Libs: Upgrade `openapi-generator` to 7.9.0, with dependency upgrades and internal changes in the SDKs.
 * Server: Add Redis sentinel support
 * Server: Add OTEL metrics for Redis queues
-* Server: Add Redis DLQ support 
+* Server: Add Redis DLQ support
 * Server: Several dependency upgrades and CI improvements
 
 ## Version 1.38.0
@@ -334,7 +408,7 @@ This version contains a big overhaul of the client libraries, with improved typi
 * Libs/Rust: Add `Svix::with_token` to allow changing API token
 * Libs/PHP: Replace ctype_digit for PHP 8.1 deprecation of non-string arguments
 
-## Version 1.24.0 
+## Version 1.24.0
 * Server: Update redis health check
 * Server: Clean up tracing spans for HTTP requests
 * Libs: Update OpenAPI
@@ -368,17 +442,17 @@ This version contains a big overhaul of the client libraries, with improved typi
 * Libs/Rust: Make request timeout configurable
 
 ## Version 1.18.0
-* Server: upgrade dependencies 
+* Server: upgrade dependencies
 * Server: adopt omniqueue as a queue backend
 * Libs/C#: **[Breaking]** Return iterator information in list endpoints. Changes the return type of list endpoints.
 * Libs/Java: don't serialize nulls in PATCH endpoint methods
-* Libs/Rust: upgrade and clean up dependencies 
+* Libs/Rust: upgrade and clean up dependencies
 * Libs/Rust: switch from reqwest to hyper 1.0
 
 ## Version 1.17.0
 * Server: Upgrade hyper to 0.14.28
 * Libs/Rust: **[Important]** Fix a bug in the webhook signature verification method where certain signatures could bypass the verification.
-* Libs/Java: **[Breaking]** Use Java time instead of threetenbp. This removes the need to import threetenbp to use the library. Depending on how the lib is used, it might require migrating uses of threetenbp to Java 8 Date-Time APIs. 
+* Libs/Java: **[Breaking]** Use Java time instead of threetenbp. This removes the need to import threetenbp to use the library. Depending on how the lib is used, it might require migrating uses of threetenbp to Java 8 Date-Time APIs.
 
 ## Version 1.16.0
 * Server: Add `tag` parameter to list-message for Go, JavaScript, and Python.
@@ -456,7 +530,7 @@ This version contains a big overhaul of the client libraries, with improved typi
 
 ## Version 1.5.0
 * Server: update OpenSSL dep and fix an incredibly slow memory leak.
-* Libs/Go: support passing `WithContent` to `List Attepmted Messages`
+* Libs/Go: support passing `WithContent` to `List Attempted Messages`
 * Libs/Python: fix regression in Python library (causing some functions not to work).
 
 ## Version 1.4.12

@@ -1,15 +1,15 @@
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{convert::Infallible, net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{
-    extract::{Path, State},
-    http,
+    extract::{FromRequestParts, Path, State},
+    http::{self, request},
     routing::{get, post},
     Router,
 };
 use svix_bridge_types::{
     async_trait,
     svix::{
-        api::{MessagePollerConsumerPollOptions, Svix},
+        api::{MessagePollerConsumerPollOptions, PollingEndpointMessageOut, Svix},
         error::Error,
     },
     ForwardRequest, PollerInput, ReceiverOutput, TransformationConfig, TransformerInput,
@@ -78,53 +78,63 @@ pub async fn run(
         .map_err(std::io::Error::other)
 }
 
+struct WebhookIdHeader(Option<String>);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for WebhookIdHeader {
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut request::Parts,
+        _: &S,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(Self(
+            parts
+                .headers
+                .get("svix-id")
+                .or_else(|| parts.headers.get("webhook-id"))
+                .and_then(|val| Some(val.to_str().ok()?.to_owned())),
+        ))
+    }
+}
+
 #[instrument(
     skip_all,
     level = "error",
     fields(
+        msg_id = _msg_id,
         integration_id = integration_id.as_ref(),
     )
 )]
 async fn route(
     Path(integration_id): Path<IntegrationId>,
+    WebhookIdHeader(_msg_id): WebhookIdHeader,
     State(InternalState {
         routes,
         transformer_tx,
     }): State<InternalState>,
     req: SerializableRequest<Unvalidated>,
-) -> http::StatusCode {
-    if let Some(IntegrationState {
+) -> Result<http::StatusCode, http::StatusCode> {
+    let IntegrationState {
         verifier,
         output,
         transformation,
-    }) = routes.get(&integration_id)
-    {
-        match req.validate(verifier).await {
-            Ok(req) => {
-                let payload = match parse_payload(
-                    req.payload(),
-                    transformation.as_ref(),
-                    transformer_tx.clone(),
-                )
-                .await
-                {
-                    Err(e) => return e,
-                    Ok(p) => p,
-                };
-                match handle(payload, output.clone()).await {
-                    Ok(value) => value,
-                    Err(value) => return value,
-                }
-            }
-            Err(code) => {
-                tracing::warn!("validation failed: {code}");
-                code
-            }
-        }
-    } else {
-        tracing::trace!("integration not found");
-        http::StatusCode::NOT_FOUND
-    }
+    } = routes
+        .get(&integration_id)
+        .ok_or(http::StatusCode::NOT_FOUND)?;
+
+    let req = req.validate(verifier).await.inspect_err(|code| {
+        tracing::warn!("validation failed: {code}");
+    })?;
+
+    let payload = parse_payload(
+        req.payload(),
+        transformation.as_ref(),
+        transformer_tx.clone(),
+    )
+    .await?;
+
+    handle(payload, Arc::clone(output)).await
 }
 
 // FIXME: Really odd return type - artifact of being extracted from the HTTP server
@@ -309,40 +319,11 @@ async fn run_inner(poller: &SvixEventsPoller) -> ! {
             Ok(resp) => {
                 let mut has_failure = false;
                 tracing::trace!(count = resp.data.len(), "got messages");
-                'inner: for msg in resp.data.into_iter() {
-                    let payload = match parse_payload(
-                        &SerializablePayload::Standard(
-                            // FIXME: for svix-event pollers we already know the payload is json so
-                            //   there's some wasted ser/deser/ser cycles.
-                            serde_json::to_vec(&msg)
-                                .expect("just fetched as json, must be serializable"),
-                        ),
-                        poller.transformation.as_ref(),
-                        poller
-                            .transformer_tx
-                            .clone()
-                            .expect("transformer tx is required"),
-                    )
-                    .await
-                    {
-                        Err(status) => {
-                            tracing::error!(
-                                status = status.as_u16(),
-                                "error while parsing polled message"
-                            );
-                            has_failure = true;
-                            break 'inner;
-                        }
-                        Ok(p) => p,
-                    };
-                    if let Err(status) = handle(payload, poller.output.clone()).await {
-                        // FIXME: need to refactor handle to not give http status codes so we can report what happened here.
-                        tracing::error!(
-                            status = status.as_u16(),
-                            "error while handling polled message"
-                        );
+                for msg in resp.data {
+                    let msg_id = msg.id.clone();
+                    if let Err((status, message)) = handle_poller_msg(msg, poller).await {
+                        tracing::error!(msg_id, status, message);
                         has_failure = true;
-                        break 'inner;
                     }
                 }
 
@@ -404,6 +385,34 @@ async fn run_inner(poller: &SvixEventsPoller) -> ! {
             tokio::time::sleep(sleep_time).await;
         }
     }
+}
+
+#[tracing::instrument(skip_all, fields(msg_id = msg.id))]
+async fn handle_poller_msg(
+    msg: PollingEndpointMessageOut,
+    poller: &SvixEventsPoller,
+) -> Result<(), (u16, &'static str)> {
+    let payload = parse_payload(
+        &SerializablePayload::Standard(
+            // FIXME: for svix-event pollers we already know the payload is json so
+            //   there's some wasted ser/deser/ser cycles.
+            serde_json::to_vec(&msg).expect("just fetched as json, must be serializable"),
+        ),
+        poller.transformation.as_ref(),
+        poller
+            .transformer_tx
+            .clone()
+            .expect("transformer tx is required"),
+    )
+    .await
+    .map_err(|status| (status.as_u16(), "error while parsing polled message"))?;
+
+    handle(payload, Arc::clone(&poller.output))
+        .await
+        // FIXME: need to refactor handle to not give http status codes so we can report what happened here.
+        .map_err(|status| (status.as_u16(), "error while handling polled message"))?;
+
+    Ok(())
 }
 
 #[cfg(test)]

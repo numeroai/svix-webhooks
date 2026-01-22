@@ -20,18 +20,46 @@ import java.util.Set;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonAutoDetect(getterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
 public class ConnectorIn {
+    @JsonProperty private Set<String> allowedEventTypes;
     @JsonProperty private String description;
-    @JsonProperty private String featureFlag;
     @JsonProperty private Set<String> featureFlags;
-    @JsonProperty private Set<String> filterTypes;
     @JsonProperty private String instructions;
-    @JsonProperty private URI instructionsLink;
     @JsonProperty private ConnectorKind kind;
     @JsonProperty private URI logo;
     @JsonProperty private String name;
+    @JsonProperty private ConnectorProduct productType;
     @JsonProperty private String transformation;
+    @JsonProperty private String uid;
 
     public ConnectorIn() {}
+
+    public ConnectorIn allowedEventTypes(Set<String> allowedEventTypes) {
+        this.allowedEventTypes = allowedEventTypes;
+        return this;
+    }
+
+    public ConnectorIn addAllowedEventTypesItem(String allowedEventTypesItem) {
+        if (this.allowedEventTypes == null) {
+            this.allowedEventTypes = new LinkedHashSet<>();
+        }
+        this.allowedEventTypes.add(allowedEventTypesItem);
+
+        return this;
+    }
+
+    /**
+     * Get allowedEventTypes
+     *
+     * @return allowedEventTypes
+     */
+    @javax.annotation.Nullable
+    public Set<String> getAllowedEventTypes() {
+        return allowedEventTypes;
+    }
+
+    public void setAllowedEventTypes(Set<String> allowedEventTypes) {
+        this.allowedEventTypes = allowedEventTypes;
+    }
 
     public ConnectorIn description(String description) {
         this.description = description;
@@ -50,28 +78,6 @@ public class ConnectorIn {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    @Deprecated
-    public ConnectorIn featureFlag(String featureFlag) {
-        this.featureFlag = featureFlag;
-        return this;
-    }
-
-    /**
-     * Deprecated - prefer featureFlags instead.
-     *
-     * @return featureFlag
-     */
-    @javax.annotation.Nullable
-    @Deprecated
-    public String getFeatureFlag() {
-        return featureFlag;
-    }
-
-    @Deprecated
-    public void setFeatureFlag(String featureFlag) {
-        this.featureFlag = featureFlag;
     }
 
     public ConnectorIn featureFlags(Set<String> featureFlags) {
@@ -102,34 +108,6 @@ public class ConnectorIn {
         this.featureFlags = featureFlags;
     }
 
-    public ConnectorIn filterTypes(Set<String> filterTypes) {
-        this.filterTypes = filterTypes;
-        return this;
-    }
-
-    public ConnectorIn addFilterTypesItem(String filterTypesItem) {
-        if (this.filterTypes == null) {
-            this.filterTypes = new LinkedHashSet<>();
-        }
-        this.filterTypes.add(filterTypesItem);
-
-        return this;
-    }
-
-    /**
-     * Get filterTypes
-     *
-     * @return filterTypes
-     */
-    @javax.annotation.Nullable
-    public Set<String> getFilterTypes() {
-        return filterTypes;
-    }
-
-    public void setFilterTypes(Set<String> filterTypes) {
-        this.filterTypes = filterTypes;
-    }
-
     public ConnectorIn instructions(String instructions) {
         this.instructions = instructions;
         return this;
@@ -147,25 +125,6 @@ public class ConnectorIn {
 
     public void setInstructions(String instructions) {
         this.instructions = instructions;
-    }
-
-    public ConnectorIn instructionsLink(URI instructionsLink) {
-        this.instructionsLink = instructionsLink;
-        return this;
-    }
-
-    /**
-     * Get instructionsLink
-     *
-     * @return instructionsLink
-     */
-    @javax.annotation.Nullable
-    public URI getInstructionsLink() {
-        return instructionsLink;
-    }
-
-    public void setInstructionsLink(URI instructionsLink) {
-        this.instructionsLink = instructionsLink;
     }
 
     public ConnectorIn kind(ConnectorKind kind) {
@@ -197,7 +156,7 @@ public class ConnectorIn {
      *
      * @return logo
      */
-    @javax.annotation.Nonnull
+    @javax.annotation.Nullable
     public URI getLogo() {
         return logo;
     }
@@ -225,6 +184,25 @@ public class ConnectorIn {
         this.name = name;
     }
 
+    public ConnectorIn productType(ConnectorProduct productType) {
+        this.productType = productType;
+        return this;
+    }
+
+    /**
+     * Get productType
+     *
+     * @return productType
+     */
+    @javax.annotation.Nullable
+    public ConnectorProduct getProductType() {
+        return productType;
+    }
+
+    public void setProductType(ConnectorProduct productType) {
+        this.productType = productType;
+    }
+
     public ConnectorIn transformation(String transformation) {
         this.transformation = transformation;
         return this;
@@ -242,6 +220,25 @@ public class ConnectorIn {
 
     public void setTransformation(String transformation) {
         this.transformation = transformation;
+    }
+
+    public ConnectorIn uid(String uid) {
+        this.uid = uid;
+        return this;
+    }
+
+    /**
+     * The Connector's UID.
+     *
+     * @return uid
+     */
+    @javax.annotation.Nullable
+    public String getUid() {
+        return uid;
+    }
+
+    public void setUid(String uid) {
+        this.uid = uid;
     }
 
     /**

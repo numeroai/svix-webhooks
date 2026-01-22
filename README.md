@@ -119,7 +119,7 @@ To stay up-to-date with new features and improvements be sure to watch our repo!
   <tr>
     <th><a href="https://github.com/svix/svix-webhooks/tree/main/php/">PHP</a></th>
     <th>✅</th>
-    <th>🔜</th>
+    <th>✅</th>
     <th>✅</th>
     <th colspan="4"></th>
   </tr>
@@ -172,10 +172,6 @@ docker run \
   --env-file development.env \
   svix/svix-server
 ```
-
-### Pre-compiled binaries
-
-Pre-compiled binaries are available for released versions in the [releases section](https://github.com/svix/svix-webhooks/releases).
 
 ### Building from source
 
@@ -420,7 +416,7 @@ Contributions are what makes the open source world go round! All contributions a
 Please refer to the [contribution guide](./CONTRIBUTING.md) for information on how to contribute.
 
 A quick how to for contribution:
-    
+
 1. Fork the project
 2. Create your feature branch (`git checkout -b feature/some-feature`)
 3. Make your changes

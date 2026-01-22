@@ -5,15 +5,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ConnectorIn(
+    val allowedEventTypes: Set<String>? = null,
     val description: String? = null,
-    /** Deprecated - prefer featureFlags instead. */
-    val featureFlag: String? = null,
     val featureFlags: Set<String>? = null,
-    val filterTypes: Set<String>? = null,
     val instructions: String? = null,
-    val instructionsLink: String? = null,
     val kind: ConnectorKind? = null,
-    val logo: String,
+    val logo: String? = null,
     val name: String,
+    val productType: ConnectorProduct? = null,
     val transformation: String,
+    /** The Connector's UID. */
+    val uid: String? = null,
 )

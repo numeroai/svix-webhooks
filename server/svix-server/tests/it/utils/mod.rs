@@ -5,6 +5,7 @@ use std::{
     future::Future,
     net::TcpListener,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use anyhow::{Context, Result};
@@ -393,6 +394,9 @@ impl TestReceiver {
         T: IntoResponse + Clone + Send + Sync + 'static,
     {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let listener = tokio::net::TcpListener::from_std(listener).unwrap();
+
         let endpoint = format!("http://{}/", listener.local_addr().unwrap());
 
         let (tx, data_recv) = mpsc::channel(32);
@@ -416,11 +420,7 @@ impl TestReceiver {
             .into_make_service();
 
         let jh = tokio::spawn(async move {
-            axum::Server::from_tcp(listener)
-                .unwrap()
-                .serve(routes)
-                .await
-                .unwrap();
+            axum::serve(listener, routes).await.unwrap();
         });
 
         TestReceiver {
@@ -430,6 +430,24 @@ impl TestReceiver {
             header_recv,
             response_status_code,
         }
+    }
+
+    pub(crate) fn try_recv_body_value(
+        &mut self,
+    ) -> Result<serde_json::Value, mpsc::error::TryRecvError> {
+        let payload = self.data_recv.try_recv()?;
+        Ok(serde_json::from_value(payload).unwrap())
+    }
+
+    pub(crate) async fn recv_body(&mut self) -> Option<serde_json::Value> {
+        self.data_recv.recv().await
+    }
+
+    pub(crate) async fn recv_body_value(&mut self) -> Option<serde_json::Value> {
+        let payload = tokio::time::timeout(Duration::from_secs(30), self.data_recv.recv())
+            .await
+            .expect("timed out")?;
+        Some(serde_json::from_value(payload).unwrap())
     }
 
     pub fn set_response_status_code(&self, resp_with: axum::http::StatusCode) {

@@ -59,6 +59,9 @@ output_dir = "python/svix/models"
 template = "templates/python/component_type.py.jinja"
 output_dir = "python/svix/models"
 [[python.task]]
+template = "templates/python/api_summary.py.jinja"
+output_dir = "python/svix/api"
+[[python.task]]
 template = "templates/python/summary.py.jinja"
 output_dir = "python/svix/api"
 
@@ -101,6 +104,10 @@ extra_shell_commands = [
    "sed -i.bak 's/package svix/package internalapi/g' go/internalapi/management* && rm go/internalapi/management*.bak",
 ]
 extra_codegen_args = ["-e=v1.health.get"]
+
+[[go.task]]
+template = "templates/go/summary.go.jinja"
+output_dir = "go"
 [[go.task]]
 template = "templates/go/api_resource.go.jinja"
 output_dir = "go"
@@ -155,3 +162,26 @@ output_dir = "kotlin/lib/src/main/kotlin/models"
 [[kotlin.task]]
 template = "templates/kotlin/api_resource.kt.jinja"
 output_dir = "kotlin/lib/src/main/kotlin"
+
+
+[php]
+extra_codegen_args = [
+   # ingest requires struct enums and is excluded from initial release
+   "--exclude-op-id=v1.ingest.source.list",
+   "--exclude-op-id=v1.ingest.source.create",
+   "--exclude-op-id=v1.ingest.source.get",
+   "--exclude-op-id=v1.ingest.source.update",
+   "--exclude-op-id=v1.ingest.source.delete",
+]
+[[php.task]]
+template = "templates/php/component_type.php.jinja"
+output_dir = "php/src/Models"
+[[php.task]]
+template = "templates/php/api_resource.php.jinja"
+output_dir = "php/src/Api"
+[[php.task]]
+template = "templates/php/operation_options.php.jinja"
+output_dir = "php/src/Api"
+[[php.task]]
+template = "templates/php/summary.php.jinja"
+output_dir = "php/src"

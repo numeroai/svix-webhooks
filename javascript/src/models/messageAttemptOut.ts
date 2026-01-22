@@ -1,11 +1,11 @@
 // this file is @generated
-/* eslint @typescript-eslint/no-explicit-any: 0 */
 import {
-  MessageAttemptTriggerType,
+  type MessageAttemptTriggerType,
   MessageAttemptTriggerTypeSerializer,
 } from "./messageAttemptTriggerType";
-import { MessageOut, MessageOutSerializer } from "./messageOut";
-import { MessageStatus, MessageStatusSerializer } from "./messageStatus";
+import { type MessageOut, MessageOutSerializer } from "./messageOut";
+import { type MessageStatus, MessageStatusSerializer } from "./messageStatus";
+import { type MessageStatusText, MessageStatusTextSerializer } from "./messageStatusText";
 
 export interface MessageAttemptOut {
   /** The Endpoint's ID. */
@@ -20,6 +20,7 @@ export interface MessageAttemptOut {
   responseDurationMs: number;
   responseStatusCode: number;
   status: MessageStatus;
+  statusText: MessageStatusText;
   timestamp: Date;
   triggerType: MessageAttemptTriggerType;
   url: string;
@@ -38,6 +39,7 @@ export const MessageAttemptOutSerializer = {
       responseDurationMs: object["responseDurationMs"],
       responseStatusCode: object["responseStatusCode"],
       status: MessageStatusSerializer._fromJsonObject(object["status"]),
+      statusText: MessageStatusTextSerializer._fromJsonObject(object["statusText"]),
       timestamp: new Date(object["timestamp"]),
       triggerType: MessageAttemptTriggerTypeSerializer._fromJsonObject(
         object["triggerType"]
@@ -56,6 +58,7 @@ export const MessageAttemptOutSerializer = {
       responseDurationMs: self.responseDurationMs,
       responseStatusCode: self.responseStatusCode,
       status: MessageStatusSerializer._toJsonObject(self.status),
+      statusText: MessageStatusTextSerializer._toJsonObject(self.statusText),
       timestamp: self.timestamp,
       triggerType: MessageAttemptTriggerTypeSerializer._toJsonObject(self.triggerType),
       url: self.url,

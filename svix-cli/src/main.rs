@@ -12,6 +12,7 @@ use self::{
             endpoint::EndpointArgs, environment::EnvironmentArgs, event_type::EventTypeArgs,
             ingest::IngestArgs, integration::IntegrationArgs, message::MessageArgs,
             message_attempt::MessageAttemptArgs, operational_webhook::OperationalWebhookArgs,
+            streaming::StreamingArgs,
         },
         listen::ListenArgs,
         open::OpenArgs,
@@ -20,6 +21,7 @@ use self::{
     },
     config::Config,
 };
+use crate::cmds::api::connector::ConnectorArgs;
 
 mod cmds;
 mod config;
@@ -35,6 +37,13 @@ const BIN_NAME: &str = env!("CARGO_BIN_NAME");
 struct Cli {
     #[command(flatten)]
     color: Color,
+    #[arg(
+        short,
+        long,
+        action = clap::ArgAction::Count,
+        help = "Log more. This option may be repeated up to 3 times"
+    )]
+    verbose: u8,
     #[command(subcommand)]
     command: RootCommands,
 }
@@ -51,6 +60,15 @@ impl Cli {
             ColorChoice::Never => ColorMode::Off,
         }
     }
+
+    fn log_level(&self) -> tracing::Level {
+        match self.verbose {
+            3.. => tracing::Level::TRACE,
+            2 => tracing::Level::DEBUG,
+            1 => tracing::Level::INFO,
+            0 => tracing::Level::WARN,
+        }
+    }
 }
 
 // N.b Ordering matters here for how clap presents the help.
@@ -62,6 +80,8 @@ enum RootCommands {
     Authentication(AuthenticationArgs),
     /// Generate the autocompletion script for the specified shell
     Completion { shell: Shell },
+    /// List, create & modify connectors
+    Connector(ConnectorArgs),
     /// List, create & modify endpoints
     Endpoint(EndpointArgs),
     /// Import or export environments
@@ -84,6 +104,8 @@ enum RootCommands {
     Open(OpenArgs),
     /// List, create & modify operational webhook endpoints
     OperationalWebhook(OperationalWebhookArgs),
+    /// List, create & modify Svix Stream resources
+    Streaming(StreamingArgs),
     /// Generate a test application with sample endpoints and event types
     Seed(SeedArgs),
     /// Verifying and signing webhooks with the Svix signature scheme
@@ -96,6 +118,17 @@ enum RootCommands {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     let color_mode = cli.color_mode();
+
+    tracing_subscriber::fmt()
+        .with_max_level(cli.log_level())
+        .with_timer(tracing_subscriber::fmt::time::LocalTime::rfc_3339())
+        .init();
+
+    // rustls requires a crypto backend ("provider") choice to be made explicitly
+    // The Svix SDK uses the default provider if a default is not installed, but
+    // we use reqwest directly in some code paths, which does not do this.
+    _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
     // XXX: cfg can give an Err in certain situations.
     // Assigning the variable here since several match arms need a `&Config` but the rest of them
     // won't care/are still usable if the config doesn't exist.
@@ -114,6 +147,10 @@ async fn main() -> Result<()> {
         RootCommands::Authentication(args) => {
             let cfg = cfg?;
             let client = get_client(&cfg)?;
+            args.command.exec(&client, color_mode).await?;
+        }
+        RootCommands::Connector(args) => {
+            let client = get_client(&cfg?)?;
             args.command.exec(&client, color_mode).await?;
         }
         RootCommands::EventType(args) => {
@@ -145,6 +182,10 @@ async fn main() -> Result<()> {
             args.command.exec(&client, color_mode).await?;
         }
         RootCommands::OperationalWebhook(args) => {
+            let client = get_client(&cfg?)?;
+            args.command.exec(&client, color_mode).await?;
+        }
+        RootCommands::Streaming(args) => {
             let client = get_client(&cfg?)?;
             args.command.exec(&client, color_mode).await?;
         }

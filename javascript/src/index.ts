@@ -2,6 +2,7 @@
 import { Application } from "./api/application";
 import { Authentication } from "./api/authentication";
 import { BackgroundTask } from "./api/backgroundTask";
+import { Connector } from "./api/connector";
 import { Endpoint } from "./api/endpoint";
 import { Environment } from "./api/environment";
 import { EventType } from "./api/eventType";
@@ -12,13 +13,15 @@ import { Message } from "./api/message";
 import { MessageAttempt } from "./api/messageAttempt";
 import { OperationalWebhook } from "./api/operationalWebhook";
 import { Statistics } from "./api/statistics";
+import { Streaming } from "./api/streaming";
 import { OperationalWebhookEndpoint } from "./api/operationalWebhookEndpoint";
-import { SvixRequestContext } from "./request";
+import type { SvixRequestContext } from "./request";
 
 export { PostOptions, ApiException } from "./util";
 export { HTTPValidationError, HttpErrorOut, ValidationError } from "./HttpErrors";
 export * from "./webhook";
 export * from "./models/index";
+import type { XOR } from "./util";
 
 export { ApplicationListOptions } from "./api/application";
 export { BackgroundTaskListOptions } from "./api/backgroundTask";
@@ -29,12 +32,29 @@ export { MessageListOptions, messageInRaw } from "./api/message";
 export { MessageAttemptListByEndpointOptions } from "./api/messageAttempt";
 export { OperationalWebhookEndpointListOptions } from "./api/operationalWebhookEndpoint";
 
-export interface SvixOptions {
+export type SvixOptions = {
   debug?: boolean;
   serverUrl?: string;
   /** Time in milliseconds to wait for requests to get a response. */
   requestTimeout?: number;
-}
+  /**
+   * Custom fetch implementation to use for HTTP requests.
+   * Useful for testing, adding custom middleware, or running in non-standard environments.
+   */
+  fetch?: typeof fetch;
+} & XOR<
+  {
+    /** List of delays (in milliseconds) to wait before each retry attempt.*/
+    retryScheduleInMs?: number[];
+  },
+  {
+    /** The number of times the client will retry if a server-side error
+     *  or timeout is received.
+     *  Default: 2
+     */
+    numRetries?: number;
+  }
+>;
 
 const REGIONS = [
   { region: "us", url: "https://api.us.svix.com" },
@@ -51,7 +71,32 @@ export class Svix {
     const regionalUrl = REGIONS.find((x) => x.region === token.split(".")[1])?.url;
     const baseUrl: string = options.serverUrl ?? regionalUrl ?? "https://api.svix.com";
 
-    this.requestCtx = { baseUrl, token, timeout: options.requestTimeout };
+    if (options.retryScheduleInMs) {
+      this.requestCtx = {
+        baseUrl,
+        token,
+        timeout: options.requestTimeout,
+        retryScheduleInMs: options.retryScheduleInMs,
+        fetch: options.fetch,
+      };
+      return;
+    }
+    if (options.numRetries) {
+      this.requestCtx = {
+        baseUrl,
+        token,
+        timeout: options.requestTimeout,
+        numRetries: options.numRetries,
+        fetch: options.fetch,
+      };
+      return;
+    }
+    this.requestCtx = {
+      baseUrl,
+      token,
+      timeout: options.requestTimeout,
+      fetch: options.fetch,
+    };
   }
 
   public get application() {
@@ -64,6 +109,10 @@ export class Svix {
 
   public get backgroundTask() {
     return new BackgroundTask(this.requestCtx);
+  }
+
+  public get connector() {
+    return new Connector(this.requestCtx);
   }
 
   public get endpoint() {
@@ -104,6 +153,10 @@ export class Svix {
 
   public get statistics() {
     return new Statistics(this.requestCtx);
+  }
+
+  public get streaming() {
+    return new Streaming(this.requestCtx);
   }
 
   public get operationalWebhookEndpoint() {

@@ -1,5 +1,5 @@
 use js_option::JsOption;
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 use svix::{
     api::{ApplicationIn, EndpointIn, EndpointPatch, EventTypeIn},
     error::Error,
@@ -234,6 +234,58 @@ async fn test_custom_retries() {
 
     let diff = std::time::Instant::now() - t0;
     let expected: u32 = (1..=num_retries).map(|x| 20 * x).sum();
+    assert!(diff.as_millis() >= u128::from(expected));
+
+    mock_server.verify().await;
+}
+
+#[tokio::test]
+async fn test_custom_retry_schedule() {
+    let mock_server: MockServer = MockServer::start().await;
+    let retry_schedule_in_ms = [50, 100, 200, 400];
+    let retry_schedule = retry_schedule_in_ms.map(Duration::from_millis).into();
+
+    Mock::given(wiremock::matchers::method("POST"))
+        .and(wiremock::matchers::path("/api/v1/app"))
+        .respond_with(ResponseTemplate::new(500))
+        .up_to_n_times(1)
+        .expect(1)
+        .mount(&mock_server)
+        .await;
+
+    for i in 1..=retry_schedule_in_ms.len() {
+        Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/api/v1/app"))
+            .and(wiremock::matchers::header("svix-retry-count", i))
+            .respond_with(ResponseTemplate::new(500))
+            .up_to_n_times(1)
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+    }
+
+    let t0 = std::time::Instant::now();
+    let client = TestClientBuilder::new()
+        .url(mock_server.uri())
+        .token("test".to_string())
+        .retry_schedule(retry_schedule)
+        .build()
+        .client;
+
+    let app = client
+        .application()
+        .create(
+            ApplicationIn {
+                name: "app".to_string(),
+                ..Default::default()
+            },
+            None,
+        )
+        .await;
+    assert!(app.is_err());
+
+    let diff = std::time::Instant::now() - t0;
+    let expected: u64 = retry_schedule_in_ms.iter().sum();
     assert!(diff.as_millis() >= u128::from(expected));
 
     mock_server.verify().await;

@@ -17,7 +17,7 @@ use axum::{
 };
 use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
-use sea_orm::{ActiveValue::Set, ColumnTrait, FromQueryResult, QueryFilter, QuerySelect};
+use sea_orm::{ActiveValue::Set, ColumnTrait, FromQueryResult, QuerySelect};
 use serde::{Deserialize, Serialize};
 use svix_server_derive::{aide_annotate, ModelIn, ModelOut};
 use url::Url;
@@ -31,12 +31,15 @@ use crate::{
         cryptography::Encryption,
         permissions,
         types::{
-            metadata::Metadata, BaseId, EndpointHeaders, EndpointHeadersPatch, EndpointId,
-            EndpointSecret, EndpointSecretInternal, EndpointUid, EventChannelSet, EventTypeName,
-            EventTypeNameSet, MessageEndpointId, MessageStatus,
+            metadata::Metadata, ApplicationIdOrUid, EndpointHeaders, EndpointHeadersPatch,
+            EndpointId, EndpointSecret, EndpointSecretInternal, EndpointUid, EventChannelSet,
+            EventTypeName, EventTypeNameSet, MessageStatus,
         },
     },
-    db::models::{endpoint, eventtype, messagedestination},
+    db::models::{
+        endpoint, eventtype,
+        messageattempt::{self, Query as _},
+    },
     error::{self, HttpError},
     v1::utils::{
         openapi_tag,
@@ -381,12 +384,6 @@ pub struct EndpointPatch {
     #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
     pub channels: UnrequiredNullableField<EventChannelSet>,
 
-    #[validate]
-    #[serde(default)]
-    #[serde(rename = "secret")]
-    #[serde(skip_serializing_if = "UnrequiredNullableField::is_absent")]
-    pub key: UnrequiredNullableField<EndpointSecret>,
-
     #[serde(default)]
     #[serde(skip_serializing_if = "UnrequiredField::is_absent")]
     pub metadata: UnrequiredField<Metadata>,
@@ -406,7 +403,6 @@ impl ModelIn for EndpointPatch {
             disabled,
             event_types_ids,
             channels,
-            key: _,
             metadata: _,
         } = self;
 
@@ -708,21 +704,20 @@ async fn endpoint_stats(
 ) -> error::Result<Json<EndpointStatsOut>> {
     let (since, until) = range.validate_unwrap_or_default()?;
 
-    let endpoint =
-        crate::db::models::endpoint::Entity::secure_find_by_id_or_uid(app.id, endpoint_id)
-            .one(db)
-            .await?
-            .ok_or_else(|| HttpError::not_found(None, None))?
-            .id;
+    let endpoint = endpoint::Entity::secure_find_by_id_or_uid(app.id, endpoint_id)
+        .one(db)
+        .await?
+        .ok_or_else(|| HttpError::not_found(None, None))?
+        .id;
 
     let query_out: Vec<EndpointStatsQueryOut> =
-        messagedestination::Entity::secure_find_by_endpoint(endpoint)
+        messageattempt::Entity::secure_find_by_endpoint(endpoint)
+            .after(since)
+            .before(until)
             .select_only()
-            .column(messagedestination::Column::Status)
-            .column_as(messagedestination::Column::Status.count(), "count")
-            .group_by(messagedestination::Column::Status)
-            .filter(messagedestination::Column::Id.gte(MessageEndpointId::start_id(since)))
-            .filter(messagedestination::Column::Id.lte(MessageEndpointId::start_id(until)))
+            .column(messageattempt::Column::Status)
+            .column_as(messageattempt::Column::Status.count(), "count")
+            .group_by(messageattempt::Column::Status)
             .into_model::<EndpointStatsQueryOut>()
             .all(db)
             .await?;
@@ -800,10 +795,20 @@ async fn send_example(
         uid: None,
         payload_retention_period: 90,
         extra_params: None,
+        application: None,
     };
 
-    let create_message =
-        create_message_inner(db, queue_tx, cache, false, Some(endpoint.id), msg_in, app).await?;
+    let create_message = create_message_inner(
+        db,
+        queue_tx,
+        cache,
+        false,
+        Some(endpoint.id),
+        msg_in,
+        app.org_id,
+        ApplicationIdOrUid(app.id.0),
+    )
+    .await?;
 
     Ok(Json(create_message))
 }

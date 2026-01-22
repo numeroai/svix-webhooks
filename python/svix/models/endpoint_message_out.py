@@ -4,6 +4,7 @@ from datetime import datetime
 
 from .common import BaseModel
 from .message_status import MessageStatus
+from .message_status_text import MessageStatusText
 
 
 class EndpointMessageOut(BaseModel):
@@ -11,6 +12,8 @@ class EndpointMessageOut(BaseModel):
 
     channels: t.Optional[t.List[str]] = None
     """List of free-form identifiers that endpoints can filter by"""
+
+    deliver_at: t.Optional[datetime] = None
 
     event_id: t.Optional[str] = None
     """Optional unique identifier for the message"""
@@ -26,6 +29,8 @@ class EndpointMessageOut(BaseModel):
     payload: t.Dict[str, t.Any]
 
     status: MessageStatus
+
+    status_text: MessageStatusText
 
     tags: t.Optional[t.List[str]] = None
 

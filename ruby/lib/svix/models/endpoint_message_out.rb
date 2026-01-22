@@ -7,6 +7,7 @@ module Svix
   class EndpointMessageOut
     # List of free-form identifiers that endpoints can filter by
     attr_accessor :channels
+    attr_accessor :deliver_at
     # Optional unique identifier for the message
     attr_accessor :event_id
     # The event type's name
@@ -16,10 +17,23 @@ module Svix
     attr_accessor :next_attempt
     attr_accessor :payload
     attr_accessor :status
+    attr_accessor :status_text
     attr_accessor :tags
     attr_accessor :timestamp
 
-    ALL_FIELD ||= ["channels", "event_id", "event_type", "id", "next_attempt", "payload", "status", "tags", "timestamp"].freeze
+    ALL_FIELD ||= [
+      "channels",
+      "deliver_at",
+      "event_id",
+      "event_type",
+      "id",
+      "next_attempt",
+      "payload",
+      "status",
+      "status_text",
+      "tags",
+      "timestamp"
+    ].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -41,12 +55,14 @@ module Svix
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
       attrs["channels"] = attributes["channels"]
+      attrs["deliver_at"] = DateTime.rfc3339(attributes["deliverAt"]).to_time if attributes["deliverAt"]
       attrs["event_id"] = attributes["eventId"]
       attrs["event_type"] = attributes["eventType"]
       attrs["id"] = attributes["id"]
       attrs["next_attempt"] = DateTime.rfc3339(attributes["nextAttempt"]).to_time if attributes["nextAttempt"]
       attrs["payload"] = attributes["payload"]
       attrs["status"] = Svix::MessageStatus.deserialize(attributes["status"])
+      attrs["status_text"] = Svix::MessageStatusText.deserialize(attributes["statusText"])
       attrs["tags"] = attributes["tags"]
       attrs["timestamp"] = DateTime.rfc3339(attributes["timestamp"]).to_time
       new(attrs)
@@ -55,12 +71,14 @@ module Svix
     def serialize
       out = Hash.new
       out["channels"] = Svix::serialize_primitive(@channels) if @channels
+      out["deliverAt"] = Svix::serialize_primitive(@deliver_at) if @deliver_at
       out["eventId"] = Svix::serialize_primitive(@event_id) if @event_id
       out["eventType"] = Svix::serialize_primitive(@event_type) if @event_type
       out["id"] = Svix::serialize_primitive(@id) if @id
       out["nextAttempt"] = Svix::serialize_primitive(@next_attempt) if @next_attempt
       out["payload"] = Svix::serialize_primitive(@payload) if @payload
       out["status"] = Svix::serialize_schema_ref(@status) if @status
+      out["statusText"] = Svix::serialize_schema_ref(@status_text) if @status_text
       out["tags"] = Svix::serialize_primitive(@tags) if @tags
       out["timestamp"] = Svix::serialize_primitive(@timestamp) if @timestamp
       out

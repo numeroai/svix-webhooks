@@ -1,39 +1,32 @@
 // this file is @generated
 use serde::{Deserialize, Serialize};
 
-use super::connector_kind::ConnectorKind;
+use super::{connector_kind::ConnectorKind, connector_product::ConnectorProduct};
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct ConnectorOut {
+    #[serde(rename = "allowedEventTypes")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_event_types: Option<Vec<String>>,
+
     #[serde(rename = "createdAt")]
     pub created_at: String,
 
     pub description: String,
 
-    #[serde(rename = "featureFlag")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub feature_flag: Option<String>,
-
     #[serde(rename = "featureFlags")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub feature_flags: Option<Vec<String>>,
-
-    #[serde(rename = "filterTypes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub filter_types: Option<Vec<String>>,
 
     /// The Connector's ID.
     pub id: String,
 
     pub instructions: String,
 
-    #[serde(rename = "instructionsLink")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub instructions_link: Option<String>,
-
     pub kind: ConnectorKind,
 
-    pub logo: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo: Option<String>,
 
     pub name: String,
 
@@ -41,7 +34,17 @@ pub struct ConnectorOut {
     #[serde(rename = "orgId")]
     pub org_id: String,
 
+    #[serde(rename = "productType")]
+    pub product_type: ConnectorProduct,
+
     pub transformation: String,
+
+    #[serde(rename = "transformationUpdatedAt")]
+    pub transformation_updated_at: String,
+
+    /// The Connector's UID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uid: Option<String>,
 
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
@@ -54,26 +57,28 @@ impl ConnectorOut {
         id: String,
         instructions: String,
         kind: ConnectorKind,
-        logo: String,
         name: String,
         org_id: String,
+        product_type: ConnectorProduct,
         transformation: String,
+        transformation_updated_at: String,
         updated_at: String,
     ) -> Self {
         Self {
+            allowed_event_types: None,
             created_at,
             description,
-            feature_flag: None,
             feature_flags: None,
-            filter_types: None,
             id,
             instructions,
-            instructions_link: None,
             kind,
-            logo,
+            logo: None,
             name,
             org_id,
+            product_type,
             transformation,
+            transformation_updated_at,
+            uid: None,
             updated_at,
         }
     }

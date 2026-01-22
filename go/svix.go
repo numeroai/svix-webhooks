@@ -1,3 +1,4 @@
+// Package svix this file is @generated DO NOT EDIT
 package svix
 
 import (
@@ -23,8 +24,10 @@ type (
 		// to override the user agent use `SetUseragentSuffix`
 		client *internal.SvixHttpClient
 
-		Authentication             *Authentication
 		Application                *Application
+		Authentication             *Authentication
+		BackgroundTask             *BackgroundTask
+		Connector                  *Connector
 		Endpoint                   *Endpoint
 		Environment                *Environment
 		EventType                  *EventType
@@ -32,8 +35,9 @@ type (
 		Integration                *Integration
 		Message                    *Message
 		MessageAttempt             *MessageAttempt
-		Statistics                 *Statistics
 		OperationalWebhook         *OperationalWebhook
+		Statistics                 *Statistics
+		Streaming                  *Streaming
 		OperationalWebhookEndpoint *OperationalWebhookEndpoint
 	}
 )
@@ -65,17 +69,20 @@ func New(token string, options *SvixOptions) (*Svix, error) {
 	svx := Svix{
 		client: &svixHttpClient,
 
-		Authentication:             newAuthentication(&svixHttpClient),
 		Application:                newApplication(&svixHttpClient),
+		Authentication:             newAuthentication(&svixHttpClient),
+		BackgroundTask:             newBackgroundTask(&svixHttpClient),
+		Connector:                  newConnector(&svixHttpClient),
 		Endpoint:                   newEndpoint(&svixHttpClient),
 		Environment:                newEnvironment(&svixHttpClient),
 		EventType:                  newEventType(&svixHttpClient),
-		Message:                    newMessage(&svixHttpClient),
 		Ingest:                     newIngest(&svixHttpClient),
 		Integration:                newIntegration(&svixHttpClient),
+		Message:                    newMessage(&svixHttpClient),
 		MessageAttempt:             newMessageAttempt(&svixHttpClient),
-		Statistics:                 newStatistics(&svixHttpClient),
 		OperationalWebhook:         newOperationalWebhook(&svixHttpClient),
+		Statistics:                 newStatistics(&svixHttpClient),
+		Streaming:                  newStreaming(&svixHttpClient),
 		OperationalWebhookEndpoint: newOperationalWebhookEndpoint(&svixHttpClient),
 	}
 	return &svx, nil

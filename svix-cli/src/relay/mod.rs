@@ -191,14 +191,14 @@ impl Client {
             async move {
                 read_from_ws_loop(ws_rx, remote_tx, local_url.clone(), http_client.clone())
                     .await
-                    .inspect_err(|e| eprintln!("read loop terminated: {e}"))
+                    .inspect_err(|e| eprintln!("read loop terminated: {e:#}"))
             }
         });
 
         set.spawn(async move {
             send_to_ws_loop(remote_rx, ws_tx)
                 .await
-                .inspect_err(|e| eprintln!("write loop terminated: {e}"))
+                .inspect_err(|e| eprintln!("write loop terminated: {e:#}"))
         });
 
         // If any task terminates, trash the rest so we can reconnect.
@@ -215,6 +215,7 @@ pub async fn listen(
     relay_token: String,
     relay_debug_url: Option<&str>,
     relay_disable_security: bool,
+    disable_tls_verification: bool,
 ) -> Result<()> {
     let scheme = if relay_disable_security { "ws" } else { "wss" };
     let api_host = relay_debug_url.unwrap_or(DEFAULT_API_HOST);
@@ -222,11 +223,15 @@ pub async fn listen(
 
     let websocket_url = format!("{scheme}://{api_host}/{API_PREFIX}/listen/").parse()?;
 
+    let http_client = HttpClient::builder()
+        .danger_accept_invalid_certs(disable_tls_verification)
+        .build()?;
+
     let mut client = Client {
         token,
         websocket_url,
         local_url,
-        http_client: HttpClient::new(),
+        http_client,
     };
 
     const MAX_BACKOFF: Duration = Duration::from_millis(5000);
@@ -248,7 +253,7 @@ pub async fn listen(
         let show_welcome_message = attempt_count == 0 || orig_token != client.token;
 
         if let Err(e) = client.connect(show_welcome_message).await {
-            eprintln!("Failed to connect to Webhook Relay: {e}");
+            eprintln!("Failed to connect to Webhook Relay: {e:#}");
             if e.downcast_ref::<TokenInUse>().is_some() {
                 eprintln!("Generating a new token for this session.");
                 client.token = {
@@ -418,11 +423,11 @@ async fn handle_incoming_message(
             println!("<- Forwarding message id={msg_id} to: {local_url}");
             match make_local_request(client, local_url, data).await {
                 Err(err) => {
-                    eprintln!("Failed to make request to local server: \n{err}");
+                    eprintln!("Failed to make request to local server: \n{err:#}");
                 }
                 Ok(resp) => {
                     if let Err(err) = process_response(msg_id, resp, tx).await {
-                        eprintln!("Failed to read response from local server: \n{err}");
+                        eprintln!("Failed to read response from local server: \n{err:#}");
                     }
                 }
             }

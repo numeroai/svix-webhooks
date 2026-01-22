@@ -21,12 +21,14 @@ import java.util.Set;
 @JsonAutoDetect(getterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
 public class EndpointMessageOut {
     @JsonProperty private Set<String> channels;
+    @JsonProperty private OffsetDateTime deliverAt;
     @JsonProperty private String eventId;
     @JsonProperty private String eventType;
     @JsonProperty private String id;
     @JsonProperty private OffsetDateTime nextAttempt;
     @JsonProperty private Object payload;
     @JsonProperty private MessageStatus status;
+    @JsonProperty private MessageStatusText statusText;
     @JsonProperty private Set<String> tags;
     @JsonProperty private OffsetDateTime timestamp;
 
@@ -58,6 +60,25 @@ public class EndpointMessageOut {
 
     public void setChannels(Set<String> channels) {
         this.channels = channels;
+    }
+
+    public EndpointMessageOut deliverAt(OffsetDateTime deliverAt) {
+        this.deliverAt = deliverAt;
+        return this;
+    }
+
+    /**
+     * Get deliverAt
+     *
+     * @return deliverAt
+     */
+    @javax.annotation.Nullable
+    public OffsetDateTime getDeliverAt() {
+        return deliverAt;
+    }
+
+    public void setDeliverAt(OffsetDateTime deliverAt) {
+        this.deliverAt = deliverAt;
     }
 
     public EndpointMessageOut eventId(String eventId) {
@@ -172,6 +193,25 @@ public class EndpointMessageOut {
 
     public void setStatus(MessageStatus status) {
         this.status = status;
+    }
+
+    public EndpointMessageOut statusText(MessageStatusText statusText) {
+        this.statusText = statusText;
+        return this;
+    }
+
+    /**
+     * Get statusText
+     *
+     * @return statusText
+     */
+    @javax.annotation.Nonnull
+    public MessageStatusText getStatusText() {
+        return statusText;
+    }
+
+    public void setStatusText(MessageStatusText statusText) {
+        this.statusText = statusText;
     }
 
     public EndpointMessageOut tags(Set<String> tags) {

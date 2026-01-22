@@ -5,20 +5,20 @@ on:
       - main
     paths:
       - "python/**"
-      - "lib-openapi.json"
+      - "codegen/lib-openapi.json"
       - "server/**"
       - ".github/workflows/python-tests.yml"
   pull_request:
     paths:
       - "python/**"
-      - "lib-openapi.json"
+      - "codegen/lib-openapi.json"
       - "server/**"
       - ".github/workflows/python-tests.yml"
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Pull svix server image (and dependencies)
         run: docker compose pull

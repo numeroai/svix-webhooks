@@ -1301,9 +1301,9 @@ macro_rules! jsonschema_for_repr_enum {
                     })),
                     instance_type: Some(SingleOrVec::Single(Box::new(InstanceType::Integer))),
                     enum_values: Some(values),
-                    extensions: indexmap::indexmap!{
-                        "x-enum-varnames".to_string() => serde_json::Value::Array(variant_names),
-                    },
+                    extensions: FromIterator::from_iter([
+                        ("x-enum-varnames".to_string(), serde_json::Value::Array(variant_names)),
+                    ]),
                     ..Default::default()
                 })
             }
@@ -1339,6 +1339,27 @@ jsonschema_for_repr_enum! {
     i16,
     "The sending status of the message:\n- Success = 0\n- Pending = 1\n- Fail = 2\n- Sending = 3",
     Success, Pending, Fail, Sending
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum MessageStatusText {
+    Success,
+    Pending,
+    #[serde(alias = "failed")]
+    Fail,
+    Sending,
+}
+
+impl From<MessageStatus> for MessageStatusText {
+    fn from(status: MessageStatus) -> Self {
+        match status {
+            MessageStatus::Success => Self::Success,
+            MessageStatus::Pending => Self::Pending,
+            MessageStatus::Fail => Self::Fail,
+            MessageStatus::Sending => Self::Sending,
+        }
+    }
 }
 
 #[repr(i16)]

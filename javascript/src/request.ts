@@ -1,9 +1,8 @@
-import "svix-fetch";
-import { ApiException } from "./util";
-import { HttpErrorOut, HTTPValidationError } from "./HttpErrors";
+import { ApiException, type XOR } from "./util";
+import type { HttpErrorOut, HTTPValidationError } from "./HttpErrors";
 import { v4 as uuidv4 } from "uuid";
 
-export const LIB_VERSION = "1.71.0";
+export const LIB_VERSION = "1.84.1";
 const USER_AGENT = `svix-libs/${LIB_VERSION}/javascript`;
 
 export enum HttpMethod {
@@ -18,14 +17,31 @@ export enum HttpMethod {
   PATCH = "PATCH",
 }
 
-export interface SvixRequestContext {
+export type SvixRequestContext = {
   /** The API base URL, like "https://api.svix.com" */
   baseUrl: string;
   /** The 'bearer' scheme access token */
   token: string;
   /** Time in milliseconds to wait for requests to get a response. */
   timeout?: number;
-}
+  /**
+   * Custom fetch implementation to use for HTTP requests.
+   * Useful for testing, adding custom middleware, or running in non-standard environments.
+   */
+  fetch?: typeof fetch;
+} & XOR<
+  {
+    /** List of delays (in milliseconds) to wait before each retry attempt.*/
+    retryScheduleInMs?: number[];
+  },
+  {
+    /** The number of times the client will retry if a server-side error
+     *  or timeout is received.
+     *  Default: 2
+     */
+    numRetries?: number;
+  }
+>;
 
 type QueryParameter = string | boolean | number | Date | string[] | null | undefined;
 
@@ -47,6 +63,12 @@ export class SvixRequest {
     this.path = newPath;
   }
 
+  public setQueryParams(params: { [name: string]: QueryParameter }) {
+    for (const [name, value] of Object.entries(params)) {
+      this.setQueryParam(name, value);
+    }
+  }
+
   public setQueryParam(name: string, value: QueryParameter) {
     if (value === undefined || value === null) {
       return;
@@ -58,7 +80,7 @@ export class SvixRequest {
       this.queryParams[name] = value.toString();
     } else if (value instanceof Date) {
       this.queryParams[name] = value.toISOString();
-    } else if (value instanceof Array) {
+    } else if (Array.isArray(value)) {
       if (value.length > 0) {
         this.queryParams[name] = value.join(",");
       }
@@ -96,7 +118,7 @@ export class SvixRequest {
     parseResponseBody: (jsonObject: any) => R
   ): Promise<R> {
     const response = await this.sendInner(ctx);
-    if (response.status == 204) {
+    if (response.status === 204) {
       return <R>null;
     }
     const responseBody = await response.text();
@@ -118,7 +140,7 @@ export class SvixRequest {
       this.headerParams["idempotency-key"] === undefined &&
       this.method.toUpperCase() === "POST"
     ) {
-      this.headerParams["idempotency-key"] = "auto_" + uuidv4();
+      this.headerParams["idempotency-key"] = `auto_${uuidv4()}`;
     }
 
     const randomId = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -128,22 +150,29 @@ export class SvixRequest {
     }
     // Cloudflare Workers fail if the credentials option is used in a fetch call.
     // This work around that. Source:
-    // https://github.com/cloudflare/workers-sdk/issues/2514#issuecomment-2178070014
+    // https://github.com/cloudflare/workers-sdk/issues/2514#issuecomment-21.84.1014
     const isCredentialsSupported = "credentials" in Request.prototype;
 
-    const response = await sendWithRetry(url, {
-      method: this.method.toString(),
-      body: this.body,
-      headers: {
-        accept: "application/json, */*;q=0.8",
-        authorization: `Bearer ${ctx.token}`,
-        "user-agent": USER_AGENT,
-        "svix-req-id": randomId.toString(),
-        ...this.headerParams,
+    const response = await sendWithRetry(
+      url,
+      {
+        method: this.method.toString(),
+        body: this.body,
+        headers: {
+          accept: "application/json, */*;q=0.8",
+          authorization: `Bearer ${ctx.token}`,
+          "user-agent": USER_AGENT,
+          "svix-req-id": randomId.toString(),
+          ...this.headerParams,
+        },
+        credentials: isCredentialsSupported ? "same-origin" : undefined,
+        signal: ctx.timeout !== undefined ? AbortSignal.timeout(ctx.timeout) : undefined,
       },
-      credentials: isCredentialsSupported ? "same-origin" : undefined,
-      signal: ctx.timeout !== undefined ? AbortSignal.timeout(ctx.timeout) : undefined,
-    });
+      ctx.retryScheduleInMs,
+      ctx.retryScheduleInMs?.[0],
+      ctx.retryScheduleInMs?.length || ctx.numRetries,
+      ctx.fetch
+    );
     return filterResponseForErrors(response);
   }
 }
@@ -180,15 +209,17 @@ type SvixRequestInit = RequestInit & {
 async function sendWithRetry(
   url: URL,
   init: SvixRequestInit,
-  triesLeft = 2,
+  retryScheduleInMs?: number[],
   nextInterval = 50,
+  triesLeft = 2,
+  fetchImpl: typeof fetch = fetch,
   retryCount = 1
 ): Promise<Response> {
   const sleep = (interval: number) =>
     new Promise((resolve) => setTimeout(resolve, interval));
 
   try {
-    const response = await fetch(url, init);
+    const response = await fetchImpl(url, init);
     if (triesLeft <= 0 || response.status < 500) {
       return response;
     }
@@ -200,5 +231,14 @@ async function sendWithRetry(
 
   await sleep(nextInterval);
   init.headers["svix-retry-count"] = retryCount.toString();
-  return await sendWithRetry(url, init, --triesLeft, nextInterval * 2, ++retryCount);
+  nextInterval = retryScheduleInMs?.[retryCount] || nextInterval * 2;
+  return await sendWithRetry(
+    url,
+    init,
+    retryScheduleInMs,
+    nextInterval,
+    --triesLeft,
+    fetchImpl,
+    ++retryCount
+  );
 }

@@ -8,6 +8,7 @@ import shutil
 import string
 import subprocess
 import time
+import multiprocessing
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -17,7 +18,7 @@ except ImportError:
     print("Python 3.11 or greater is required to run the codegen")
     exit(1)
 
-OPENAPI_CODEGEN_IMAGE = "ghcr.io/svix/openapi-codegen:20250812-321"
+OPENAPI_CODEGEN_IMAGE = "ghcr.io/svix/openapi-codegen:20260105-347"
 DEBUG = os.getenv("DEBUG") is not None
 GREEN = "\033[92m"
 BLUE = "\033[94m"
@@ -222,7 +223,7 @@ def execute_codegen_task(task) -> list[str]:
 
 def run_codegen_for_language(language, language_config) -> list[str]:
     tasks_results = []
-    with ThreadPoolExecutor() as pool:
+    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as pool:
         futures = []
         for t in language_config["tasks"]:
             futures.append(pool.submit(execute_codegen_task, t))
@@ -320,6 +321,7 @@ def log_generated_files(generated_paths: list[list[str]]):
     allowed_to_be_generated_twice = [
         "go/models/endpoint_transformation_in.go",
         "go/models/ordering.go",
+        "go/models/api_token_out.go",
     ]
     processed_files = set()
 
@@ -331,9 +333,9 @@ def log_generated_files(generated_paths: list[list[str]]):
                 )
             processed_files.add(path)
 
-            # ensure each file has `this file is @generated` in the first (2) lines
+            # ensure each file has `this file is @generated` in the first (3) lines
             with open(path, "r") as f:
-                first_line = "".join(f.readlines()[0:2])
+                first_line = "".join(f.readlines()[0:3])
                 assert "@generated" in first_line.lower(), (
                     f"missing the `this file is @generated` comment in {path}"
                 )
@@ -357,6 +359,7 @@ def log_generated_files(generated_paths: list[list[str]]):
     generated_paths.sort()
     with open(Path("codegen").joinpath("generated_files.json"), "w") as f:
         json.dump(generated_paths, f, indent=4)
+        f.write("\n")
 
 
 def main():
@@ -372,7 +375,7 @@ def main():
     # there may be more then 1 subprocess that exited
     exit_with_error = False
     tasks_results = []
-    with ThreadPoolExecutor() as pool:
+    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as pool:
         futures = []
         for language, language_config in config.items():
             futures.append(

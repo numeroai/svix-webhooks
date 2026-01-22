@@ -11,7 +11,7 @@ use svix_bridge_types::{ForwardRequest, ReceiverOutput as _};
 use crate::{create_topic, delete_topic, kafka_admin_client, BROKER_HOST};
 
 /// Time to wait for the consumer to be properly listening.
-const LISTEN_WAIT_TIME: Duration = Duration::from_secs(5);
+const LISTEN_WAIT_TIME: Duration = Duration::from_secs(8);
 
 #[tokio::test]
 async fn test_produce_ok() {
@@ -30,7 +30,7 @@ async fn test_produce_ok() {
 
     let consumer = Arc::new(consumer);
     let recv_join_hdl = tokio::spawn({
-        let consumer = consumer.clone();
+        let consumer = Arc::clone(&consumer);
         async move { consumer.recv().await.unwrap().detach() }
     });
     tokio::time::sleep(LISTEN_WAIT_TIME).await;

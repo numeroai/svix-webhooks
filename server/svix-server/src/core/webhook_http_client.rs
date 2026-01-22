@@ -5,25 +5,33 @@ use std::{
     pin::Pin,
     str::FromStr,
     sync::Arc,
-    task::Poll,
+    task::{ready, Poll},
     time::{Duration, Instant},
 };
 
-use axum::headers::{authorization::Credentials, Authorization};
+use axum::{body::Body, response::Response};
+use axum_extra::headers::{authorization::Credentials, Authorization};
 use bytes::Bytes;
 use futures::{future::BoxFuture, FutureExt};
-use hickory_resolver::{
-    error::ResolveError, lookup_ip::LookupIpIntoIter, AsyncResolver, TokioAsyncResolver,
+use hickory_resolver::{lookup_ip::LookupIpIntoIter, ResolveError, Resolver, TokioResolver};
+use http::{header::HeaderName, HeaderMap, HeaderValue, Method, StatusCode, Version};
+use http_body_util::Full;
+use hyper::{body::Incoming, ext::HeaderCaseMap, Uri};
+use hyper_openssl::client::legacy::{HttpsConnector, MaybeHttpsStream};
+use hyper_util::{
+    client::{
+        legacy::{
+            connect::{
+                dns::Name,
+                proxy::{SocksV5, Tunnel},
+                HttpConnector,
+            },
+            Client,
+        },
+        proxy::matcher::Matcher,
+    },
+    rt::{TokioExecutor, TokioIo},
 };
-use http::{header::HeaderName, HeaderMap, HeaderValue, Method, Response, StatusCode, Version};
-use hyper::{
-    client::connect::{dns::Name, HttpConnector},
-    ext::HeaderCaseMap,
-    Body, Client, Uri,
-};
-use hyper_openssl::{HttpsConnector, MaybeHttpsStream};
-use hyper_proxy::{Intercept, Proxy, ProxyConnector as HttpProxyConnector, ProxyStream};
-use hyper_socks2::SocksConnector;
 use ipnet::IpNet;
 use openssl::ssl::{SslConnector, SslConnectorBuilder, SslMethod, SslVerifyMode};
 use serde::Serialize;
@@ -31,7 +39,7 @@ use thiserror::Error;
 use tokio::{net::TcpStream, sync::Mutex};
 use tower::Service;
 
-use crate::cfg::{ProxyAddr, ProxyConfig};
+use crate::cfg::{ProxyAddr, ProxyBypassCfg, ProxyConfig};
 
 pub type CaseSensitiveHeaderMap = HashMap<String, HeaderValue>;
 
@@ -51,13 +59,42 @@ pub enum Error {
     #[error("error forming request: {0}")]
     InvalidHttpRequest(http::Error),
     #[error("error making request: {0}")]
-    FailedRequest(hyper::Error),
+    FailedRequest(hyper_util::client::legacy::Error),
+}
+
+impl From<hyper_util::client::legacy::Error> for Error {
+    fn from(e: hyper_util::client::legacy::Error) -> Self {
+        let mut dyn_e = &e as &dyn std::error::Error;
+        loop {
+            if dyn_e
+                .to_string()
+                .contains("requests to this IP range are blocked")
+            {
+                return Error::BlockedIp;
+            }
+
+            match dyn_e.source() {
+                Some(source) => dyn_e = source,
+                None => return Error::FailedRequest(e),
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct WebhookClient {
-    client: Client<SvixHttpsConnector, Body>,
+    client: Client<SvixHttpsConnector, Full<Bytes>>,
     whitelist_nets: Arc<Vec<IpNet>>,
+}
+
+fn ssl_builder(disable_tls_verification: bool) -> SslConnectorBuilder {
+    // Openssl is required here -- in practice, rustls does not support many
+    // ciphers that we encounter on a regular basis:
+    let mut ssl = SslConnector::builder(SslMethod::tls()).expect("SslConnector build failed");
+    if disable_tls_verification {
+        ssl.set_verify(SslVerifyMode::NONE);
+    }
+    ssl
 }
 
 impl WebhookClient {
@@ -74,18 +111,13 @@ impl WebhookClient {
         let mut http = HttpConnector::new_with_resolver(dns_resolver);
         http.enforce_http(false);
 
-        // Openssl is required here -- in practice, rustls does not support many
-        // ciphers that we encounter on a regular basis:
-        let mut ssl = SslConnector::builder(SslMethod::tls()).expect("SslConnector build failed");
         if dangerous_disable_tls_verification {
             tracing::warn!("TLS certificate verification has been disabled by the configuration.");
-            ssl.set_verify(SslVerifyMode::NONE);
         }
-
-        let https = SvixHttpsConnector::new(http, proxy_config, ssl)
+        let https = SvixHttpsConnector::new(http, proxy_config, dangerous_disable_tls_verification)
             .expect("SvixHttpsConnector build failed");
 
-        let client: Client<_, hyper::Body> = Client::builder()
+        let client = hyper_util::client::legacy::Client::builder(TokioExecutor::new())
             .http1_ignore_invalid_headers_in_responses(true)
             .http1_title_case_headers(true)
             .build(https);
@@ -96,15 +128,16 @@ impl WebhookClient {
         }
     }
 
-    pub async fn execute(&self, request: Request) -> Result<Response<Body>, Error> {
-        self.execute_inner(request, true).await
+    pub async fn execute(&self, request: Request) -> Result<Response, Error> {
+        let resp = self.execute_inner(request, true).await?;
+        Ok(resp.map(Body::new))
     }
 
     pub fn execute_inner(
         &self,
         request: Request,
         retry: bool,
-    ) -> BoxFuture<'_, Result<Response<Body>, Error>> {
+    ) -> BoxFuture<'_, Result<Response<Incoming>, Error>> {
         async move {
             let org_req = request.clone();
             if let Some(auth) = request.uri.authority() {
@@ -125,14 +158,14 @@ impl WebhookClient {
                     .method(request.method)
                     .uri(request.uri)
                     .version(request.version)
-                    .body(Body::from(body))
+                    .body(Full::from(body))
                     .map_err(Error::InvalidHttpRequest)?
             } else {
                 hyper::Request::builder()
                     .method(request.method)
                     .uri(request.uri)
                     .version(request.version)
-                    .body(Body::empty())
+                    .body(Full::default())
                     .map_err(Error::InvalidHttpRequest)?
             };
 
@@ -146,27 +179,11 @@ impl WebhookClient {
             let res = if let Some(timeout) = request.timeout {
                 match tokio::time::timeout(timeout, self.client.request(req)).await {
                     Ok(Ok(resp)) => Ok(resp),
-                    Ok(Err(e)) => Err({
-                        if e.to_string()
-                            .contains("requests to this IP range are blocked")
-                        {
-                            Error::BlockedIp
-                        } else {
-                            Error::FailedRequest(e)
-                        }
-                    }),
+                    Ok(Err(e)) => Err(e.into()),
                     Err(_to) => Err(Error::TimedOut),
                 }
             } else {
-                self.client.request(req).await.map_err(|e| {
-                    if e.to_string()
-                        .contains("requests to this IP range are blocked")
-                    {
-                        Error::BlockedIp
-                    } else {
-                        Error::FailedRequest(e)
-                    }
-                })
+                self.client.request(req).await.map_err(Into::into)
             };
 
             if !retry {
@@ -174,13 +191,10 @@ impl WebhookClient {
             }
 
             match res {
-                Err(ref e) => match e {
-                    Error::FailedRequest(e) if start.elapsed() < Duration::from_millis(1000) => {
-                        tracing::info!("Insta-retrying: {}", e);
-                        self.execute_inner(org_req, false).await
-                    }
-                    _ => res,
-                },
+                Err(Error::FailedRequest(e)) if start.elapsed() < Duration::from_millis(1000) => {
+                    tracing::info!("Insta-retrying: {e}");
+                    self.execute_inner(org_req, false).await
+                }
                 res => res,
             }
         }
@@ -440,47 +454,71 @@ impl RequestBuilder {
 #[derive(Clone)]
 enum SvixHttpsConnector {
     Regular(HttpsConnector<NonLocalHttpConnector>),
-    Socks5Proxy(HttpsConnector<SocksConnector<NonLocalHttpConnector>>),
-    HttpProxy(HttpProxyConnector<HttpConnector<NonLocalDnsResolver>>),
+    Socks5Proxy {
+        proxy: HttpsConnector<SocksV5<NonLocalHttpConnector>>,
+        bypass: HttpsConnector<NonLocalHttpConnector>,
+        matcher: Arc<Matcher>,
+    },
+    HttpProxy {
+        proxy: HttpsConnector<Tunnel<NonLocalHttpConnector>>,
+        bypass: HttpsConnector<NonLocalHttpConnector>,
+        matcher: Arc<Matcher>,
+    },
 }
 
 impl SvixHttpsConnector {
     fn new(
         inner: NonLocalHttpConnector,
         proxy_cfg: Option<&ProxyConfig>,
-        ssl: SslConnectorBuilder,
+        disable_tls_verification: bool,
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        let https =
+            HttpsConnector::with_connector(inner.clone(), ssl_builder(disable_tls_verification))?;
+
+        let matcher = |proxy_url: String, noproxy: Option<ProxyBypassCfg>| -> Arc<Matcher> {
+            let mut matcher = Matcher::builder().all(proxy_url);
+            if let Some(noproxy) = noproxy {
+                matcher = matcher.no(noproxy.0);
+            }
+            Arc::new(matcher.build())
+        };
+
         match proxy_cfg {
             Some(proxy_cfg) => match proxy_cfg.addr.clone() {
-                // In the SOCKS5 case, TLS is handled inside of the proxy
-                // TcpStream, by the same code that would do it without a proxy
                 ProxyAddr::Socks5(proxy_addr) => {
-                    let socks = SocksConnector {
-                        proxy_addr,
-                        auth: None,
-                        connector: inner,
-                    };
-                    let socks_https = HttpsConnector::with_connector(socks, ssl)?;
-                    Ok(Self::Socks5Proxy(socks_https))
+                    let matcher = matcher(proxy_addr.to_string(), proxy_cfg.noproxy.clone());
+                    let socks = SocksV5::new(proxy_addr, inner).local_dns(true);
+                    let socks_https = HttpsConnector::with_connector(
+                        socks,
+                        ssl_builder(disable_tls_verification),
+                    )?;
+                    Ok(Self::Socks5Proxy {
+                        proxy: socks_https,
+                        bypass: https,
+                        matcher,
+                    })
                 }
-                // In the HTTP proxy case, TLS is handled by the proxy connector
                 ProxyAddr::Http(proxy_addr) => {
-                    let proxy = Proxy::new(Intercept::All, proxy_addr);
-                    Ok(Self::HttpProxy(HttpProxyConnector::from_proxy(
-                        inner, proxy,
-                    )?))
+                    let matcher = matcher(proxy_addr.to_string(), proxy_cfg.noproxy.clone());
+                    let tunnel = Tunnel::new(proxy_addr, inner);
+                    let tunnel_https = HttpsConnector::with_connector(
+                        tunnel,
+                        ssl_builder(disable_tls_verification),
+                    )?;
+                    Ok(Self::HttpProxy {
+                        proxy: tunnel_https,
+                        bypass: https,
+                        matcher,
+                    })
                 }
             },
-            None => {
-                let https = HttpsConnector::with_connector(inner, ssl)?;
-                Ok(Self::Regular(https))
-            }
+            None => Ok(Self::Regular(https)),
         }
     }
 }
 
 impl Service<Uri> for SvixHttpsConnector {
-    type Response = ProxyStream<TcpStream>;
+    type Response = MaybeHttpsStream<TokioIo<TcpStream>>;
     type Error = Box<dyn std::error::Error + Send + Sync>;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
@@ -490,39 +528,45 @@ impl Service<Uri> for SvixHttpsConnector {
     ) -> std::task::Poll<Result<(), Self::Error>> {
         match self {
             Self::Regular(inner) => inner.poll_ready(cx),
-            Self::Socks5Proxy(inner) => inner.poll_ready(cx),
-            Self::HttpProxy(inner) => inner.poll_ready(cx).map_err(Into::into),
+            Self::Socks5Proxy { proxy, bypass, .. } => {
+                ready!(proxy.poll_ready(cx)?);
+                ready!(bypass.poll_ready(cx)?);
+                Poll::Ready(Ok(()))
+            }
+            Self::HttpProxy { proxy, bypass, .. } => {
+                ready!(proxy.poll_ready(cx)?);
+                ready!(bypass.poll_ready(cx)?);
+                Poll::Ready(Ok(()))
+            }
         }
     }
 
     fn call(&mut self, req: Uri) -> Self::Future {
-        fn convert_stream(maybe_https: MaybeHttpsStream<TcpStream>) -> ProxyStream<TcpStream> {
-            match maybe_https {
-                MaybeHttpsStream::Http(stream) => ProxyStream::NoProxy(stream),
-                MaybeHttpsStream::Https(stream) => ProxyStream::Secured(stream),
-            }
-        }
-
         match self {
-            Self::Regular(inner) => {
-                let fut = inner.call(req);
-                Box::pin(async move { Ok(convert_stream(fut.await?)) })
-            }
-            Self::Socks5Proxy(inner) => {
-                let fut = inner.call(req);
-                Box::pin(async move { Ok(convert_stream(fut.await?)) })
-            }
-            Self::HttpProxy(inner) => {
-                let fut = inner.call(req);
-                Box::pin(async move { fut.await.map_err(Into::into) })
-            }
+            Self::Regular(inner) => Box::pin(inner.call(req)),
+            Self::Socks5Proxy {
+                proxy,
+                bypass,
+                matcher,
+                ..
+            } => match matcher.intercept(&req) {
+                Some(_) => Box::pin(proxy.call(req)),
+                None => Box::pin(bypass.call(req)),
+            },
+            Self::HttpProxy {
+                proxy,
+                bypass,
+                matcher,
+                ..
+            } => match matcher.intercept(&req) {
+                Some(_) => Box::pin(proxy.call(req)),
+                None => Box::pin(bypass.call(req)),
+            },
         }
     }
 }
 
 /// A plain-HTTP connector that blocks outgoing requests to private IPs.
-///
-/// Used as a building block for [`SvixHttpConnector`].
 type NonLocalHttpConnector = HttpConnector<NonLocalDnsResolver>;
 
 /// A DNS resolver that produces an error for names that resolve to private IPs.
@@ -538,7 +582,7 @@ struct NonLocalDnsResolver {
 #[derive(Clone, Debug)]
 enum DnsState {
     Init,
-    Ready(Arc<TokioAsyncResolver>),
+    Ready(Arc<TokioResolver>),
 }
 
 impl NonLocalDnsResolver {
@@ -633,8 +677,8 @@ impl Iterator for SocketAddrs {
     }
 }
 
-async fn new_resolver() -> Result<Arc<TokioAsyncResolver>, ResolveError> {
-    Ok(Arc::new(AsyncResolver::tokio_from_system_conf()?))
+async fn new_resolver() -> Result<Arc<TokioResolver>, ResolveError> {
+    Ok(Arc::new(Resolver::builder_tokio()?.build()))
 }
 
 fn is_allowed(addr: IpAddr) -> bool {

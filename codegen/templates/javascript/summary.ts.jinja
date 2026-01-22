@@ -4,12 +4,13 @@ import { {{ resource.name | to_upper_camel_case }} } from "./api/{{ resource.nam
 {% endfor -%}
 {# hardcoded for backwards compat -#}
 import { OperationalWebhookEndpoint } from "./api/operationalWebhookEndpoint";
-import { SvixRequestContext } from "./request";
+import type { SvixRequestContext } from "./request";
 
 export { PostOptions, ApiException } from "./util";
 export { HTTPValidationError, HttpErrorOut, ValidationError } from "./HttpErrors";
 export * from "./webhook";
 export * from "./models/index";
+import type { XOR } from "./util";
 
 export { ApplicationListOptions } from "./api/application";
 export { BackgroundTaskListOptions } from "./api/backgroundTask";
@@ -21,12 +22,29 @@ export { MessageAttemptListByEndpointOptions } from "./api/messageAttempt";
 export { OperationalWebhookEndpointListOptions } from "./api/operationalWebhookEndpoint";
 
 
-export interface SvixOptions {
+export type SvixOptions = {
   debug?: boolean;
   serverUrl?: string;
   /** Time in milliseconds to wait for requests to get a response. */
   requestTimeout?: number;
-}
+  /**
+   * Custom fetch implementation to use for HTTP requests.
+   * Useful for testing, adding custom middleware, or running in non-standard environments.
+   */
+  fetch?: typeof fetch;
+} & XOR<
+  {
+    /** List of delays (in milliseconds) to wait before each retry attempt.*/
+    retryScheduleInMs?: number[];
+  },
+  {
+    /** The number of times the client will retry if a server-side error
+     *  or timeout is received.
+     *  Default: 2
+     */
+    numRetries?: number;
+  }
+>;
 
 const REGIONS = [
   { region: "us", url: "https://api.us.svix.com" },
@@ -44,7 +62,32 @@ export class Svix {
     const regionalUrl = REGIONS.find((x) => x.region === token.split(".")[1])?.url;
     const baseUrl: string = options.serverUrl ?? regionalUrl ?? "https://api.svix.com";
 
-    this.requestCtx = { baseUrl, token, timeout: options.requestTimeout };
+    if (options.retryScheduleInMs) {
+      this.requestCtx = {
+        baseUrl,
+        token,
+        timeout: options.requestTimeout,
+        retryScheduleInMs: options.retryScheduleInMs,
+        fetch: options.fetch,
+      };
+      return;
+    }
+    if (options.numRetries) {
+      this.requestCtx = {
+        baseUrl,
+        token,
+        timeout: options.requestTimeout,
+        numRetries: options.numRetries,
+        fetch: options.fetch,
+      };
+      return;
+    }
+    this.requestCtx = {
+      baseUrl,
+      token,
+      timeout: options.requestTimeout,
+      fetch: options.fetch,
+    };
   }
 
 

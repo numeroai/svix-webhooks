@@ -57,8 +57,8 @@ type MessageGetOptions struct {
 
 // List all of the application's messages.
 //
-// The `before` and `after` parameters let you filter all items created before or after a certain date. These can be used alongside an iterator to paginate over results
-// within a certain window.
+// The `before` and `after` parameters let you filter all items created before or after a certain date. These can be
+// used alongside an iterator to paginate over results within a certain window.
 //
 // Note that by default this endpoint is limited to retrieving 90 days' worth of data
 // relative to now or, if an iterator is provided, 90 days before/after the time indicated
@@ -142,6 +142,20 @@ func (message *Message) Create(
 // Delete all message payloads for the application.
 //
 // This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
+//
+// A completed task will return a payload like the following:
+// ```json
+//
+//	{
+//	  "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
+//	  "status": "finished",
+//	  "task": "application.purge_content",
+//	  "data": {
+//	    "messagesPurged": 150
+//	  }
+//	}
+//
+// ```
 func (message *Message) ExpungeAllContents(
 	ctx context.Context,
 	appId string,

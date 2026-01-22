@@ -12,6 +12,9 @@ namespace Svix.Models
         [JsonProperty("channels")]
         public List<string>? Channels { get; set; } = null;
 
+        [JsonProperty("deliverAt")]
+        public DateTime? DeliverAt { get; set; } = null;
+
         [JsonProperty("eventId")]
         public string? EventId { get; set; } = null;
 
@@ -30,6 +33,9 @@ namespace Svix.Models
         [JsonProperty("status", Required = Required.Always)]
         public required MessageStatus Status { get; set; }
 
+        [JsonProperty("statusText", Required = Required.Always)]
+        public required MessageStatusText StatusText { get; set; }
+
         [JsonProperty("tags")]
         public List<string>? Tags { get; set; } = null;
 
@@ -42,12 +48,14 @@ namespace Svix.Models
 
             sb.Append("class EndpointMessageOut {\n");
             sb.Append("  Channels: ").Append(Channels).Append('\n');
+            sb.Append("  DeliverAt: ").Append(DeliverAt).Append('\n');
             sb.Append("  EventId: ").Append(EventId).Append('\n');
             sb.Append("  EventType: ").Append(EventType).Append('\n');
             sb.Append("  Id: ").Append(Id).Append('\n');
             sb.Append("  NextAttempt: ").Append(NextAttempt).Append('\n');
             sb.Append("  Payload: ").Append(Payload).Append('\n');
             sb.Append("  Status: ").Append(Status).Append('\n');
+            sb.Append("  StatusText: ").Append(StatusText).Append('\n');
             sb.Append("  Tags: ").Append(Tags).Append('\n');
             sb.Append("  Timestamp: ").Append(Timestamp).Append('\n');
             sb.Append("}\n");

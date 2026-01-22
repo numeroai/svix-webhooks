@@ -16,16 +16,14 @@ use aide::{
 };
 use axum::{
     async_trait,
-    body::HttpBody,
     extract::{
         rejection::{BytesRejection, FailedToBufferBody},
-        FromRequest, FromRequestParts, Query,
+        FromRequest, FromRequestParts, Query, Request,
     },
     response::IntoResponse,
-    BoxError,
 };
 use chrono::{DateTime, Utc};
-use http::{request::Parts, Request, StatusCode};
+use http::{request::Parts, StatusCode};
 use regex::Regex;
 use schemars::JsonSchema;
 use sea_orm::{ColumnTrait, QueryFilter, QueryOrder, QuerySelect};
@@ -57,7 +55,7 @@ static FUTURE_QUERY_LIMIT: LazyLock<chrono::Duration> =
 static LIMITED_QUERY_DURATION: LazyLock<chrono::Duration> =
     LazyLock::new(|| chrono::Duration::days(90));
 
-#[derive(Debug, Deserialize, Validate, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Validate, JsonSchema)]
 pub struct PaginationDescending<T: Validate + JsonSchema> {
     /// Limit the number of returned items
     #[validate]
@@ -68,7 +66,7 @@ pub struct PaginationDescending<T: Validate + JsonSchema> {
     pub iterator: Option<T>,
 }
 
-#[derive(Debug, Deserialize, Validate, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Validate, JsonSchema)]
 pub struct Pagination<T: Validate + JsonSchema> {
     /// Limit the number of returned items
     #[validate]
@@ -81,7 +79,7 @@ pub struct Pagination<T: Validate + JsonSchema> {
     pub order: Option<Ordering>,
 }
 
-#[derive(Debug, JsonSchema)]
+#[derive(Clone, Debug, JsonSchema)]
 #[schemars(transparent)]
 pub struct PaginationLimit(pub u64);
 
@@ -120,7 +118,7 @@ impl Validate for PaginationLimit {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReversibleIterator<T: Validate> {
     /// Regular iteration - backwards in time.
     Normal(T),
@@ -375,6 +373,17 @@ pub struct ListResponse<T> {
     pub done: bool,
 }
 
+impl<T> ListResponse<T> {
+    pub fn empty() -> Self {
+        Self {
+            data: Vec::new(),
+            iterator: None,
+            prev_iterator: None,
+            done: true,
+        }
+    }
+}
+
 // This custom impl is needed because we want to customize the name of the
 // schema that goes into the spec, but that can only be done by having a custom
 // `JsonSchema` implementation.
@@ -478,10 +487,6 @@ pub(crate) trait ModelOut: Sized {
     ) -> ListResponse<Self> {
         list_response_inner(data, limit, direction, true)
     }
-
-    fn list_response_no_prev(data: Vec<Self>, limit: usize) -> ListResponse<Self> {
-        list_response_inner(data, limit, IteratorDirection::Normal, false)
-    }
 }
 
 // Helper method to simplify the somewhat egregious API for creating a ValidationError
@@ -495,7 +500,7 @@ pub fn validation_error(code: Option<&'static str>, msg: Option<&'static str>) -
 
 /// Recursively searches a [`validator::ValidationErrors`] tree into a linear list of errors to be
 /// sent to the user
-fn validation_errors(
+pub fn validation_errors(
     acc_path: Vec<String>,
     err: validator::ValidationErrors,
 ) -> Vec<ValidationErrorItem> {
@@ -547,17 +552,14 @@ fn validation_errors(
 pub struct ValidatedJson<T>(pub T);
 
 #[async_trait]
-impl<T, S, B> FromRequest<S, B> for ValidatedJson<T>
+impl<T, S> FromRequest<S> for ValidatedJson<T>
 where
     T: DeserializeOwned + Validate,
     S: Send + Sync,
-    B: HttpBody + Send + 'static,
-    B::Data: Send,
-    B::Error: Into<BoxError>,
 {
     type Rejection = Error;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self> {
+    async fn from_request(req: Request, state: &S) -> Result<Self> {
         let b = bytes::Bytes::from_request(req, state).await.map_err(|e| {
             tracing::error!("Error reading body as bytes: {}", e);
 

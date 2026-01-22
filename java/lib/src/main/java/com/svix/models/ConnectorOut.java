@@ -21,22 +21,51 @@ import java.util.Set;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonAutoDetect(getterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
 public class ConnectorOut {
+    @JsonProperty private Set<String> allowedEventTypes;
     @JsonProperty private OffsetDateTime createdAt;
     @JsonProperty private String description;
-    @JsonProperty private String featureFlag;
     @JsonProperty private Set<String> featureFlags;
-    @JsonProperty private Set<String> filterTypes;
     @JsonProperty private String id;
     @JsonProperty private String instructions;
-    @JsonProperty private URI instructionsLink;
     @JsonProperty private ConnectorKind kind;
     @JsonProperty private URI logo;
     @JsonProperty private String name;
     @JsonProperty private String orgId;
+    @JsonProperty private ConnectorProduct productType;
     @JsonProperty private String transformation;
+    @JsonProperty private OffsetDateTime transformationUpdatedAt;
+    @JsonProperty private String uid;
     @JsonProperty private OffsetDateTime updatedAt;
 
     public ConnectorOut() {}
+
+    public ConnectorOut allowedEventTypes(Set<String> allowedEventTypes) {
+        this.allowedEventTypes = allowedEventTypes;
+        return this;
+    }
+
+    public ConnectorOut addAllowedEventTypesItem(String allowedEventTypesItem) {
+        if (this.allowedEventTypes == null) {
+            this.allowedEventTypes = new LinkedHashSet<>();
+        }
+        this.allowedEventTypes.add(allowedEventTypesItem);
+
+        return this;
+    }
+
+    /**
+     * Get allowedEventTypes
+     *
+     * @return allowedEventTypes
+     */
+    @javax.annotation.Nullable
+    public Set<String> getAllowedEventTypes() {
+        return allowedEventTypes;
+    }
+
+    public void setAllowedEventTypes(Set<String> allowedEventTypes) {
+        this.allowedEventTypes = allowedEventTypes;
+    }
 
     public ConnectorOut createdAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
@@ -76,25 +105,6 @@ public class ConnectorOut {
         this.description = description;
     }
 
-    public ConnectorOut featureFlag(String featureFlag) {
-        this.featureFlag = featureFlag;
-        return this;
-    }
-
-    /**
-     * Get featureFlag
-     *
-     * @return featureFlag
-     */
-    @javax.annotation.Nullable
-    public String getFeatureFlag() {
-        return featureFlag;
-    }
-
-    public void setFeatureFlag(String featureFlag) {
-        this.featureFlag = featureFlag;
-    }
-
     public ConnectorOut featureFlags(Set<String> featureFlags) {
         this.featureFlags = featureFlags;
         return this;
@@ -121,34 +131,6 @@ public class ConnectorOut {
 
     public void setFeatureFlags(Set<String> featureFlags) {
         this.featureFlags = featureFlags;
-    }
-
-    public ConnectorOut filterTypes(Set<String> filterTypes) {
-        this.filterTypes = filterTypes;
-        return this;
-    }
-
-    public ConnectorOut addFilterTypesItem(String filterTypesItem) {
-        if (this.filterTypes == null) {
-            this.filterTypes = new LinkedHashSet<>();
-        }
-        this.filterTypes.add(filterTypesItem);
-
-        return this;
-    }
-
-    /**
-     * Get filterTypes
-     *
-     * @return filterTypes
-     */
-    @javax.annotation.Nullable
-    public Set<String> getFilterTypes() {
-        return filterTypes;
-    }
-
-    public void setFilterTypes(Set<String> filterTypes) {
-        this.filterTypes = filterTypes;
     }
 
     public ConnectorOut id(String id) {
@@ -189,25 +171,6 @@ public class ConnectorOut {
         this.instructions = instructions;
     }
 
-    public ConnectorOut instructionsLink(URI instructionsLink) {
-        this.instructionsLink = instructionsLink;
-        return this;
-    }
-
-    /**
-     * Get instructionsLink
-     *
-     * @return instructionsLink
-     */
-    @javax.annotation.Nullable
-    public URI getInstructionsLink() {
-        return instructionsLink;
-    }
-
-    public void setInstructionsLink(URI instructionsLink) {
-        this.instructionsLink = instructionsLink;
-    }
-
     public ConnectorOut kind(ConnectorKind kind) {
         this.kind = kind;
         return this;
@@ -237,7 +200,7 @@ public class ConnectorOut {
      *
      * @return logo
      */
-    @javax.annotation.Nonnull
+    @javax.annotation.Nullable
     public URI getLogo() {
         return logo;
     }
@@ -284,6 +247,25 @@ public class ConnectorOut {
         this.orgId = orgId;
     }
 
+    public ConnectorOut productType(ConnectorProduct productType) {
+        this.productType = productType;
+        return this;
+    }
+
+    /**
+     * Get productType
+     *
+     * @return productType
+     */
+    @javax.annotation.Nonnull
+    public ConnectorProduct getProductType() {
+        return productType;
+    }
+
+    public void setProductType(ConnectorProduct productType) {
+        this.productType = productType;
+    }
+
     public ConnectorOut transformation(String transformation) {
         this.transformation = transformation;
         return this;
@@ -301,6 +283,44 @@ public class ConnectorOut {
 
     public void setTransformation(String transformation) {
         this.transformation = transformation;
+    }
+
+    public ConnectorOut transformationUpdatedAt(OffsetDateTime transformationUpdatedAt) {
+        this.transformationUpdatedAt = transformationUpdatedAt;
+        return this;
+    }
+
+    /**
+     * Get transformationUpdatedAt
+     *
+     * @return transformationUpdatedAt
+     */
+    @javax.annotation.Nonnull
+    public OffsetDateTime getTransformationUpdatedAt() {
+        return transformationUpdatedAt;
+    }
+
+    public void setTransformationUpdatedAt(OffsetDateTime transformationUpdatedAt) {
+        this.transformationUpdatedAt = transformationUpdatedAt;
+    }
+
+    public ConnectorOut uid(String uid) {
+        this.uid = uid;
+        return this;
+    }
+
+    /**
+     * The Connector's UID.
+     *
+     * @return uid
+     */
+    @javax.annotation.Nullable
+    public String getUid() {
+        return uid;
+    }
+
+    public void setUid(String uid) {
+        this.uid = uid;
     }
 
     public ConnectorOut updatedAt(OffsetDateTime updatedAt) {

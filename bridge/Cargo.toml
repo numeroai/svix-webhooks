@@ -12,11 +12,15 @@ members = [
     "svix-bridge-plugin-kafka",
 ]
 
+[workspace.package]
+version = "1.84.1"
+
 [workspace.lints.rust]
 rust_2018_idioms = { level = "warn", priority = -1 }
 trivial_numeric_casts = "warn"
 
 [workspace.lints.clippy]
+clone_on_ref_ptr = "warn"
 cloned_instead_of_copied = "warn"
 dbg_macro = "warn"
 inefficient_to_string = "warn"
@@ -32,7 +36,7 @@ svix-bridge-types = { path = "svix-bridge-types" }
 thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["macros", "time", "rt-multi-thread", "sync"] }
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 wiremock = "0.6.0"
 
 [profile.dev.package]

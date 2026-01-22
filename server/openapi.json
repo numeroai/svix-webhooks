@@ -3,6 +3,11 @@
         "schemas": {
             "AppPortalAccessIn": {
                 "properties": {
+                    "application": {
+                        "$ref": "#/components/schemas/ApplicationIn",
+                        "description": "Optionally creates a new application alongside the message.\n\nIf the application id or uid that is used in the path already exists, this argument is ignored.",
+                        "nullable": true
+                    },
                     "featureFlags": {
                         "description": "The set of feature flags the created token will have access to.",
                         "example": [],
@@ -726,13 +731,6 @@
                         "minimum": 0,
                         "nullable": true,
                         "type": "integer"
-                    },
-                    "secret": {
-                        "description": "The endpoint's verification secret. If `null` is passed, a secret is automatically generated. Format: `base64` encoded random bytes optionally prefixed with `whsec_`. Recommended size: 24.",
-                        "example": "whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD",
-                        "nullable": true,
-                        "pattern": "^(whsec_)?[a-zA-Z0-9+/=]{32,100}$",
-                        "type": "string"
                     },
                     "uid": {
                         "example": "unique-ep-identifier",
@@ -1532,6 +1530,9 @@
                     "status": {
                         "$ref": "#/components/schemas/MessageStatus"
                     },
+                    "statusText": {
+                        "$ref": "#/components/schemas/MessageStatusText"
+                    },
                     "timestamp": {
                         "format": "date-time",
                         "type": "string"
@@ -1555,6 +1556,7 @@
                     "responseDurationMs",
                     "responseStatusCode",
                     "status",
+                    "statusText",
                     "timestamp",
                     "triggerType",
                     "url"
@@ -1718,6 +1720,9 @@
                     "status": {
                         "$ref": "#/components/schemas/MessageStatus"
                     },
+                    "statusText": {
+                        "$ref": "#/components/schemas/MessageStatusText"
+                    },
                     "timestamp": {
                         "format": "date-time",
                         "type": "string"
@@ -1741,6 +1746,7 @@
                     "responseDurationMs",
                     "responseStatusCode",
                     "status",
+                    "statusText",
                     "timestamp",
                     "triggerType",
                     "url"
@@ -1931,6 +1937,11 @@
             },
             "MessageIn": {
                 "properties": {
+                    "application": {
+                        "$ref": "#/components/schemas/ApplicationIn",
+                        "description": "Optionally creates a new application alongside the message.\n\nIf the application id or uid that is used in the path already exists, this argument is ignored.",
+                        "nullable": true
+                    },
                     "channels": {
                         "description": "List of free-form identifiers that endpoints can filter by",
                         "example": [
@@ -2062,6 +2073,15 @@
                     "Sending"
                 ]
             },
+            "MessageStatusText": {
+                "enum": [
+                    "success",
+                    "pending",
+                    "fail",
+                    "sending"
+                ],
+                "type": "string"
+            },
             "Ordering": {
                 "description": "Defines the ordering in a listing of results.",
                 "enum": [
@@ -2152,6 +2172,13 @@
                     "type"
                 ],
                 "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "HTTPBearer": {
+                "description": "HTTP Bearer token passed in the `Authorization` header",
+                "scheme": "bearer",
+                "type": "http"
             }
         }
     },
@@ -5285,6 +5312,19 @@
                         "style": "form"
                     },
                     {
+                        "in": "path",
+                        "name": "app_id",
+                        "required": true,
+                        "schema": {
+                            "example": "unique-app-identifier",
+                            "maxLength": 256,
+                            "minLength": 1,
+                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
+                            "type": "string"
+                        },
+                        "style": "simple"
+                    },
+                    {
                         "description": "The request's idempotency key",
                         "in": "header",
                         "name": "idempotency-key",
@@ -7009,30 +7049,6 @@
                     }
                 },
                 "summary": "Create Event Type",
-                "tags": [
-                    "Event Type"
-                ]
-            }
-        },
-        "/api/v1/event-type/schema/generate-example": {
-            "post": {
-                "description": "Generates a fake example from the given JSONSchema",
-                "parameters": [
-                    {
-                        "description": "The request's idempotency key",
-                        "in": "header",
-                        "name": "idempotency-key",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "no content"
-                    }
-                },
                 "tags": [
                     "Event Type"
                 ]

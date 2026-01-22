@@ -3,12 +3,14 @@
 module Svix
   class ConnectorKind
     CUSTOM = "Custom".freeze
+    AGENTIC_COMMERCE_PROTOCOL = "AgenticCommerceProtocol".freeze
     CLOSE_CRM = "CloseCRM".freeze
     CUSTOMER_IO = "CustomerIO".freeze
     DISCORD = "Discord".freeze
     HUBSPOT = "Hubspot".freeze
     INNGEST = "Inngest".freeze
     LOOPS = "Loops".freeze
+    OTEL = "Otel".freeze
     RESEND = "Resend".freeze
     SALESFORCE = "Salesforce".freeze
     SEGMENT = "Segment".freeze
@@ -22,12 +24,14 @@ module Svix
     def self.all_vars
       @all_vars ||= [
         CUSTOM,
+        AGENTIC_COMMERCE_PROTOCOL,
         CLOSE_CRM,
         CUSTOMER_IO,
         DISCORD,
         HUBSPOT,
         INNGEST,
         LOOPS,
+        OTEL,
         RESEND,
         SALESFORCE,
         SEGMENT,

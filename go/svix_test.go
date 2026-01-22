@@ -47,6 +47,71 @@ var endpointOurStr = `
   "updatedAt": "2019-08-24T14:15:22Z"
 }`
 
+var listAttemptOut = `{
+  "data": [
+    {
+      "url": "https://example.com/webhook/",
+      "response": "{}",
+      "responseStatusCode": 200,
+      "responseDurationMs": 0,
+      "status": 0,
+      "statusText": "success",
+      "triggerType": 0,
+      "msgId": "msg_1srOrx2ZWZBpBUvZwXKQmoEYga2",
+      "endpointId": "ep_1srOrx2ZWZBpBUvZwXKQmoEYga2",
+      "id": "atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2",
+      "timestamp": "2019-08-24T14:15:22Z",
+      "msg": {
+        "eventId": "unique-identifier",
+        "eventType": "user.signup",
+        "payload": {
+          "email": "test@example.com",
+          "type": "user.created",
+          "username": "test_user"
+        },
+        "channels": [
+          "project_123",
+          "group_2"
+        ],
+        "id": "msg_1srOrx2ZWZBpBUvZwXKQmoEYga2",
+        "timestamp": "2019-08-24T14:15:22Z",
+        "tags": [
+          "project_1337"
+        ]
+      }
+    }
+  ],
+  "iterator": "iterator",
+  "prevIterator": "-iterator",
+  "done": true
+}`
+var MsgOut = `{
+  "eventId": "unique-identifier",
+  "eventType": "user.signup",
+  "payload": {
+    "email": "test@example.com",
+    "type": "user.created",
+    "username": "test_user"
+  },
+  "channels": [
+    "project_123",
+    "group_2"
+  ],
+  "application": {
+    "name": "My first application",
+    "rateLimit": 1,
+    "uid": "unique-identifier",
+    "metadata": {}
+  },
+  "tags": [
+    "my_tag",
+    "other"
+  ],
+  "transformationsParams": {},
+  "payloadRetentionPeriod": 90,
+  "payloadRetentionHours": null
+}`
+
 // Builds an API client for testing against an arbitrary API server with an arbitrary token.
 //
 // The connection details are pulled from the environment, e.g. `SVIX_TOKEN` and `SVIX_SERVER_URL`.
@@ -748,4 +813,78 @@ func TestReadStructEnumField(t *testing.T) {
 		t.Fatal("Unexpected type for Config")
 	}
 
+}
+
+func TestUnknownKeysAreIgnored(t *testing.T) {
+	ctx := context.Background()
+	svx := newMockClient()
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder("GET", "http://testapi.test/api/v1/app",
+		func(r *http.Request) (*http.Response, error) {
+			return httpmock.NewStringResponse(200, `{"data":[],"done":true,"iterator":null,"prevIterator":null,"extra-key":"ignored"}`), nil
+		},
+	)
+	_, err := svx.Application.List(ctx, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+}
+
+func TestDatetimeInQueryParam(t *testing.T) {
+	ctx := context.Background()
+	svx := newMockClient()
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	expectedTime := time.Date(2019, 8, 24, 14, 15, 22, 0, time.UTC)
+
+	httpmock.RegisterResponder("GET", "http://testapi.test/api/v1/app/app1/attempt/endpoint/endp",
+		func(r *http.Request) (*http.Response, error) {
+			queryParams := r.URL.Query()
+			beforeParam := queryParams.Get("before")
+			if beforeParam != "2019-08-24T14:15:22Z" {
+				t.Errorf("Expected before param to be '2019-08-24T14:15:22Z', got '%s'", beforeParam)
+			}
+			return httpmock.NewStringResponse(200, listAttemptOut), nil
+		},
+	)
+
+	opts := svix.MessageAttemptListByEndpointOptions{
+		Before: &expectedTime,
+	}
+	_, err := svx.MessageAttempt.ListByEndpoint(ctx, "app1", "endp", &opts)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMsgInRaw(t *testing.T) {
+
+	ctx := context.Background()
+	svx := newMockClient()
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder("POST", "http://testapi.test/api/v1/app/app1/msg", func(r *http.Request) (*http.Response, error) {
+		defer r.Body.Close()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+		}
+		bodyStr := string(body)
+		expectedBody := `{"eventType":"ev-ty","payload":{},"transformationsParams":{"headers":{"content-type":"custom/non-standard"},"rawPayload":"raw payload"}}`
+		if bodyStr != expectedBody {
+			t.Errorf("Unexpected body %s", bodyStr)
+		}
+		return httpmock.NewStringResponse(200, MsgOut), nil
+
+	})
+
+	contentType := "custom/non-standard"
+	_, err := svx.Message.Create(ctx, "app1", *svix.NewMessageInRaw("ev-ty", "raw payload", &contentType), nil)
+	if err != nil {
+		t.Error(err)
+	}
 }

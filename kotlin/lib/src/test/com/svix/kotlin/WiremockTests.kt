@@ -1,10 +1,10 @@
 package com.svix.kotlin
 
-import SvixOptions
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
+import com.svix.kotlin.SvixOptions
 import com.svix.kotlin.exceptions.ApiException
 import com.svix.kotlin.models.*
 import kotlin.test.assertEquals
@@ -479,6 +479,21 @@ class WiremockTests {
         1,
         postRequestedFor(urlEqualTo("/api/v1/app"))
             .withHeader("idempotency-key", equalTo(clientProvidedKey)),
+    )
+  }
+
+  @Test
+  fun testUnknownKeysAreIgnored() {
+    val res =
+        """{"data": [],"iterator": "iterator","prevIterator": "-iterator","done": true,"extra-field": "ignored"}"""
+    val svx = testClient()
+    wireMockServer.stubFor(get(urlEqualTo("/api/v1/app")).willReturn(ok().withBody(res)))
+
+    runBlocking { svx.application.list() }
+
+    wireMockServer.verify(
+        1,
+        getRequestedFor(urlEqualTo("/api/v1/app")),
     )
   }
 }
