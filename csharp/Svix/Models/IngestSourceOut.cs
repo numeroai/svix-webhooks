@@ -134,6 +134,9 @@ namespace Svix.Models
         public static IngestSourceOutConfig Lithic(SvixConfigOut svixConfigOut) =>
             new(svixConfigOut, ConfigType.Lithic);
 
+        public static IngestSourceOutConfig Meta(MetaConfigOut metaConfigOut) =>
+            new(metaConfigOut, ConfigType.Meta);
+
         public static IngestSourceOutConfig Nash(SvixConfigOut svixConfigOut) =>
             new(svixConfigOut, ConfigType.Nash);
 
@@ -145,6 +148,9 @@ namespace Svix.Models
 
         public static IngestSourceOutConfig PortIo(PortIoConfigOut portIoConfigOut) =>
             new(portIoConfigOut, ConfigType.PortIo);
+
+        public static IngestSourceOutConfig PsiFi(SvixConfigOut svixConfigOut) =>
+            new(svixConfigOut, ConfigType.PsiFi);
 
         public static IngestSourceOutConfig Pleo(SvixConfigOut svixConfigOut) =>
             new(svixConfigOut, ConfigType.Pleo);
@@ -203,6 +209,9 @@ namespace Svix.Models
         public static IngestSourceOutConfig Airwallex(AirwallexConfigOut airwallexConfigOut) =>
             new(airwallexConfigOut, ConfigType.Airwallex);
 
+        public static IngestSourceOutConfig Vgs(VgsConfigOut vgsConfigOut) =>
+            new(vgsConfigOut, ConfigType.Vgs);
+
         private enum ConfigType
         {
             [EnumMember(Value = "generic-webhook")]
@@ -247,6 +256,9 @@ namespace Svix.Models
             [EnumMember(Value = "lithic")]
             Lithic,
 
+            [EnumMember(Value = "meta")]
+            Meta,
+
             [EnumMember(Value = "nash")]
             Nash,
 
@@ -258,6 +270,9 @@ namespace Svix.Models
 
             [EnumMember(Value = "port-io")]
             PortIo,
+
+            [EnumMember(Value = "psi-fi")]
+            PsiFi,
 
             [EnumMember(Value = "pleo")]
             Pleo,
@@ -315,6 +330,9 @@ namespace Svix.Models
 
             [EnumMember(Value = "airwallex")]
             Airwallex,
+
+            [EnumMember(Value = "vgs")]
+            Vgs,
         }
 
         public TResult Match<TResult>(
@@ -332,10 +350,12 @@ namespace Svix.Models
             Func<HubspotConfigOut, TResult> onHubspot,
             Func<SvixConfigOut, TResult> onIncidentIo,
             Func<SvixConfigOut, TResult> onLithic,
+            Func<MetaConfigOut, TResult> onMeta,
             Func<SvixConfigOut, TResult> onNash,
             Func<OrumIoConfigOut, TResult> onOrumIo,
             Func<PandaDocConfigOut, TResult> onPandaDoc,
             Func<PortIoConfigOut, TResult> onPortIo,
+            Func<SvixConfigOut, TResult> onPsiFi,
             Func<SvixConfigOut, TResult> onPleo,
             Func<SvixConfigOut, TResult> onReplicate,
             Func<SvixConfigOut, TResult> onResend,
@@ -354,7 +374,8 @@ namespace Svix.Models
             Func<SvixConfigOut, TResult> onOpenAi,
             Func<SvixConfigOut, TResult> onRender,
             Func<VeriffConfigOut, TResult> onVeriff,
-            Func<AirwallexConfigOut, TResult> onAirwallex
+            Func<AirwallexConfigOut, TResult> onAirwallex,
+            Func<VgsConfigOut, TResult> onVgs
         )
         {
             return _type switch
@@ -373,10 +394,12 @@ namespace Svix.Models
                 ConfigType.Hubspot => onHubspot((HubspotConfigOut)_value),
                 ConfigType.IncidentIo => onIncidentIo((SvixConfigOut)_value),
                 ConfigType.Lithic => onLithic((SvixConfigOut)_value),
+                ConfigType.Meta => onMeta((MetaConfigOut)_value),
                 ConfigType.Nash => onNash((SvixConfigOut)_value),
                 ConfigType.OrumIo => onOrumIo((OrumIoConfigOut)_value),
                 ConfigType.PandaDoc => onPandaDoc((PandaDocConfigOut)_value),
                 ConfigType.PortIo => onPortIo((PortIoConfigOut)_value),
+                ConfigType.PsiFi => onPsiFi((SvixConfigOut)_value),
                 ConfigType.Pleo => onPleo((SvixConfigOut)_value),
                 ConfigType.Replicate => onReplicate((SvixConfigOut)_value),
                 ConfigType.Resend => onResend((SvixConfigOut)_value),
@@ -396,6 +419,7 @@ namespace Svix.Models
                 ConfigType.Render => onRender((SvixConfigOut)_value),
                 ConfigType.Veriff => onVeriff((VeriffConfigOut)_value),
                 ConfigType.Airwallex => onAirwallex((AirwallexConfigOut)_value),
+                ConfigType.Vgs => onVgs((VgsConfigOut)_value),
                 // unreachable
                 _ => throw new InvalidOperationException("Unknown config type"),
             };
@@ -416,10 +440,12 @@ namespace Svix.Models
             Action<HubspotConfigOut> onHubspot,
             Action<SvixConfigOut> onIncidentIo,
             Action<SvixConfigOut> onLithic,
+            Action<MetaConfigOut> onMeta,
             Action<SvixConfigOut> onNash,
             Action<OrumIoConfigOut> onOrumIo,
             Action<PandaDocConfigOut> onPandaDoc,
             Action<PortIoConfigOut> onPortIo,
+            Action<SvixConfigOut> onPsiFi,
             Action<SvixConfigOut> onPleo,
             Action<SvixConfigOut> onReplicate,
             Action<SvixConfigOut> onResend,
@@ -438,7 +464,8 @@ namespace Svix.Models
             Action<SvixConfigOut> onOpenAi,
             Action<SvixConfigOut> onRender,
             Action<VeriffConfigOut> onVeriff,
-            Action<AirwallexConfigOut> onAirwallex
+            Action<AirwallexConfigOut> onAirwallex,
+            Action<VgsConfigOut> onVgs
         )
         {
             switch (_type)
@@ -485,6 +512,9 @@ namespace Svix.Models
                 case ConfigType.Lithic:
                     onLithic((SvixConfigOut)_value);
                     break;
+                case ConfigType.Meta:
+                    onMeta((MetaConfigOut)_value);
+                    break;
                 case ConfigType.Nash:
                     onNash((SvixConfigOut)_value);
                     break;
@@ -496,6 +526,9 @@ namespace Svix.Models
                     break;
                 case ConfigType.PortIo:
                     onPortIo((PortIoConfigOut)_value);
+                    break;
+                case ConfigType.PsiFi:
+                    onPsiFi((SvixConfigOut)_value);
                     break;
                 case ConfigType.Pleo:
                     onPleo((SvixConfigOut)_value);
@@ -553,6 +586,9 @@ namespace Svix.Models
                     break;
                 case ConfigType.Airwallex:
                     onAirwallex((AirwallexConfigOut)_value);
+                    break;
+                case ConfigType.Vgs:
+                    onVgs((VgsConfigOut)_value);
                     break;
                 default:
                     // unreachable
@@ -677,10 +713,12 @@ namespace Svix.Models
             ["hubspot"] = c => IngestSourceOutConfig.Hubspot(ToObj<HubspotConfigOut>(c)),
             ["incident-io"] = c => IngestSourceOutConfig.IncidentIo(ToObj<SvixConfigOut>(c)),
             ["lithic"] = c => IngestSourceOutConfig.Lithic(ToObj<SvixConfigOut>(c)),
+            ["meta"] = c => IngestSourceOutConfig.Meta(ToObj<MetaConfigOut>(c)),
             ["nash"] = c => IngestSourceOutConfig.Nash(ToObj<SvixConfigOut>(c)),
             ["orum-io"] = c => IngestSourceOutConfig.OrumIo(ToObj<OrumIoConfigOut>(c)),
             ["panda-doc"] = c => IngestSourceOutConfig.PandaDoc(ToObj<PandaDocConfigOut>(c)),
             ["port-io"] = c => IngestSourceOutConfig.PortIo(ToObj<PortIoConfigOut>(c)),
+            ["psi-fi"] = c => IngestSourceOutConfig.PsiFi(ToObj<SvixConfigOut>(c)),
             ["pleo"] = c => IngestSourceOutConfig.Pleo(ToObj<SvixConfigOut>(c)),
             ["replicate"] = c => IngestSourceOutConfig.Replicate(ToObj<SvixConfigOut>(c)),
             ["resend"] = c => IngestSourceOutConfig.Resend(ToObj<SvixConfigOut>(c)),
@@ -700,6 +738,7 @@ namespace Svix.Models
             ["render"] = c => IngestSourceOutConfig.Render(ToObj<SvixConfigOut>(c)),
             ["veriff"] = c => IngestSourceOutConfig.Veriff(ToObj<VeriffConfigOut>(c)),
             ["airwallex"] = c => IngestSourceOutConfig.Airwallex(ToObj<AirwallexConfigOut>(c)),
+            ["vgs"] = c => IngestSourceOutConfig.Vgs(ToObj<VgsConfigOut>(c)),
         };
     }
 }

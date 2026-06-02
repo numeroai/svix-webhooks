@@ -22,7 +22,8 @@ class SvixHttpClient
         private string $token,
         private \GuzzleHttp\Client $guzzleClient,
         private SvixOptions $opts
-    ) {}
+    ) {
+    }
 
     public function newReq(
         string $method,
@@ -32,18 +33,26 @@ class SvixHttpClient
         return new SvixRequest($method, $url);
     }
 
+    /**
+     * @throws ApiException
+     */
     public function send(SvixRequest $req): ?string
     {
         $response = $this->sendInner($req);
         return $response['body'];
     }
 
+    /**
+     * @throws ApiException
+     */
     public function sendNoResponseBody(SvixRequest $req): void
     {
         $this->sendInner($req);
     }
 
-
+    /**
+     * @throws ApiException
+     */
     private function sendInner(SvixRequest $req): array
     {
         // Set idempotency key for POST requests
@@ -60,7 +69,7 @@ class SvixHttpClient
             // Build headers
             $headers = array_merge([
                 'Authorization' => 'Bearer ' . $this->token,
-                'User-Agent' => 'svix-libs/' . Version::VERSION . '/php',
+                'User-Agent' => 'svix-libs/' . Version::VERSION . '/php' . ' php/' . phpversion() . ' ' . php_uname('s') . '/' . php_uname('m'),
                 'svix-req-id' => (string)random_int(0, PHP_INT_MAX),
             ], $req->headerParams);
 

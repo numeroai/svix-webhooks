@@ -13,6 +13,10 @@ module Svix
       end
 
       @secret = Base64.decode64(secret)
+
+      if @secret.empty?
+        raise EmptyWebhookSecretError, "Webhook secret must not be blank"
+      end
     end
 
     def verify(payload, headers)
@@ -40,6 +44,7 @@ module Svix
         end
 
         if ::Svix::secure_compare(signature, expectedSignature)
+          return nil if payload.empty?
           return JSON.parse(payload, symbolize_names: true)
         end
       end

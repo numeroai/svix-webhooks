@@ -2,24 +2,25 @@
 // SPDX-Licensepub(crate) -Identifier: MIT
 
 use std::{
-    collections::HashMap,
     sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc, LazyLock,
+        atomic::{AtomicU64, AtomicUsize, Ordering},
     },
     time::Duration,
 };
 
-use base64::{engine::general_purpose::STANDARD, Engine};
-use chrono::Utc;
+use base64::{Engine, engine::general_purpose::STANDARD};
+use chrono::{DateTime, Utc};
 use futures::future;
-use http::{HeaderValue, StatusCode, Version};
+use http::{
+    HeaderMap, HeaderName, HeaderValue, StatusCode, Version,
+    header::{CONTENT_TYPE, RETRY_AFTER, USER_AGENT},
+};
 use http_body_util::BodyExt as _;
 use itertools::Itertools;
-use rand::Rng;
 use sea_orm::{
-    prelude::DateTimeUtc, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait,
-    QueryFilter, QueryOrder, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
+    prelude::DateTimeUtc,
 };
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
@@ -28,7 +29,7 @@ use tracing::Instrument;
 use crate::{
     cfg::Configuration,
     core::{
-        cache::{kv_def, Cache, CacheBehavior, CacheKey, CacheValue},
+        cache::{Cache, CacheBehavior, CacheKey, CacheValue, kv_def},
         cryptography::Encryption,
         message_app::{CreateMessageApp, CreateMessageEndpoint},
         operational_webhooks::{
@@ -36,8 +37,8 @@ use crate::{
             OperationalWebhookSender,
         },
         types::{
-            ApplicationId, ApplicationUid, BaseId, EndpointHeaders, EndpointId,
-            EndpointSecretInternal, EndpointSecretType, MessageAttemptId,
+            ApplicationId, ApplicationUid, BaseId, CasePreservingHeaderMap, EndpointHeaders,
+            EndpointId, EndpointSecretInternal, EndpointSecretType, MessageAttemptId,
             MessageAttemptTriggerType, MessageId, MessageStatus, MessageUid, OrganizationId,
         },
         webhook_http_client::{Error as WebhookClientError, RequestBuilder, WebhookClient},
@@ -48,14 +49,22 @@ use crate::{
     v1::utils::get_unix_timestamp,
 };
 
-pub type CaseSensitiveHeaderMap = HashMap<String, HeaderValue>;
-
 // The maximum variation from the retry schedule when applying jitter to a resent webhook event in
 // percent deviation
 const JITTER_DELTA: f32 = 0.2;
 const OVERLOAD_PENALTY_SECS: u64 = 60;
 
-const USER_AGENT: &str = concat!("Svix-Webhooks/", env!("CARGO_PKG_VERSION"));
+const OUR_USER_AGENT: HeaderValue =
+    HeaderValue::from_static(concat!("Svix-Webhooks/", env!("CARGO_PKG_VERSION")));
+const APPLICATION_JSON: HeaderValue = HeaderValue::from_static("application/json");
+
+pub const WEBHOOK_ID: HeaderName = HeaderName::from_static("webhook-id");
+pub const WEBHOOK_TIMESTAMP: HeaderName = HeaderName::from_static("webhook-timestamp");
+pub const WEBHOOK_SIGNATURE: HeaderName = HeaderName::from_static("webhook-signature");
+
+pub const SVIX_ID: HeaderName = HeaderName::from_static("svix-id");
+pub const SVIX_TIMESTAMP: HeaderName = HeaderName::from_static("svix-timestamp");
+pub const SVIX_SIGNATURE: HeaderName = HeaderName::from_static("svix-signature");
 
 /// Send the MessageAttemptFailingEvent after exceeding this number of failed attempts
 const OP_WEBHOOKS_SEND_FAILING_EVENT_AFTER: usize = 4;
@@ -194,8 +203,8 @@ fn generate_msg_headers(
     whitelabel_headers: bool,
     configured_headers: Option<&EndpointHeaders>,
     _endpoint_url: &str,
-) -> Result<CaseSensitiveHeaderMap> {
-    let mut headers = CaseSensitiveHeaderMap::new();
+) -> Result<CasePreservingHeaderMap> {
+    let mut headers = CasePreservingHeaderMap::new();
     let id_hdr = msg_id
         .0
         .parse()
@@ -208,27 +217,23 @@ fn generate_msg_headers(
         .parse()
         .map_err(|e| Error::generic(format_args!("Error parsing message signatures: {e:?}")))?;
     if whitelabel_headers {
-        headers.insert("webhook-id".to_owned(), id_hdr);
-        headers.insert("webhook-timestamp".to_owned(), timestamp);
-        headers.insert("webhook-signature".to_owned(), signatures_str);
+        headers.insert(WEBHOOK_ID, id_hdr);
+        headers.insert(WEBHOOK_TIMESTAMP, timestamp);
+        headers.insert(WEBHOOK_SIGNATURE, signatures_str);
     } else {
-        headers.insert("svix-id".to_owned(), id_hdr);
-        headers.insert("svix-timestamp".to_owned(), timestamp);
-        headers.insert("svix-signature".to_owned(), signatures_str);
+        headers.insert(SVIX_ID, id_hdr);
+        headers.insert(SVIX_TIMESTAMP, timestamp);
+        headers.insert(SVIX_SIGNATURE, signatures_str);
     }
-    headers.insert(
-        "user-agent".to_owned(),
-        USER_AGENT.to_string().parse().unwrap(),
-    );
-    headers.insert(
-        "content-type".to_owned(),
-        "application/json".parse().unwrap(),
-    );
+    headers.insert(USER_AGENT, OUR_USER_AGENT);
+    headers.insert(CONTENT_TYPE, APPLICATION_JSON);
     if let Some(configured_headers) = configured_headers {
         for (k, v) in &configured_headers.0 {
             match v.parse() {
                 Ok(v) => {
-                    headers.insert(k.clone(), v);
+                    if let Err(e) = headers.try_insert(k, v) {
+                        tracing::error!("Invalid HeaderName {}: {}", k, e);
+                    }
                 }
                 Err(e) => {
                     tracing::error!("Invalid HeaderValue {}: {}", v, e);
@@ -250,7 +255,12 @@ struct WorkerContext<'a> {
     webhook_client: &'a WebhookClient,
 }
 
-struct FailedDispatch(messageattempt::ActiveModel, Error);
+struct FailedDispatch {
+    attempt: messageattempt::ActiveModel,
+    err: Error,
+    retry_after: Option<DateTime<Utc>>,
+}
+
 struct SuccessfulDispatch(messageattempt::ActiveModel);
 
 #[allow(clippy::large_enum_variant)]
@@ -263,7 +273,7 @@ enum IncompleteDispatch {
 struct PendingDispatch {
     method: http::Method,
     url: String,
-    headers: CaseSensitiveHeaderMap,
+    headers: CasePreservingHeaderMap,
     payload: String,
     request_timeout: u64,
     created_at: DateTimeUtc,
@@ -382,7 +392,8 @@ async fn make_http_call(
                 None
             };
 
-            let body = match res.into_body().collect().await {
+            let (res_parts, body) = res.into_parts();
+            let body = match body.collect().await {
                 Ok(collected) => {
                     let bytes = collected.to_bytes();
                     if bytes.len() > RESPONSE_MAX_SIZE {
@@ -403,10 +414,14 @@ async fn make_http_call(
             };
 
             match http_error {
-                Some(err) => Ok(CompletedDispatch::Failed(FailedDispatch(
-                    attempt,
-                    Error::generic(err),
-                ))),
+                Some(err) => {
+                    let retry_after = retry_after(&res_parts.headers);
+                    Ok(CompletedDispatch::Failed(FailedDispatch {
+                        attempt,
+                        err: Error::generic(err),
+                        retry_after,
+                    }))
+                }
                 None => Ok(CompletedDispatch::Successful(SuccessfulDispatch(attempt))),
             }
         }
@@ -414,16 +429,17 @@ async fn make_http_call(
             // For errors, we still calculate the duration
             let duration_ms = (Utc::now() - created_at).num_milliseconds();
 
-            Ok(CompletedDispatch::Failed(FailedDispatch(
-                messageattempt::ActiveModel {
+            Ok(CompletedDispatch::Failed(FailedDispatch {
+                attempt: messageattempt::ActiveModel {
                     response_status_code: Set(0),
                     response: Set(err.to_string()),
                     status: Set(MessageStatus::Fail),
                     response_duration_ms: Set(duration_ms),
                     ..attempt
                 },
-                err.into(),
-            )))
+                err: err.into(),
+                retry_after: None,
+            }))
         }
     }
 }
@@ -481,7 +497,32 @@ async fn handle_successful_dispatch(
     Ok(())
 }
 
-fn calculate_retry_delay(duration: Duration, err: &Error) -> Duration {
+fn retry_after(hdr_map: &HeaderMap) -> Option<DateTime<Utc>> {
+    let retry_after = hdr_map.get(RETRY_AFTER)?;
+    let retry_after_str = retry_after.to_str().ok()?;
+
+    if let Ok(date) = DateTime::parse_from_rfc2822(retry_after_str) {
+        return Some(date.with_timezone(&Utc));
+    }
+
+    if let Ok(seconds_f64) = retry_after_str.parse::<f64>() {
+        let seconds = seconds_f64.ceil() as i64;
+        return Some(Utc::now() + chrono::Duration::seconds(seconds));
+    }
+
+    tracing::warn!("Failed to parse retry-after header: {retry_after_str}");
+    None
+}
+
+fn limit_retry_delay(base: Duration, retry_after: Duration) -> Duration {
+    retry_after.clamp(base, base * 2)
+}
+
+fn calculate_retry_delay(
+    duration: Duration,
+    err: &Error,
+    retry_after: Option<DateTime<Utc>>,
+) -> Duration {
     let duration = if matches!(err.typ, ErrorType::Timeout(_))
         || matches!(err.typ, ErrorType::Http(HttpError { status, .. }) if status == StatusCode::TOO_MANY_REQUESTS)
     {
@@ -489,9 +530,18 @@ fn calculate_retry_delay(duration: Duration, err: &Error) -> Duration {
     } else {
         duration
     };
+
+    let duration = if let Some(retry_after) = retry_after {
+        let retry_after = (retry_after - Utc::now())
+            .to_std()
+            .unwrap_or(Duration::from_secs(0));
+        limit_retry_delay(duration, retry_after)
+    } else {
+        duration
+    };
+
     // Apply jitter with a maximum variation of JITTER_DELTA
-    rand::thread_rng()
-        .gen_range(duration.mul_f32(1.0 - JITTER_DELTA)..=duration.mul_f32(1.0 + JITTER_DELTA))
+    rand::random_range(duration.mul_f32(1.0 - JITTER_DELTA)..=duration.mul_f32(1.0 + JITTER_DELTA))
 }
 
 #[tracing::instrument(skip_all, fields(response_code))]
@@ -513,7 +563,11 @@ async fn handle_failed_dispatch(
         msg_task,
         ..
     }: DispatchContext<'_>,
-    FailedDispatch(mut attempt, err): FailedDispatch,
+    FailedDispatch {
+        mut attempt,
+        err,
+        retry_after,
+    }: FailedDispatch,
 ) -> Result<()> {
     attempt.ended_at = Set(Some(Utc::now().into()));
 
@@ -529,7 +583,7 @@ async fn handle_failed_dispatch(
         attempt.insert(*db).await?;
         Ok(())
     } else if attempt_count < retry_schedule.len() {
-        let retry_delay = calculate_retry_delay(retry_schedule[attempt_count], &err);
+        let retry_delay = calculate_retry_delay(retry_schedule[attempt_count], &err, retry_after);
         let next_attempt_time =
             Utc::now() + chrono::Duration::from_std(retry_delay).expect("Error parsing duration");
 
@@ -624,7 +678,7 @@ async fn handle_failed_dispatch(
                 .ok_or_else(|| {
                     Error::generic(format_args!(
                         "Endpoint not found {app_id} {}",
-                        &msg_task.endpoint_id
+                        msg_task.endpoint_id
                     ))
                 })?;
 
@@ -805,7 +859,7 @@ async fn process_queue_task_inner(
                                     .ok_or_else(|| {
                                         Error::generic(format!(
                                             "MessageDestination not found for message {}",
-                                            &task.msg_id
+                                            task.msg_id
                                         ))
                                     })?
                                     .status
@@ -1061,11 +1115,16 @@ pub async fn queue_handler(
 mod tests {
     use std::collections::HashMap;
 
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     use bytes::Bytes;
+    use chrono::{DateTime, Utc};
     use ed25519_compact::Signature;
+    use http::HeaderMap;
 
-    use super::{bytes_to_string, generate_msg_headers, sign_msg, CaseSensitiveHeaderMap};
+    use super::{
+        CasePreservingHeaderMap, SVIX_SIGNATURE, bytes_to_string, generate_msg_headers,
+        retry_after, sign_msg,
+    };
     use crate::core::{
         cryptography::{AsymmetricKey, Encryption},
         types::{BaseId, EndpointHeaders, EndpointSecret, EndpointSecretInternal, MessageId},
@@ -1080,7 +1139,7 @@ mod tests {
 
     /// Utility function that returns the default set of headers before configurable header are
     /// accounted for
-    fn mock_headers() -> (CaseSensitiveHeaderMap, MessageId) {
+    fn mock_headers() -> (CasePreservingHeaderMap, MessageId) {
         let id = MessageId::new(None, None);
 
         let signatures = sign_msg(
@@ -1113,7 +1172,9 @@ mod tests {
 
         // The invalid key should be skipped over so it is not included in the expected
         let (mut expected, id) = mock_headers();
-        let _ = expected.insert("test_key".to_owned(), "value".parse().unwrap());
+        expected
+            .try_insert("test_key".to_owned(), "value".parse().unwrap())
+            .unwrap();
 
         let signatures = sign_msg(
             &Encryption::new_noop(),
@@ -1169,10 +1230,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            actual.get("svix-signature").unwrap(),
-            expected_signature_str
-        );
+        assert_eq!(actual[&SVIX_SIGNATURE], expected_signature_str);
     }
 
     // Tests asymmetric signing keys
@@ -1206,12 +1264,59 @@ mod tests {
         )
         .unwrap();
         asym_key.0.pk.verify(to_sign.as_bytes(), &sig).unwrap();
-        assert_eq!(signatures, "v1a,hnO3f9T8Ytu9HwrXslvumlUpqtNVqkhqw/enGzPCXe5BdqzCInXqYXFymVJaA7AZdpXwVLPo3mNl8EM+m7TBAg==");
+        assert_eq!(
+            signatures,
+            "v1a,hnO3f9T8Ytu9HwrXslvumlUpqtNVqkhqw/enGzPCXe5BdqzCInXqYXFymVJaA7AZdpXwVLPo3mNl8EM+m7TBAg=="
+        );
     }
 
     #[test]
     fn test_bytes_to_string() {
         let b = Bytes::from_static(b"Hello, world.");
         assert_eq!(bytes_to_string(b), "Hello, world.");
+    }
+
+    #[test]
+    fn test_retry_after() {
+        let mut headers = HeaderMap::new();
+
+        headers.insert(
+            "retry-after",
+            "Wed, 21 Oct 2015 07:28:00 GMT".parse().unwrap(),
+        );
+        let result = retry_after(&headers).unwrap();
+        assert_eq!(
+            result,
+            DateTime::parse_from_rfc2822("Wed, 21 Oct 2015 07:28:00 GMT")
+                .unwrap()
+                .with_timezone(&Utc)
+        );
+
+        headers.insert("retry-after", "120".parse().unwrap());
+        let result = retry_after(&headers).unwrap();
+        let expected = Utc::now() + chrono::Duration::seconds(120);
+        assert!((result - expected).num_seconds().abs() < 2);
+
+        headers.insert("retry-after", "120.1".parse().unwrap());
+        let result = retry_after(&headers).unwrap();
+        let expected = Utc::now() + chrono::Duration::seconds(121);
+        assert!((result - expected).num_seconds().abs() < 2);
+
+        headers.insert("retry-after", "120.6".parse().unwrap());
+        let result = retry_after(&headers).unwrap();
+        let expected = Utc::now() + chrono::Duration::seconds(121);
+        assert!((result - expected).num_seconds().abs() < 2);
+
+        headers.insert("retry-after", "120.0".parse().unwrap());
+        let result = retry_after(&headers).unwrap();
+        let expected = Utc::now() + chrono::Duration::seconds(120);
+        assert!((result - expected).num_seconds().abs() < 2);
+
+        headers.clear();
+        headers.insert("retry-after", "invalid".parse().unwrap());
+        assert!(retry_after(&headers).is_none());
+
+        headers.clear();
+        assert!(retry_after(&headers).is_none());
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\IntegrationIn;
 use Svix\Models\IntegrationKeyOut;
 use Svix\Models\IntegrationOut;
@@ -19,39 +20,47 @@ class Integration
     ) {
     }
 
-    /** List the application's integrations. */
+    /**
+     * List the application's integrations.
+     *
+     * @throws ApiException
+     */
     public function list(
         string $appId,
         ?IntegrationListOptions $options = null,
     ): ListResponseIntegrationOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/integration");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('order', $options->order);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('order', $options?->order);
         $res = $this->client->send($request);
 
         return ListResponseIntegrationOut::fromJson($res);
     }
 
-    /** Create an integration. */
+    /**
+     * Create an integration.
+     *
+     * @throws ApiException
+     */
     public function create(
         string $appId,
         IntegrationIn $integrationIn,
         ?IntegrationCreateOptions $options = null,
     ): IntegrationOut {
         $request = $this->client->newReq('POST', "/api/v1/app/{$appId}/integration");
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $request->setBody(json_encode($integrationIn));
         $res = $this->client->send($request);
 
         return IntegrationOut::fromJson($res);
     }
 
-    /** Get an integration. */
+    /**
+     * Get an integration.
+     *
+     * @throws ApiException
+     */
     public function get(
         string $appId,
         string $integId,
@@ -62,7 +71,11 @@ class Integration
         return IntegrationOut::fromJson($res);
     }
 
-    /** Update an integration. */
+    /**
+     * Update an integration.
+     *
+     * @throws ApiException
+     */
     public function update(
         string $appId,
         string $integId,
@@ -75,7 +88,11 @@ class Integration
         return IntegrationOut::fromJson($res);
     }
 
-    /** Delete an integration. */
+    /**
+     * Delete an integration.
+     *
+     * @throws ApiException
+     */
     public function delete(
         string $appId,
         string $integId,
@@ -84,7 +101,11 @@ class Integration
         $res = $this->client->sendNoResponseBody($request);
     }
 
-    /** Get an integration's key. */
+    /**
+     * Get an integration's key.
+     *
+     * @throws ApiException
+     */
     public function getKey(
         string $appId,
         string $integId,
@@ -95,16 +116,18 @@ class Integration
         return IntegrationKeyOut::fromJson($res);
     }
 
-    /** Rotate the integration's key. The previous key will be immediately revoked. */
+    /**
+     * Rotate the integration's key. The previous key will be immediately revoked.
+     *
+     * @throws ApiException
+     */
     public function rotateKey(
         string $appId,
         string $integId,
         ?IntegrationRotateKeyOptions $options = null,
     ): IntegrationKeyOut {
         $request = $this->client->newReq('POST', "/api/v1/app/{$appId}/integration/{$integId}/key/rotate");
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $res = $this->client->send($request);
 
         return IntegrationKeyOut::fromJson($res);

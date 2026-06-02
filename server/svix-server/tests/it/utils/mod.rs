@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 use axum::response::IntoResponse;
 use http::HeaderMap;
 use reqwest::{Client, RequestBuilder, StatusCode};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use svix_ksuid::KsuidLike;
 use svix_server::{
     cfg::ConfigurationInner,
@@ -69,8 +69,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -92,8 +91,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -118,8 +116,7 @@ impl TestClient {
             Ok(resp) => {
                 if resp.status() != expected_code {
                     anyhow::bail!(
-                        "assertion failed: expected status {}, actual status {}",
-                        expected_code,
+                        "assertion failed: expected status {expected_code}, actual status {}",
                         resp.status()
                     );
                 }
@@ -149,8 +146,7 @@ impl TestClient {
             Ok(resp) => {
                 if resp.status() != expected_code {
                     anyhow::bail!(
-                        "assertion failed: expected status {}, actual status {}",
-                        expected_code,
+                        "assertion failed: expected status {expected_code}, actual status {}",
                         resp.status()
                     );
                 }
@@ -181,8 +177,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -203,8 +198,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -227,8 +221,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -247,8 +240,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -274,8 +266,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -298,8 +289,7 @@ impl TestClient {
 
         if resp.status() != expected_code {
             anyhow::bail!(
-                "assertion failed: expected status {}, actual status {}",
-                expected_code,
+                "assertion failed: expected status {expected_code}, actual status {}",
                 resp.status()
             );
         }
@@ -332,7 +322,7 @@ pub async fn start_svix_server_with_cfg_and_org_id(
     cfg: &ConfigurationInner,
     org_id: OrganizationId,
 ) -> (TestClient, tokio::task::JoinHandle<()>) {
-    let prefix = svix_ksuid::Ksuid::new(None, None).to_string();
+    let prefix = svix_ksuid::Ksuid::now(None).to_string();
     start_svix_server_with_cfg_and_org_id_and_prefix(cfg, org_id, prefix).await
 }
 
@@ -341,7 +331,7 @@ pub async fn start_svix_server_with_cfg_and_org_id_and_prefix(
     org_id: OrganizationId,
     prefix: String,
 ) -> (TestClient, tokio::task::JoinHandle<()>) {
-    let (tracing_subscriber, _guard) = setup_tracing(cfg, /* for_test = */ true);
+    let (tracing_subscriber, _guard, _) = setup_tracing(cfg, /* for_test = */ true);
 
     let cfg = Arc::new(cfg.clone());
 

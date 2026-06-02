@@ -285,7 +285,7 @@ class WiremockTests {
         wireMockServer.verify(
             1,
             getRequestedFor(urlEqualTo("/api/v1/app/ap/msg"))
-                .withHeader("User-Agent", matching("svix-libs/.*/kotlin")),
+                .withHeader("User-Agent", matching("svix-libs/.*/kotlin kotlin/2.* jre/.*")),
         )
     }
 
@@ -345,7 +345,7 @@ class WiremockTests {
                 .willReturn(
                     WireMock.ok()
                         .withBody(
-                            """{"unresolvedAppIds":["unique-identifier"],"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay"}"""
+                            """{"unresolvedAppIds":["unique-identifier"],"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay","updatedAt":"2025-03-03T03:03:03.000000Z"}"""
                         )
                 )
         )
@@ -494,6 +494,23 @@ class WiremockTests {
     wireMockServer.verify(
         1,
         getRequestedFor(urlEqualTo("/api/v1/app")),
+    )
+  }
+
+  @Test
+  fun testExpandedStatusesDefaultTrue() {
+    val svx = testClient()
+    wireMockServer.stubFor(
+      WireMock.get(urlPathEqualTo("/api/v1/app/ap/attempt/endpoint/endp"))
+        .willReturn(ok().withBodyFile("ListResponseMessageAttemptOut.json"))
+    )
+    runBlocking {
+      svx.messageAttempt.listByEndpoint("ap", "endp")
+    }
+
+    wireMockServer.verify(
+      1,
+      getRequestedFor(urlEqualTo("/api/v1/app/ap/attempt/endpoint/endp?expanded_statuses=true"))
     )
   }
 }

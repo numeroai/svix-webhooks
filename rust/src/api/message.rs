@@ -47,6 +47,11 @@ pub struct MessageExpungeAllContentsOptions {
 }
 
 #[derive(Default)]
+pub struct MessagePrecheckOptions {
+    pub idempotency_key: Option<String>,
+}
+
+#[derive(Default)]
 pub struct MessageGetOptions {
     /// When `true` message payloads are included in the response.
     pub with_content: Option<bool>,
@@ -136,13 +141,22 @@ impl<'a> Message<'a> {
             idempotency_key,
         } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::POST, "/api/v1/app/{app_id}/msg")
-            .with_path_param("app_id", app_id)
-            .with_optional_query_param("with_content", with_content)
-            .with_optional_header_param("idempotency-key", idempotency_key)
-            .with_body_param(message_in)
-            .execute(self.cfg)
-            .await
+        let payload = with_content
+            .unwrap_or(true)
+            .then(|| message_in.payload.clone());
+        let mut response: MessageOut =
+            crate::request::Request::new(http1::Method::POST, "/api/v1/app/{app_id}/msg")
+                .with_path_param("app_id", app_id)
+                .with_query_param("with_content", false)
+                .with_optional_header_param("idempotency-key", idempotency_key)
+                .with_body_param(message_in)
+                .execute(self.cfg)
+                .await?;
+        if let Some(p) = payload {
+            response.payload = p;
+        }
+
+        Ok(response)
     }
 
     /// Delete all message payloads for the application.
@@ -173,6 +187,31 @@ impl<'a> Message<'a> {
         )
         .with_path_param("app_id", app_id)
         .with_optional_header_param("idempotency-key", idempotency_key)
+        .execute(self.cfg)
+        .await
+    }
+
+    /// A pre-check call for `message.create` that checks whether any active
+    /// endpoints are listening to this message.
+    ///
+    /// Note: most people shouldn't be using this API. Svix doesn't bill you for
+    /// messages not actually sent, so using this API doesn't save money.
+    /// If unsure, please ask Svix support before using this API.
+    pub async fn precheck(
+        &self,
+        app_id: String,
+        message_precheck_in: MessagePrecheckIn,
+        options: Option<MessagePrecheckOptions>,
+    ) -> Result<MessagePrecheckOut> {
+        let MessagePrecheckOptions { idempotency_key } = options.unwrap_or_default();
+
+        crate::request::Request::new(
+            http1::Method::POST,
+            "/api/v1/app/{app_id}/msg/precheck/active",
+        )
+        .with_path_param("app_id", app_id)
+        .with_optional_header_param("idempotency-key", idempotency_key)
+        .with_body_param(message_precheck_in)
         .execute(self.cfg)
         .await
     }

@@ -4,13 +4,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
 import com.svix.Webhook;
+import com.svix.exceptions.EmptyWebhookSecretException;
 import com.svix.exceptions.WebhookSigningException;
 import com.svix.exceptions.WebhookVerificationException;
 
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
-import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +18,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiPredicate;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -28,7 +27,7 @@ public class WebhookTest {
     private static final int SECOND_IN_MS = 1000;
 
     @Test
-    public void verifyValidPayloadAndheader() throws WebhookVerificationException {
+    public void verifyValidPayloadAndheader() throws WebhookVerificationException, EmptyWebhookSecretException {
         TestPayload testPayload = new TestPayload(System.currentTimeMillis());
 
         Webhook webhook = new Webhook(testPayload.secret);
@@ -37,7 +36,7 @@ public class WebhookTest {
     }
 
     @Test
-    public void verifyValidBrandlessPayloadAndheader() throws WebhookVerificationException {
+    public void verifyValidBrandlessPayloadAndheader() throws WebhookVerificationException, EmptyWebhookSecretException {
         TestPayload testPayload = new TestPayload(System.currentTimeMillis());
         HashMap<String, ArrayList<String>> unbrandedHeaders =
                 new HashMap<String, ArrayList<String>>();
@@ -53,7 +52,7 @@ public class WebhookTest {
 
     @Test
     public void verifyValidPayloadWithMultipleSignaturesIsValid()
-            throws WebhookVerificationException {
+            throws WebhookVerificationException, EmptyWebhookSecretException {
         TestPayload testPayload = new TestPayload(System.currentTimeMillis());
         String[] sigs =
                 new String[] {
@@ -141,7 +140,7 @@ public class WebhookTest {
     }
 
     @Test
-    public void verifySecretWorksWithOrWithoutPrefix() throws WebhookVerificationException {
+    public void verifySecretWorksWithOrWithoutPrefix() throws WebhookVerificationException, EmptyWebhookSecretException  {
         TestPayload testPayload = new TestPayload(System.currentTimeMillis());
 
         Webhook webhook = new Webhook(testPayload.secret);
@@ -152,7 +151,7 @@ public class WebhookTest {
     }
 
     @Test
-    public void verifyWebhookSignWorks() throws WebhookSigningException {
+    public void verifyWebhookSignWorks() throws WebhookSigningException, EmptyWebhookSecretException  {
         String key = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
         String msgId = "msg_p5jXN8AQM9LWM0D4loKWxJek";
         final long timestamp = 1614265330;
@@ -167,7 +166,7 @@ public class WebhookTest {
     private ThrowingRunnable verify(final TestPayload testPayload) {
         return new ThrowingRunnable() {
             @Override
-            public void run() throws WebhookVerificationException {
+            public void run() throws WebhookVerificationException, EmptyWebhookSecretException {
                 Webhook webhook = new Webhook(testPayload.secret);
                 webhook.verify(testPayload.payload, testPayload.headers());
             }
@@ -213,20 +212,12 @@ public class WebhookTest {
                     new ArrayList<String>(Arrays.asList(String.format("v1,%s", this.signature))));
         }
 
-        public HttpHeaders headers() {
+        public Map<String, List<String>> headers() {
             HashMap<String, List<String>> map = new HashMap<String, List<String>>();
             for (Map.Entry<String, ArrayList<String>> entry : this.headerMap.entrySet()) {
                 map.put(entry.getKey(), entry.getValue());
             }
-
-            return HttpHeaders.of(map, new DefaultBiPredicate());
-        }
-    }
-
-    private class DefaultBiPredicate implements BiPredicate<String, String> {
-        @Override
-        public boolean test(final String arg0, final String arg1) {
-            return true;
+            return map;
         }
     }
 }

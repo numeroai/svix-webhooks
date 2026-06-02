@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\ListResponseStreamOut;
 use Svix\Models\StreamIn;
 use Svix\Models\StreamOut;
@@ -18,37 +19,45 @@ class StreamingStream
     ) {
     }
 
-    /** List of all the organization's streams. */
+    /**
+     * List of all the organization's streams.
+     *
+     * @throws ApiException
+     */
     public function list(
         ?StreamingStreamListOptions $options = null,
     ): ListResponseStreamOut {
         $request = $this->client->newReq('GET', '/api/v1/stream');
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('order', $options->order);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('order', $options?->order);
         $res = $this->client->send($request);
 
         return ListResponseStreamOut::fromJson($res);
     }
 
-    /** Creates a new stream. */
+    /**
+     * Creates a new stream.
+     *
+     * @throws ApiException
+     */
     public function create(
         StreamIn $streamIn,
         ?StreamingStreamCreateOptions $options = null,
     ): StreamOut {
         $request = $this->client->newReq('POST', '/api/v1/stream');
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $request->setBody(json_encode($streamIn));
         $res = $this->client->send($request);
 
         return StreamOut::fromJson($res);
     }
 
-    /** Get a stream by id or uid. */
+    /**
+     * Get a stream by id or uid.
+     *
+     * @throws ApiException
+     */
     public function get(
         string $streamId,
     ): StreamOut {
@@ -58,7 +67,11 @@ class StreamingStream
         return StreamOut::fromJson($res);
     }
 
-    /** Update a stream. */
+    /**
+     * Update a stream.
+     *
+     * @throws ApiException
+     */
     public function update(
         string $streamId,
         StreamIn $streamIn,
@@ -70,7 +83,11 @@ class StreamingStream
         return StreamOut::fromJson($res);
     }
 
-    /** Delete a stream. */
+    /**
+     * Delete a stream.
+     *
+     * @throws ApiException
+     */
     public function delete(
         string $streamId,
     ): void {
@@ -78,7 +95,11 @@ class StreamingStream
         $res = $this->client->sendNoResponseBody($request);
     }
 
-    /** Partially update a stream. */
+    /**
+     * Partially update a stream.
+     *
+     * @throws ApiException
+     */
     public function patch(
         string $streamId,
         StreamPatch $streamPatch,

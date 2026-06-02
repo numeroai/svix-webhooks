@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\DashboardAccessOut;
 use Svix\Models\IngestSourceConsumerPortalAccessIn;
 use Svix\Request\SvixHttpClient;
@@ -21,16 +22,18 @@ class Ingest
         $this->source = new IngestSource($client);
     }
 
-    /** Get access to the Ingest Source Consumer Portal. */
+    /**
+     * Get access to the Ingest Source Consumer Portal.
+     *
+     * @throws ApiException
+     */
     public function dashboard(
         string $sourceId,
         IngestSourceConsumerPortalAccessIn $ingestSourceConsumerPortalAccessIn,
         ?IngestDashboardOptions $options = null,
     ): DashboardAccessOut {
         $request = $this->client->newReq('POST', "/ingest/api/v1/source/{$sourceId}/dashboard");
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $request->setBody(json_encode($ingestSourceConsumerPortalAccessIn));
         $res = $this->client->send($request);
 

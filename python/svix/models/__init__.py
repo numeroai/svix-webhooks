@@ -23,6 +23,7 @@ from .background_task_finished_event2 import BackgroundTaskFinishedEvent2
 from .background_task_out import BackgroundTaskOut
 from .background_task_status import BackgroundTaskStatus
 from .background_task_type import BackgroundTaskType
+from .bulk_replay_in import BulkReplayIn
 from .checkbook_config import CheckbookConfig
 from .checkbook_config_out import CheckbookConfigOut
 from .connector_in import ConnectorIn
@@ -151,8 +152,12 @@ from .message_attempt_trigger_type import MessageAttemptTriggerType
 from .message_endpoint_out import MessageEndpointOut
 from .message_in import MessageIn
 from .message_out import MessageOut
+from .message_precheck_in import MessagePrecheckIn
+from .message_precheck_out import MessagePrecheckOut
 from .message_status import MessageStatus
 from .message_status_text import MessageStatusText
+from .meta_config import MetaConfig
+from .meta_config_out import MetaConfigOut
 from .operational_webhook_endpoint_headers_in import OperationalWebhookEndpointHeadersIn
 from .operational_webhook_endpoint_headers_out import (
     OperationalWebhookEndpointHeadersOut,
@@ -207,8 +212,10 @@ from .stream_portal_access_in import StreamPortalAccessIn
 from .stream_sink_in import StreamSinkIn
 from .stream_sink_out import StreamSinkOut
 from .stream_sink_patch import StreamSinkPatch
+from .stream_token_expire_in import StreamTokenExpireIn
 from .stripe_config import StripeConfig
 from .stripe_config_out import StripeConfigOut
+from .subscribe_in import SubscribeIn
 from .svix_config import SvixConfig
 from .svix_config_out import SvixConfigOut
 from .telnyx_config import TelnyxConfig
@@ -217,6 +224,8 @@ from .vapi_config import VapiConfig
 from .vapi_config_out import VapiConfigOut
 from .veriff_config import VeriffConfig
 from .veriff_config_out import VeriffConfigOut
+from .vgs_config import VgsConfig
+from .vgs_config_out import VgsConfigOut
 from .zoom_config import ZoomConfig
 from .zoom_config_out import ZoomConfigOut
 
@@ -245,6 +254,7 @@ __all__ = [
     "BackgroundTaskOut",
     "BackgroundTaskStatus",
     "BackgroundTaskType",
+    "BulkReplayIn",
     "CheckbookConfig",
     "CheckbookConfigOut",
     "ConnectorIn",
@@ -365,8 +375,12 @@ __all__ = [
     "MessageEndpointOut",
     "MessageIn",
     "MessageOut",
+    "MessagePrecheckIn",
+    "MessagePrecheckOut",
     "MessageStatus",
     "MessageStatusText",
+    "MetaConfig",
+    "MetaConfigOut",
     "OperationalWebhookEndpointHeadersIn",
     "OperationalWebhookEndpointHeadersOut",
     "OperationalWebhookEndpointIn",
@@ -419,8 +433,10 @@ __all__ = [
     "StreamSinkIn",
     "StreamSinkOut",
     "StreamSinkPatch",
+    "StreamTokenExpireIn",
     "StripeConfig",
     "StripeConfigOut",
+    "SubscribeIn",
     "SvixConfig",
     "SvixConfigOut",
     "TelnyxConfig",
@@ -429,6 +445,8 @@ __all__ = [
     "VapiConfigOut",
     "VeriffConfig",
     "VeriffConfigOut",
+    "VgsConfig",
+    "VgsConfigOut",
     "ZoomConfig",
     "ZoomConfigOut",
 ]

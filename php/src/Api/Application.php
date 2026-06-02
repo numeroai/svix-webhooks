@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\ApplicationIn;
 use Svix\Models\ApplicationOut;
 use Svix\Models\ApplicationPatch;
@@ -18,39 +19,48 @@ class Application
     ) {
     }
 
-    /** List of all the organization's applications. */
+    /**
+     * List of all the organization's applications.
+     *
+     * @throws ApiException
+     */
     public function list(
         ?ApplicationListOptions $options = null,
     ): ListResponseApplicationOut {
         $request = $this->client->newReq('GET', '/api/v1/app');
-        if (null !== $options) {
-            $request->setQueryParam('exclude_apps_with_no_endpoints', $options->excludeAppsWithNoEndpoints);
-            $request->setQueryParam('exclude_apps_with_disabled_endpoints', $options->excludeAppsWithDisabledEndpoints);
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('order', $options->order);
-        }
+        $request->setQueryParam('exclude_apps_with_no_endpoints', $options?->excludeAppsWithNoEndpoints);
+        $request->setQueryParam('exclude_apps_with_disabled_endpoints', $options?->excludeAppsWithDisabledEndpoints);
+        $request->setQueryParam('exclude_apps_with_svix_play_endpoints', $options?->excludeAppsWithSvixPlayEndpoints);
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('order', $options?->order);
         $res = $this->client->send($request);
 
         return ListResponseApplicationOut::fromJson($res);
     }
 
-    /** Create a new application. */
+    /**
+     * Create a new application.
+     *
+     * @throws ApiException
+     */
     public function create(
         ApplicationIn $applicationIn,
         ?ApplicationCreateOptions $options = null,
     ): ApplicationOut {
         $request = $this->client->newReq('POST', '/api/v1/app');
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $request->setBody(json_encode($applicationIn));
         $res = $this->client->send($request);
 
         return ApplicationOut::fromJson($res);
     }
 
-    /** Get or create a new application */
+    /**
+     * Get or create a new application.
+     *
+     * @throws ApiException
+     */
     public function getOrCreate(
         ApplicationIn $applicationIn,
         ?ApplicationCreateOptions $options = null,
@@ -66,7 +76,11 @@ class Application
         return ApplicationOut::fromJson($res);
     }
 
-    /** Get an application. */
+    /**
+     * Get an application.
+     *
+     * @throws ApiException
+     */
     public function get(
         string $appId,
     ): ApplicationOut {
@@ -76,7 +90,11 @@ class Application
         return ApplicationOut::fromJson($res);
     }
 
-    /** Update an application. */
+    /**
+     * Update an application.
+     *
+     * @throws ApiException
+     */
     public function update(
         string $appId,
         ApplicationIn $applicationIn,
@@ -88,7 +106,11 @@ class Application
         return ApplicationOut::fromJson($res);
     }
 
-    /** Delete an application. */
+    /**
+     * Delete an application.
+     *
+     * @throws ApiException
+     */
     public function delete(
         string $appId,
     ): void {
@@ -96,7 +118,11 @@ class Application
         $res = $this->client->sendNoResponseBody($request);
     }
 
-    /** Partially update an application. */
+    /**
+     * Partially update an application.
+     *
+     * @throws ApiException
+     */
     public function patch(
         string $appId,
         ApplicationPatch $applicationPatch,

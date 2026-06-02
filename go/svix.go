@@ -14,10 +14,11 @@ import (
 
 type (
 	SvixOptions struct {
-		ServerUrl     *url.URL
-		HTTPClient    *http.Client
-		RetrySchedule *[]time.Duration
-		Debug         bool
+		ServerUrl        *url.URL
+		HTTPClient       *http.Client
+		TransportWrapper func(http.RoundTripper) http.RoundTripper
+		RetrySchedule    *[]time.Duration
+		Debug            bool
 	}
 	Svix struct {
 		// hidden field. allows me to override the user agent in `SvixHttpClient.DefaultHeaders["User-Agent"]`
@@ -31,6 +32,7 @@ type (
 		Endpoint                   *Endpoint
 		Environment                *Environment
 		EventType                  *EventType
+		Health                     *Health
 		Ingest                     *Ingest
 		Integration                *Integration
 		Message                    *Message
@@ -59,6 +61,9 @@ func New(token string, options *SvixOptions) (*Svix, error) {
 		if options.HTTPClient != nil {
 			svixHttpClient.HTTPClient = options.HTTPClient
 		}
+		if options.TransportWrapper != nil {
+			svixHttpClient.HTTPClient.Transport = options.TransportWrapper(svixHttpClient.HTTPClient.Transport)
+		}
 		svixHttpClient.Debug = options.Debug
 
 	}
@@ -76,6 +81,7 @@ func New(token string, options *SvixOptions) (*Svix, error) {
 		Endpoint:                   newEndpoint(&svixHttpClient),
 		Environment:                newEnvironment(&svixHttpClient),
 		EventType:                  newEventType(&svixHttpClient),
+		Health:                     newHealth(&svixHttpClient),
 		Ingest:                     newIngest(&svixHttpClient),
 		Integration:                newIntegration(&svixHttpClient),
 		Message:                    newMessage(&svixHttpClient),

@@ -2,11 +2,7 @@ name: Update Postman Collection
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Mega Releaser
-    types:
-      - completed
+  workflow_call:
 
 jobs:
   postman:
@@ -15,12 +11,9 @@ jobs:
     environment: release
 
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Install Dependencies
-        run: yarn
+      - uses: actions/checkout@v6
 
       - name: Update Postman Collection
-        run: yarn update-postman
+        run: npm install openapi-to-postmanv2 && node tools/update_postman.js
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}

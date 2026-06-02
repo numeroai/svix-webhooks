@@ -11,23 +11,23 @@ use std::{
 };
 
 use aide::{
-    transform::{TransformOperation, TransformPathItem},
     OperationInput, OperationIo, OperationOutput,
+    transform::{TransformOperation, TransformPathItem},
 };
 use axum::{
     async_trait,
     extract::{
-        rejection::{BytesRejection, FailedToBufferBody},
         FromRequest, FromRequestParts, Query, Request,
+        rejection::{BytesRejection, FailedToBufferBody},
     },
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
-use http::{request::Parts, StatusCode};
+use http::{StatusCode, request::Parts};
 use regex::Regex;
 use schemars::JsonSchema;
 use sea_orm::{ColumnTrait, QueryFilter, QueryOrder, QuerySelect};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use validator::{Validate, ValidationError};
 
 use crate::{
@@ -110,11 +110,7 @@ impl Validate for PaginationLimit {
             );
         }
 
-        if errs.is_empty() {
-            Ok(())
-        } else {
-            Err(errs)
-        }
+        if errs.is_empty() { Ok(()) } else { Err(errs) }
     }
 }
 
@@ -314,38 +310,6 @@ pub fn apply_pagination<
     }
 }
 
-/// A response with no body content and a specific response code, specified by
-/// the generic parameter `N`.
-pub struct NoContentWithCode<const N: u16>;
-
-impl<const N: u16> IntoResponse for NoContentWithCode<N> {
-    fn into_response(self) -> axum::response::Response {
-        (StatusCode::from_u16(N).unwrap(), ()).into_response()
-    }
-}
-
-impl<const N: u16> OperationOutput for NoContentWithCode<N> {
-    type Inner = Self;
-
-    fn operation_response(
-        ctx: &mut aide::gen::GenContext,
-        operation: &mut aide::openapi::Operation,
-    ) -> Option<aide::openapi::Response> {
-        <() as OperationOutput>::operation_response(ctx, operation)
-    }
-
-    fn inferred_responses(
-        ctx: &mut aide::gen::GenContext,
-        operation: &mut aide::openapi::Operation,
-    ) -> Vec<(Option<u16>, aide::openapi::Response)> {
-        if let Some(response) = Self::operation_response(ctx, operation) {
-            vec![(Some(N), response)]
-        } else {
-            vec![]
-        }
-    }
-}
-
 /// A response with no body content and HTTP status code 204, the standard code
 /// for such responses.
 #[derive(OperationIo)]
@@ -354,7 +318,7 @@ pub struct NoContent;
 
 impl IntoResponse for NoContent {
     fn into_response(self) -> axum::response::Response {
-        NoContentWithCode::<204>::into_response(NoContentWithCode)
+        StatusCode::NO_CONTENT.into_response()
     }
 }
 
@@ -862,7 +826,7 @@ mod tests {
     use serde_json::json;
     use validator::Validate;
 
-    use super::{default_limit, validate_no_control_characters, validation_errors, Pagination};
+    use super::{Pagination, default_limit, validate_no_control_characters, validation_errors};
     use crate::{core::types::ApplicationUid, error::ValidationErrorItem};
 
     #[derive(Debug, Validate)]

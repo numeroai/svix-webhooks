@@ -8,9 +8,13 @@ use std::{borrow::Cow, sync::LazyLock, time::Duration};
 
 use aide::axum::ApiRouter;
 use cfg::ConfigurationInner;
-use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::{metrics::SdkMeterProvider, runtime::Tokio};
+use opentelemetry::{InstrumentationScope, trace::TracerProvider as _};
+use opentelemetry_otlp::WithExportConfig as _;
+use opentelemetry_sdk::{
+    metrics::{SdkMeterProvider, periodic_reader_with_async_runtime::PeriodicReader},
+    runtime,
+    trace::{SdkTracerProvider, span_processor_with_async_runtime::BatchSpanProcessor},
+};
 use queue::TaskQueueProducer;
 use redis::RedisManager;
 use sea_orm::DatabaseConnection;
@@ -23,10 +27,10 @@ use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
     normalize_path::NormalizePath,
 };
-use tracing_subscriber::{layer::SubscriberExt as _, Layer as _};
+use tracing_subscriber::{Layer as _, layer::SubscriberExt as _};
 
 use crate::{
-    cfg::{CacheBackend, Configuration},
+    cfg::{CacheBackend, Configuration, QueueType},
     core::{
         cache,
         cache::Cache,
@@ -70,7 +74,7 @@ pub fn start_shut_down() {
 }
 
 pub static INSTANCE_ID: LazyLock<String> =
-    LazyLock::new(|| hex::encode(KsuidMs::new(None, None).to_string()));
+    LazyLock::new(|| hex::encode(KsuidMs::now(None).to_string()));
 
 async fn graceful_shutdown_handler() {
     let ctrl_c = async {
@@ -100,10 +104,34 @@ async fn graceful_shutdown_handler() {
 }
 
 pub async fn run(cfg: Configuration) {
-    let _metrics = setup_metrics(&cfg);
+    setup_metrics(&cfg);
     run_with_prefix(cfg.queue_prefix.clone(), cfg, None).await
 }
 
+fn warn_if_risky_redis_pending_timeout(cfg: &Configuration) {
+    const BUFFER_SECS: u64 = 5;
+
+    if !matches!(
+        cfg.queue_type,
+        QueueType::Redis | QueueType::RedisCluster | QueueType::RedisSentinel
+    ) {
+        return;
+    }
+
+    let http_timeout = cfg.worker_request_timeout as u64;
+    let pending = cfg.redis_pending_duration_secs;
+
+    if pending < http_timeout + BUFFER_SECS {
+        tracing::warn!(
+            redis_pending_duration_secs = pending,
+            worker_request_timeout = http_timeout,
+            buffer_secs = BUFFER_SECS,
+            "redis_pending_duration_secs is shorter than worker_request_timeout \
+             (plus safety buffer); slow deliveries may be re-queued while still in-flight, \
+             causing overlapping webhook deliveries for the same message."
+        );
+    }
+}
 #[derive(Clone)]
 pub struct AppState {
     db: DatabaseConnection,
@@ -120,6 +148,8 @@ pub async fn run_with_prefix(
     cfg: Configuration,
     listener: Option<TcpListener>,
 ) {
+    warn_if_risky_redis_pending_timeout(&cfg);
+
     tracing::debug!("DB: Initializing pool");
     let pool = init_db(&cfg).await;
     tracing::debug!("DB: Started");
@@ -189,9 +219,10 @@ pub async fn run_with_prefix(
 
     let with_api = cfg.api_enabled;
     let with_worker = cfg.worker_enabled;
+    let with_background_migrations = cfg.background_migrations_enabled;
     let listen_address = cfg.listen_address;
 
-    let ((), worker_loop, expired_message_cleaner_loop) = tokio::join!(
+    let ((), worker_loop, expired_message_cleaner_loop, ()) = tokio::join!(
         async {
             if with_api {
                 let listener = match listener {
@@ -236,6 +267,14 @@ pub async fn run_with_prefix(
                 tracing::debug!("Expired message cleaner: off");
                 Ok(())
             }
+        },
+        async {
+            if with_background_migrations {
+                tracing::debug!("Background migrations: Started");
+                db::background_migrations::run(&cfg).await
+            } else {
+                tracing::debug!("Background migrations: off");
+            }
         }
     );
 
@@ -246,7 +285,11 @@ pub async fn run_with_prefix(
 pub fn setup_tracing(
     cfg: &ConfigurationInner,
     for_test: bool,
-) -> (tracing::Dispatch, sentry::ClientInitGuard) {
+) -> (
+    tracing::Dispatch,
+    sentry::ClientInitGuard,
+    Option<SdkTracerProvider>,
+) {
     let filter_directives = std::env::var("RUST_LOG").unwrap_or_else(|e| {
         if let std::env::VarError::NotUnicode(_) = e {
             eprintln!("RUST_LOG environment variable has non-utf8 contents, ignoring!");
@@ -265,44 +308,46 @@ pub fn setup_tracing(
         var.join(",")
     });
 
-    let otel_layer = cfg.opentelemetry_address.as_ref().map(|addr| {
+    let mapped = cfg.opentelemetry_address.as_ref().map(|addr| {
         // Configure the OpenTelemetry tracing layer
         opentelemetry::global::set_text_map_propagator(
             opentelemetry_sdk::propagation::TraceContextPropagator::new(),
         );
 
-        let exporter = opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_endpoint(addr);
-
-        let provider = opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(exporter)
-            .with_trace_config(
-                opentelemetry_sdk::trace::Config::default()
-                    .with_sampler(
-                        cfg.opentelemetry_sample_ratio
-                            .map(opentelemetry_sdk::trace::Sampler::TraceIdRatioBased)
-                            .unwrap_or(opentelemetry_sdk::trace::Sampler::AlwaysOn),
-                    )
-                    .with_resource(opentelemetry_sdk::Resource::new(vec![
-                        opentelemetry::KeyValue::new(
-                            "service.name",
-                            cfg.opentelemetry_service_name.clone(),
-                        ),
-                    ])),
-            )
-            .install_batch(Tokio)
+        let exporter = opentelemetry_otlp::SpanExporter::builder()
+            .with_tonic()
+            .with_endpoint(addr)
+            .build()
             .unwrap();
 
-        // Based on the private `build_batch_with_exporter` method from opentelemetry-otlp
-        let tracer = provider
-            .tracer_builder("opentelemetry-otlp")
-            .with_schema_url(opentelemetry_semantic_conventions::SCHEMA_URL)
+        let provider = SdkTracerProvider::builder()
+            .with_span_processor(BatchSpanProcessor::builder(exporter, runtime::Tokio).build())
+            .with_sampler(
+                cfg.opentelemetry_sample_ratio
+                    .map(opentelemetry_sdk::trace::Sampler::TraceIdRatioBased)
+                    .unwrap_or(opentelemetry_sdk::trace::Sampler::AlwaysOn),
+            )
+            .with_resource(
+                opentelemetry_sdk::Resource::builder()
+                    .with_service_name(cfg.opentelemetry_service_name.clone())
+                    .build(),
+            )
             .build();
 
-        tracing_opentelemetry::layer().with_tracer(tracer)
+        // Based on the private `build_batch_with_exporter` method from opentelemetry-otlp
+        let layer = tracing_opentelemetry::layer().with_tracer(
+            provider.tracer_with_scope(
+                InstrumentationScope::builder("opentelemetry-otlp")
+                    .with_schema_url(opentelemetry_semantic_conventions::SCHEMA_URL)
+                    .build(),
+            ),
+        );
+
+        _ = opentelemetry::global::set_tracer_provider(provider.clone());
+        (layer, provider)
     });
+
+    let (otel_layer, otel_tracer_provider) = mapped.unzip();
 
     let sentry_guard = sentry::init(sentry::ClientOptions {
         dsn: cfg.sentry_dsn.clone(),
@@ -336,40 +381,46 @@ pub fn setup_tracing(
         }
     };
 
-    let registry = tracing_subscriber::Registry::default()
+    let dispatch = tracing_subscriber::Registry::default()
         .with(otel_layer)
         .with(sentry_layer)
         .with(stdout_layer)
         .with(tracing_subscriber::EnvFilter::new(filter_directives))
         .into();
 
-    (registry, sentry_guard)
+    (dispatch, sentry_guard, otel_tracer_provider)
 }
 
-pub fn setup_metrics(cfg: &ConfigurationInner) -> Option<SdkMeterProvider> {
-    cfg.opentelemetry_address.as_ref().map(|addr| {
-        let exporter = opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_endpoint(addr);
-
-        opentelemetry_otlp::new_pipeline()
-            .metrics(Tokio)
-            .with_delta_temporality()
-            .with_exporter(exporter)
-            .with_resource(opentelemetry_sdk::Resource::new(vec![
-                opentelemetry::KeyValue::new(
-                    "service.name",
-                    cfg.opentelemetry_service_name.clone(),
-                ),
-                opentelemetry::KeyValue::new("instance_id", INSTANCE_ID.to_owned()),
-                opentelemetry::KeyValue::new(
-                    "service.version",
-                    option_env!("GITHUB_SHA").unwrap_or("unknown"),
-                ),
-            ]))
+pub fn setup_metrics(cfg: &ConfigurationInner) {
+    if let Some(addr) = &cfg.opentelemetry_address {
+        let exporter = opentelemetry_otlp::MetricExporter::builder()
+            .with_tonic()
+            .with_endpoint(addr)
+            .with_temporality(opentelemetry_sdk::metrics::Temporality::Delta)
             .build()
-            .unwrap()
-    })
+            .unwrap();
+
+        let reader = PeriodicReader::builder(exporter, runtime::Tokio).build();
+
+        let provider = SdkMeterProvider::builder()
+            .with_reader(reader)
+            .with_resource(
+                opentelemetry_sdk::Resource::builder()
+                    .with_service_name(cfg.opentelemetry_service_name.clone())
+                    .with_attribute(opentelemetry::KeyValue::new(
+                        "instance_id",
+                        INSTANCE_ID.as_str(),
+                    ))
+                    .with_attribute(opentelemetry::KeyValue::new(
+                        "service.version",
+                        option_env!("GITHUB_SHA").unwrap_or("unknown"),
+                    ))
+                    .build(),
+            )
+            .build();
+
+        opentelemetry::global::set_meter_provider(provider);
+    }
 }
 
 pub fn setup_tracing_for_tests() {

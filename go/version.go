@@ -1,3 +1,5 @@
 package svix
 
-const Version = "1.84.1"
+import "github.com/svix/svix-webhooks/go/internal"
+
+const Version = internal.Version

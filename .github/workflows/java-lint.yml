@@ -1,15 +1,6 @@
 name: Java Lint
 on:
-  pull_request:
-    paths:
-      - "java/**"
-      - "codegen/lib-openapi.json"
-  push:
-    branches:
-      - main
-    paths:
-      - "java/**"
-      - "codegen/lib-openapi.json"
+  workflow_call:
 
 jobs:
   dotnet:
@@ -17,7 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Java
         uses: actions/setup-java@v4
