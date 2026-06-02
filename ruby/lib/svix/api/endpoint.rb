@@ -28,11 +28,11 @@ module Svix
       res = @client.execute_request(
         "POST",
         "/api/v1/app/#{app_id}/endpoint",
-        headers: {
-          "idempotency-key" => options["idempotency-key"]
-        },
         query_params: {
           "connector_id" => options["connector_id"]
+        },
+        headers: {
+          "idempotency-key" => options["idempotency-key"]
         },
         body: endpoint_in
       )
