@@ -25,15 +25,12 @@ module Svix
 
     def create(app_id, endpoint_in, options = {})
       options = options.transform_keys(&:to_s)
-
-      connector_id = options["connector_id"]
-
-      path = "/api/v1/app/#{app_id}/endpoint"
-      path += "?connector_id=#{connector_id}" if connector_id
-
       res = @client.execute_request(
         "POST",
-        path,
+        "/api/v1/app/#{app_id}/endpoint",
+        query_params: {
+          "connector_id" => options["connector_id"]
+        },
         headers: {
           "idempotency-key" => options["idempotency-key"]
         },
@@ -73,6 +70,19 @@ module Svix
         body: endpoint_patch
       )
       EndpointOut.deserialize(res)
+    end
+
+    def bulk_replay(app_id, endpoint_id, bulk_replay_in, options = {})
+      options = options.transform_keys(&:to_s)
+      res = @client.execute_request(
+        "POST",
+        "/api/v1/app/#{app_id}/endpoint/#{endpoint_id}/bulk-replay",
+        headers: {
+          "idempotency-key" => options["idempotency-key"]
+        },
+        body: bulk_replay_in
+      )
+      ReplayOut.deserialize(res)
     end
 
     def get_headers(app_id, endpoint_id)

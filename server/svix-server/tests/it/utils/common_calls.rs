@@ -7,14 +7,14 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use reqwest::{StatusCode, Url};
 use serde::{
-    de::{DeserializeOwned, IgnoredAny},
     Serialize,
+    de::{DeserializeOwned, IgnoredAny},
 };
 use serde_json::json;
 use svix::api::DashboardAccessOut;
 use svix_server::{
     core::types::{
-        metadata::Metadata, ApplicationId, EventChannel, EventTypeName, FeatureFlagSet, MessageId,
+        ApplicationId, EventChannel, EventTypeName, FeatureFlagSet, MessageId, metadata::Metadata,
     },
     v1::{
         endpoints::{
@@ -29,7 +29,7 @@ use svix_server::{
     },
 };
 
-use super::{run_with_retries, TestClient};
+use super::{TestClient, run_with_retries};
 
 // App
 
@@ -59,6 +59,7 @@ pub fn default_test_endpoint() -> EndpointIn {
     EndpointIn {
         description: Default::default(),
         rate_limit: Default::default(),
+        throttle_rate: Default::default(),
         uid: Default::default(),
         url: Url::parse("http://example.com").unwrap(),
         version: Some(1),
@@ -135,7 +136,7 @@ pub async fn create_test_message(
 ) -> Result<MessageOut> {
     client
         .post(
-            &format!("api/v1/app/{}/msg/", &app_id),
+            &format!("api/v1/app/{app_id}/msg/"),
             message_in("event.type", payload)?,
             StatusCode::ACCEPTED,
         )
@@ -392,9 +393,8 @@ pub async fn get_msg_attempt_list_and_assert_count(
 
         if list.data.len() != expected_count {
             anyhow::bail!(
-                "Attempt count {} does not match expected length {}",
+                "Attempt count {} does not match expected length {expected_count}",
                 list.data.len(),
-                expected_count
             );
         }
         Ok(list)

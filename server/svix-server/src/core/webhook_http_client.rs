@@ -1,32 +1,32 @@
 use std::{
-    collections::HashMap,
+    collections::VecDeque,
     future::Future,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     pin::Pin,
     str::FromStr,
     sync::Arc,
-    task::{ready, Poll},
+    task::{Poll, ready},
     time::{Duration, Instant},
 };
 
 use axum::{body::Body, response::Response};
-use axum_extra::headers::{authorization::Credentials, Authorization};
+use axum_extra::headers::{Authorization, authorization::Credentials};
 use bytes::Bytes;
-use futures::{future::BoxFuture, FutureExt};
-use hickory_resolver::{lookup_ip::LookupIpIntoIter, ResolveError, Resolver, TokioResolver};
-use http::{header::HeaderName, HeaderMap, HeaderValue, Method, StatusCode, Version};
+use futures::{FutureExt, future::BoxFuture};
+use hickory_resolver::{Resolver, TokioResolver, net::NetError};
+use http::{HeaderMap, HeaderValue, Method, StatusCode, Version};
 use http_body_util::Full;
-use hyper::{body::Incoming, ext::HeaderCaseMap, Uri};
+use hyper::{Uri, body::Incoming, ext::HeaderCaseMap};
 use hyper_openssl::client::legacy::{HttpsConnector, MaybeHttpsStream};
 use hyper_util::{
     client::{
         legacy::{
+            Client,
             connect::{
+                HttpConnector,
                 dns::Name,
                 proxy::{SocksV5, Tunnel},
-                HttpConnector,
             },
-            Client,
         },
         proxy::matcher::Matcher,
     },
@@ -39,9 +39,13 @@ use thiserror::Error;
 use tokio::{net::TcpStream, sync::Mutex};
 use tower::Service;
 
-use crate::cfg::{ProxyAddr, ProxyBypassCfg, ProxyConfig};
+use crate::{
+    cfg::{ProxyAddr, ProxyBypassCfg, ProxyConfig},
+    core::types::CasePreservingHeaderMap,
+};
 
-pub type CaseSensitiveHeaderMap = HashMap<String, HeaderValue>;
+const APPLICATION_JSON: HeaderValue = HeaderValue::from_static("application/json");
+const STAR_SLASH_STAR: HeaderValue = HeaderValue::from_static("*/*");
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -51,7 +55,7 @@ pub enum Error {
     #[error("requests to this IP range are blocked (see the server configuration)")]
     BlockedIp,
     #[error("error resolving name: {0}")]
-    Resolve(#[from] ResolveError),
+    Resolve(#[from] NetError),
 
     #[error("request timed out")]
     TimedOut,
@@ -318,26 +322,13 @@ impl RequestBuilder {
     }
 
     fn build_headers(
-        headers: CaseSensitiveHeaderMap,
+        headers: CasePreservingHeaderMap,
     ) -> (hyper::HeaderMap, hyper::ext::HeaderCaseMap) {
-        let mut hdr_map = hyper::HeaderMap::with_capacity(headers.len());
-        let mut case_sensitive_hdrs: hyper::HeaderMap<Bytes> =
-            hyper::HeaderMap::with_capacity(headers.len());
-        for (k, v) in headers.into_iter() {
-            match HeaderName::from_str(&k) {
-                Ok(key) => {
-                    hdr_map.insert(key.clone(), v);
-                    case_sensitive_hdrs.insert(key, Bytes::copy_from_slice(k.as_bytes()));
-                }
-                Err(e) => {
-                    tracing::error!("Failed to parse header {} {}", k, e);
-                }
-            }
-        }
+        let (hdr_map, case_sensitive_hdrs) = headers.into_maps();
         (hdr_map, case_sensitive_hdrs.into())
     }
 
-    pub fn headers(mut self, headers: CaseSensitiveHeaderMap) -> Self {
+    pub fn headers(mut self, headers: CasePreservingHeaderMap) -> Self {
         let (hdrs, case_map) = Self::build_headers(headers);
         self.headers = Some(hdrs);
         self.header_names = Some(case_map);
@@ -352,7 +343,7 @@ impl RequestBuilder {
 
     pub fn json_body<T: Serialize>(self, body: T) -> Result<Self, serde_json::Error> {
         let body = serde_json::to_vec(&body)?;
-        Ok(self.body(body, HeaderValue::from_static("application/json")))
+        Ok(self.body(body, APPLICATION_JSON))
     }
 
     pub fn version(mut self, version: Version) -> Self {
@@ -412,21 +403,17 @@ impl RequestBuilder {
         // Ensure that host header is first -- even though this is technically
         // not required by HTTP spec, some clients fail if it's not first:
         headers.insert(http::header::HOST, host);
-        headers.insert(
-            http::header::ACCEPT,
-            self.accept.unwrap_or(HeaderValue::from_static("*/*")),
-        );
+        headers.insert(http::header::ACCEPT, self.accept.unwrap_or(STAR_SLASH_STAR));
         headers.insert(
             http::header::CONTENT_TYPE,
-            self.content_type
-                .unwrap_or(HeaderValue::from_static("application/json")),
+            self.content_type.unwrap_or(APPLICATION_JSON),
         );
-
-        headers.extend(custom_headers);
 
         if let Some(user_agent) = self.user_agent {
             headers.insert(http::header::USER_AGENT, user_agent);
         }
+
+        headers.extend(custom_headers);
 
         if let Some(auth_header) = self.basic_auth {
             if !headers.contains_key(http::header::AUTHORIZATION) {
@@ -628,57 +615,48 @@ impl Service<Name> for NonLocalDnsResolver {
                 .iter()
                 .any(|whitelisted| whitelisted == name.as_str());
 
-            let lookup = resolver.lookup_ip(name.as_str()).await?;
+            let mut addresses = resolver
+                .lookup_ip(name.as_str())
+                .await?
+                .iter()
+                .collect::<VecDeque<_>>();
 
-            if lookup.iter().all(|ip| {
-                !is_allowed(ip)
-                    && !whitelist_nets.iter().any(|subnet| subnet.contains(&ip))
-                    && !whitelisted_name
-            }) {
-                Err(Error::BlockedIp)
-            } else {
-                Ok(SocketAddrs {
-                    iter: lookup.into_iter(),
-                    whitelist_nets,
-                    whitelisted_name,
-                })
+            if !addresses.is_empty() {
+                addresses.retain(move |ip| {
+                    is_allowed(*ip)
+                        || whitelist_nets.iter().any(|subnet| subnet.contains(ip))
+                        || whitelisted_name
+                });
+                if addresses.is_empty() {
+                    return Err(Error::BlockedIp);
+                }
             }
+
+            Ok(SocketAddrs {
+                filtered_addresses: addresses,
+            })
         })
     }
 }
 
 pub struct SocketAddrs {
-    iter: LookupIpIntoIter,
-    whitelist_nets: Arc<Vec<IpNet>>,
-    whitelisted_name: bool,
+    filtered_addresses: VecDeque<IpAddr>,
 }
 
 impl Iterator for SocketAddrs {
     type Item = SocketAddr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next() {
-                Some(ip_addr) => {
-                    if is_allowed(ip_addr)
-                        || self
-                            .whitelist_nets
-                            .iter()
-                            .any(|subnet| subnet.contains(&ip_addr))
-                        || self.whitelisted_name
-                    {
-                        return Some(SocketAddr::from((ip_addr, 0)));
-                    }
-                }
-
-                None => return None,
-            }
-        }
+        self.filtered_addresses
+            .pop_front()
+            .map(|item| SocketAddr::from((item, 0)))
     }
 }
 
-async fn new_resolver() -> Result<Arc<TokioResolver>, ResolveError> {
-    Ok(Arc::new(Resolver::builder_tokio()?.build()))
+async fn new_resolver() -> Result<Arc<TokioResolver>, NetError> {
+    let mut builder = Resolver::builder_tokio()?;
+    builder.options_mut().ip_strategy = hickory_resolver::config::LookupIpStrategy::Ipv4thenIpv6;
+    Ok(Arc::new(builder.build()?))
 }
 
 fn is_allowed(addr: IpAddr) -> bool {
@@ -744,12 +722,13 @@ mod tests {
         sync::Arc,
     };
 
-    use axum::{routing, Router};
+    use axum::{Router, routing};
     use axum_server::tls_openssl::{OpenSSLAcceptor, OpenSSLConfig};
-    use http::{HeaderValue, Method, Version};
+    use http::{HeaderValue, Method, Version, header::AUTHORIZATION};
     use ipnet::IpNet;
 
-    use super::{is_allowed, CaseSensitiveHeaderMap, RequestBuilder, WebhookClient};
+    use super::{RequestBuilder, WebhookClient, is_allowed};
+    use crate::core::types::CasePreservingHeaderMap;
 
     #[test]
     fn is_allowed_test() {
@@ -791,24 +770,27 @@ mod tests {
             Ok(_) => panic!(),
         }
 
-        assert!(RequestBuilder::new()
-            .version(Version::HTTP_11)
-            .build()
-            .is_err());
+        assert!(
+            RequestBuilder::new()
+                .version(Version::HTTP_11)
+                .build()
+                .is_err()
+        );
 
-        assert!(RequestBuilder::new()
-            .uri(url::Url::from_str("http://127.0.0.1/").unwrap())
-            .version(Version::HTTP_11)
-            .build()
-            .is_ok());
+        assert!(
+            RequestBuilder::new()
+                .uri(url::Url::from_str("http://127.0.0.1/").unwrap())
+                .version(Version::HTTP_11)
+                .build()
+                .is_ok()
+        );
     }
 
     #[test]
     fn test_header_casings() {
-        let hdrs = CaseSensitiveHeaderMap::from([(
-            "tEsT-header-1".to_owned(),
-            HeaderValue::from_static("value"),
-        )]);
+        let mut hdrs = CasePreservingHeaderMap::new();
+        hdrs.try_insert("tEsT-header-1", HeaderValue::from_static("value"))
+            .unwrap();
 
         let req = RequestBuilder::new()
             .uri(url::Url::from_str("http://127.0.0.1/").unwrap())
@@ -838,10 +820,7 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_eq!(
-            req.headers.get("authorization").unwrap(),
-            "Basic dGVzdDoxMjM=".as_bytes()
-        );
+        assert_eq!(req.headers[&AUTHORIZATION], "Basic dGVzdDoxMjM=".as_bytes());
 
         let req_user_only = RequestBuilder::new()
             .uri(url::Url::from_str("http://test:@127.0.0.1/").unwrap())

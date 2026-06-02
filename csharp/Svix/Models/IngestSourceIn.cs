@@ -118,6 +118,9 @@ namespace Svix.Models
         public static IngestSourceInConfig Lithic(SvixConfig svixConfig) =>
             new(svixConfig, ConfigType.Lithic);
 
+        public static IngestSourceInConfig Meta(MetaConfig metaConfig) =>
+            new(metaConfig, ConfigType.Meta);
+
         public static IngestSourceInConfig Nash(SvixConfig svixConfig) =>
             new(svixConfig, ConfigType.Nash);
 
@@ -132,6 +135,9 @@ namespace Svix.Models
 
         public static IngestSourceInConfig Pleo(SvixConfig svixConfig) =>
             new(svixConfig, ConfigType.Pleo);
+
+        public static IngestSourceInConfig PsiFi(SvixConfig svixConfig) =>
+            new(svixConfig, ConfigType.PsiFi);
 
         public static IngestSourceInConfig Replicate(SvixConfig svixConfig) =>
             new(svixConfig, ConfigType.Replicate);
@@ -187,6 +193,9 @@ namespace Svix.Models
         public static IngestSourceInConfig Airwallex(AirwallexConfig airwallexConfig) =>
             new(airwallexConfig, ConfigType.Airwallex);
 
+        public static IngestSourceInConfig Vgs(VgsConfig vgsConfig) =>
+            new(vgsConfig, ConfigType.Vgs);
+
         private enum ConfigType
         {
             [EnumMember(Value = "generic-webhook")]
@@ -231,6 +240,9 @@ namespace Svix.Models
             [EnumMember(Value = "lithic")]
             Lithic,
 
+            [EnumMember(Value = "meta")]
+            Meta,
+
             [EnumMember(Value = "nash")]
             Nash,
 
@@ -245,6 +257,9 @@ namespace Svix.Models
 
             [EnumMember(Value = "pleo")]
             Pleo,
+
+            [EnumMember(Value = "psi-fi")]
+            PsiFi,
 
             [EnumMember(Value = "replicate")]
             Replicate,
@@ -299,6 +314,9 @@ namespace Svix.Models
 
             [EnumMember(Value = "airwallex")]
             Airwallex,
+
+            [EnumMember(Value = "vgs")]
+            Vgs,
         }
 
         public TResult Match<TResult>(
@@ -316,11 +334,13 @@ namespace Svix.Models
             Func<HubspotConfig, TResult> onHubspot,
             Func<SvixConfig, TResult> onIncidentIo,
             Func<SvixConfig, TResult> onLithic,
+            Func<MetaConfig, TResult> onMeta,
             Func<SvixConfig, TResult> onNash,
             Func<OrumIoConfig, TResult> onOrumIo,
             Func<PandaDocConfig, TResult> onPandaDoc,
             Func<PortIoConfig, TResult> onPortIo,
             Func<SvixConfig, TResult> onPleo,
+            Func<SvixConfig, TResult> onPsiFi,
             Func<SvixConfig, TResult> onReplicate,
             Func<SvixConfig, TResult> onResend,
             Func<RutterConfig, TResult> onRutter,
@@ -338,7 +358,8 @@ namespace Svix.Models
             Func<SvixConfig, TResult> onOpenAi,
             Func<SvixConfig, TResult> onRender,
             Func<VeriffConfig, TResult> onVeriff,
-            Func<AirwallexConfig, TResult> onAirwallex
+            Func<AirwallexConfig, TResult> onAirwallex,
+            Func<VgsConfig, TResult> onVgs
         )
         {
             return _type switch
@@ -357,11 +378,13 @@ namespace Svix.Models
                 ConfigType.Hubspot => onHubspot((HubspotConfig)_value),
                 ConfigType.IncidentIo => onIncidentIo((SvixConfig)_value),
                 ConfigType.Lithic => onLithic((SvixConfig)_value),
+                ConfigType.Meta => onMeta((MetaConfig)_value),
                 ConfigType.Nash => onNash((SvixConfig)_value),
                 ConfigType.OrumIo => onOrumIo((OrumIoConfig)_value),
                 ConfigType.PandaDoc => onPandaDoc((PandaDocConfig)_value),
                 ConfigType.PortIo => onPortIo((PortIoConfig)_value),
                 ConfigType.Pleo => onPleo((SvixConfig)_value),
+                ConfigType.PsiFi => onPsiFi((SvixConfig)_value),
                 ConfigType.Replicate => onReplicate((SvixConfig)_value),
                 ConfigType.Resend => onResend((SvixConfig)_value),
                 ConfigType.Rutter => onRutter((RutterConfig)_value),
@@ -380,6 +403,7 @@ namespace Svix.Models
                 ConfigType.Render => onRender((SvixConfig)_value),
                 ConfigType.Veriff => onVeriff((VeriffConfig)_value),
                 ConfigType.Airwallex => onAirwallex((AirwallexConfig)_value),
+                ConfigType.Vgs => onVgs((VgsConfig)_value),
                 // unreachable
                 _ => throw new InvalidOperationException("Unknown config type"),
             };
@@ -400,11 +424,13 @@ namespace Svix.Models
             Action<HubspotConfig> onHubspot,
             Action<SvixConfig> onIncidentIo,
             Action<SvixConfig> onLithic,
+            Action<MetaConfig> onMeta,
             Action<SvixConfig> onNash,
             Action<OrumIoConfig> onOrumIo,
             Action<PandaDocConfig> onPandaDoc,
             Action<PortIoConfig> onPortIo,
             Action<SvixConfig> onPleo,
+            Action<SvixConfig> onPsiFi,
             Action<SvixConfig> onReplicate,
             Action<SvixConfig> onResend,
             Action<RutterConfig> onRutter,
@@ -422,7 +448,8 @@ namespace Svix.Models
             Action<SvixConfig> onOpenAi,
             Action<SvixConfig> onRender,
             Action<VeriffConfig> onVeriff,
-            Action<AirwallexConfig> onAirwallex
+            Action<AirwallexConfig> onAirwallex,
+            Action<VgsConfig> onVgs
         )
         {
             switch (_type)
@@ -469,6 +496,9 @@ namespace Svix.Models
                 case ConfigType.Lithic:
                     onLithic((SvixConfig)_value);
                     break;
+                case ConfigType.Meta:
+                    onMeta((MetaConfig)_value);
+                    break;
                 case ConfigType.Nash:
                     onNash((SvixConfig)_value);
                     break;
@@ -483,6 +513,9 @@ namespace Svix.Models
                     break;
                 case ConfigType.Pleo:
                     onPleo((SvixConfig)_value);
+                    break;
+                case ConfigType.PsiFi:
+                    onPsiFi((SvixConfig)_value);
                     break;
                 case ConfigType.Replicate:
                     onReplicate((SvixConfig)_value);
@@ -537,6 +570,9 @@ namespace Svix.Models
                     break;
                 case ConfigType.Airwallex:
                     onAirwallex((AirwallexConfig)_value);
+                    break;
+                case ConfigType.Vgs:
+                    onVgs((VgsConfig)_value);
                     break;
                 default:
                     // unreachable
@@ -643,11 +679,13 @@ namespace Svix.Models
                 ["hubspot"] = c => IngestSourceInConfig.Hubspot(ToObj<HubspotConfig>(c)),
                 ["incident-io"] = c => IngestSourceInConfig.IncidentIo(ToObj<SvixConfig>(c)),
                 ["lithic"] = c => IngestSourceInConfig.Lithic(ToObj<SvixConfig>(c)),
+                ["meta"] = c => IngestSourceInConfig.Meta(ToObj<MetaConfig>(c)),
                 ["nash"] = c => IngestSourceInConfig.Nash(ToObj<SvixConfig>(c)),
                 ["orum-io"] = c => IngestSourceInConfig.OrumIo(ToObj<OrumIoConfig>(c)),
                 ["panda-doc"] = c => IngestSourceInConfig.PandaDoc(ToObj<PandaDocConfig>(c)),
                 ["port-io"] = c => IngestSourceInConfig.PortIo(ToObj<PortIoConfig>(c)),
                 ["pleo"] = c => IngestSourceInConfig.Pleo(ToObj<SvixConfig>(c)),
+                ["psi-fi"] = c => IngestSourceInConfig.PsiFi(ToObj<SvixConfig>(c)),
                 ["replicate"] = c => IngestSourceInConfig.Replicate(ToObj<SvixConfig>(c)),
                 ["resend"] = c => IngestSourceInConfig.Resend(ToObj<SvixConfig>(c)),
                 ["rutter"] = c => IngestSourceInConfig.Rutter(ToObj<RutterConfig>(c)),
@@ -666,6 +704,7 @@ namespace Svix.Models
                 ["render"] = c => IngestSourceInConfig.Render(ToObj<SvixConfig>(c)),
                 ["veriff"] = c => IngestSourceInConfig.Veriff(ToObj<VeriffConfig>(c)),
                 ["airwallex"] = c => IngestSourceInConfig.Airwallex(ToObj<AirwallexConfig>(c)),
+                ["vgs"] = c => IngestSourceInConfig.Vgs(ToObj<VgsConfig>(c)),
             };
     }
 }

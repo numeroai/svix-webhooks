@@ -1,31 +1,24 @@
 name: Ruby Lint
 
 on:
-  pull_request:
-    paths:
-      - "ruby/**"
-      - "codegen/lib-openapi.json"
-      - '.github/workflows/ruby-lint.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - "ruby/**"
-      - "codegen/lib-openapi.json"
-      - '.github/workflows/ruby-lint.yml'
+  workflow_call:
 
 jobs:
-  dotnet:
+  ruby:
     name: Ruby Lint
     runs-on: ubuntu-24.04
 
+    strategy:
+      matrix:
+        ruby-version: [3.2.10, 3.3.10, 3.4.9, 4.0.2]
+
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.4.2
+          ruby-version: ${{ matrix.ruby-version }}
 
       - name: Install dependencies
         run: |

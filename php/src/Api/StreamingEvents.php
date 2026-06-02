@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\CreateStreamEventsIn;
 use Svix\Models\CreateStreamEventsOut;
 use Svix\Models\EventStreamOut;
@@ -17,16 +18,18 @@ class StreamingEvents
     ) {
     }
 
-    /** Creates events on the Stream. */
+    /**
+     * Creates events on the Stream.
+     *
+     * @throws ApiException
+     */
     public function create(
         string $streamId,
         CreateStreamEventsIn $createStreamEventsIn,
         ?StreamingEventsCreateOptions $options = null,
     ): CreateStreamEventsOut {
         $request = $this->client->newReq('POST', "/api/v1/stream/{$streamId}/events");
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $request->setBody(json_encode($createStreamEventsIn));
         $res = $this->client->send($request);
 
@@ -37,6 +40,8 @@ class StreamingEvents
      * Iterate over a stream of events.
      *
      * The sink must be of type `poller` to use the poller endpoint.
+     *
+     * @throws ApiException
      */
     public function get(
         string $streamId,
@@ -44,11 +49,9 @@ class StreamingEvents
         ?StreamingEventsGetOptions $options = null,
     ): EventStreamOut {
         $request = $this->client->newReq('GET', "/api/v1/stream/{$streamId}/sink/{$sinkId}/events");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('after', $options->after);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('after', $options?->after);
         $res = $this->client->send($request);
 
         return EventStreamOut::fromJson($res);

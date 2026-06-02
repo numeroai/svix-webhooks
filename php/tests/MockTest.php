@@ -2,7 +2,6 @@
 
 namespace Svix\Tests;
 
-
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -37,19 +36,18 @@ use Svix\SvixClient;
 use Svix\SvixOptions;
 use Svix\Version;
 
-
 const AppOut = '{"uid":"unique-identifier","name":"My first application","rateLimit":0,"id":"app_1srOrx2ZWZBpBUvZwXKQmoEYga2","createdAt":"2025-08-27T17:43:50+00:00","updatedAt":"2019-08-24T14:15:22Z","metadata":{"property1":"string","property2":"string"}}';
 const ListResAppOut = '{"data":[{"uid":"unique-identifier","name":"My first application","rateLimit":0,"id":"app_1srOrx2ZWZBpBUvZwXKQmoEYga2","createdAt":"2025-08-27T17:43:50Z","updatedAt":"2019-08-24T14:15:22Z","metadata":{"property1":"string","property2":"string"}}],"iterator":"iterator","prevIterator":"-iterator","done":true}';
 const MsgOut = '{"eventId":"unique-identifier","eventType":"user.signup","payload":{"email":"test@example.com","type":"user.created","username":"test_user"},"channels":["project_123","group_2"],"id":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2019-08-24T14:15:22Z","tags":["project_1337"]}';
 const ListResMessageOut = '{"data":[{"eventId":"unique-identifier","eventType":"user.signup","payload":{"email":"test@example.com","type":"user.created","username":"test_user"},"channels":["project_123","group_2"],"id":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2019-08-24T14:15:22Z","tags":["project_1337"]}],"iterator":"iterator","prevIterator":"-iterator","done":true}';
 const ListResMessageAttemptOut = '{"data":[{"url":"https://example.com/webhook/","response":"{}","responseStatusCode":200,"responseDurationMs":0,"status":0,"statusText":"success","triggerType":0,"msgId":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","endpointId":"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2","id":"atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2025-02-16T21:38:21.977Z","msg":{"eventId":"unique-identifier","eventType":"user.signup","payload":{"email":"test@example.com","type":"user.created","username":"test_user"},"channels":["project_123","group_2"],"id":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2025-02-16T21:38:21.977Z","tags":["project_1337"]}}],"iterator":"iterator","prevIterator":"-iterator","done":true}';
-const ListResBackgroundTaskOut = '{"data":[{"data":{},"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay"}],"iterator":"iterator","prevIterator":"-iterator","done":true}';
-const BackgroundTaskOut = '{"data":{},"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"finished","task":"application.stats"}';
+const ListResBackgroundTaskOut = '{"data":[{"data":{},"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay","updatedAt":"2025-03-03T03:03:03.000000Z"}],"iterator":"iterator","prevIterator":"-iterator","done":true}';
+const BackgroundTaskOut = '{"data":{},"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"finished","task":"application.stats","updatedAt":"2025-03-03T03:03:03.000000Z"}';
 const MessageAttemptOut = '{"url":"https://example.com/webhook/","response":"{}","responseStatusCode":200,"responseDurationMs":50,"status":2,"triggerType":1,"msgId":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","endpointId":"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2","id":"atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2025-02-16T21:38:21.977Z"}';
 const ConnectorOut = '{"id":"conn_1srOrx2ZWZBpBUvZwXKQmoEYga2","name":"Test Connector","kind":"Slack","logo":"test-logo","transformation":"test-transformation","description":"Test description"}';
 const IntegrationOut = '{"id":"integ_1srOrx2ZWZBpBUvZwXKQmoEYga2","name":"Test Integration"}';
 const MessageOut = '{"eventId":"unique-identifier","eventType":"user.signup","payload":{"email":"test@example.com","type":"user.created","username":"test_user"},"channels":["project_123","group_2"],"id":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2019-08-24T14:15:22Z","tags":["project_1337"]}';
-const ReplayOut = '{"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay"}';
+const ReplayOut = '{"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay","updatedAt":"2025-03-03T03:03:03.000000Z"}';
 const AppPortalAccessOut = '{"url": "https://app.svix.com/login#key=eyJhcHBJZCI6ICJhcHBfMXRSdFl","token": "appsk_kV3ts5tKPNJN4Dl25cMTfUNdmabxbX0O"}';
 
 
@@ -99,7 +97,7 @@ class MockTest extends TestCase
         $svx->application->list();
 
         $getReq = $this->requestHistory[0]['request'];
-        $this->assertEquals('svix-libs/' . Version::VERSION . '/php', $getReq->getHeaderLine('User-Agent'));
+        $this->assertMatchesRegularExpression('/^svix-libs\/[0-9.]+\/php php\/[0-9.]+ [^ ]+\/[^ ]+$/', $getReq->getHeaderLine('User-Agent'));
         $this->assertEquals('Bearer super_secret', $getReq->getHeaderLine('Authorization'));
         $this->assertIsString($getReq->getHeaderLine('svix-req-id'));
     }
@@ -142,7 +140,7 @@ class MockTest extends TestCase
         $req1 = $this->requestHistory[0]['request'];
         $query = $req1->getUri()->getQuery();
         // channel=asd&after=2025-08-27T17:43:50+00:00&event_types=ev1,eventtype-2
-        $this->assertEquals('channel=asd&after=2025-08-27T17%3A43%3A50%2B00%3A00&event_types=ev1%2Ceventtype-2', $query);
+        $this->assertEquals('channel=asd&after=2025-08-27T17%3A43%3A50%2B00%3A00&expanded_statuses=true&event_types=ev1%2Ceventtype-2', $query);
     }
 
     public function testDateSerialization(): void
@@ -168,7 +166,7 @@ class MockTest extends TestCase
         $svx = new \Svix\Svix("super_secret", httpClient: $this->httpClient);
 
         $apps = $svx->application->list();
-        $createdAt = $apps->data[0]->createdAt->getTimestamp();;
+        $createdAt = $apps->data[0]->createdAt->getTimestamp();
         $this->assertEquals(1756316630, $createdAt);
     }
 
@@ -180,8 +178,6 @@ class MockTest extends TestCase
             new Response(200, [], AppOut),
             new Response(200, [], AppOut),
             new Response(200, [], AppOut)
-
-
         );
 
         $svx = new \Svix\Svix("super_secret", httpClient: $this->httpClient);
@@ -290,7 +286,7 @@ class MockTest extends TestCase
 
         $req = $this->requestHistory[0]['request'];
         $query = $req->getUri()->getQuery();
-        $this->assertEquals('status=0&status_code_class=200', $query);
+        $this->assertEquals('status=0&status_code_class=200&expanded_statuses=true', $query);
     }
 
     public function testStringEnumBodySerialization(): void
@@ -416,7 +412,7 @@ class MockTest extends TestCase
             new Response(500, [], '{"error": "Internal Server Error"}')
         );
 
-        $svx = new \Svix\Svix("super_secret", new SvixOptions(debug: true),  httpClient: $this->httpClient);
+        $svx = new \Svix\Svix("super_secret", new SvixOptions(debug: true), httpClient: $this->httpClient);
 
         // Expect an ApiException to be thrown after all retries are exhausted
         $this->expectException(\Svix\Exception\ApiException::class);

@@ -13,6 +13,7 @@ from .docusign_config import DocusignConfig
 from .easypost_config import EasypostConfig
 from .github_config import GithubConfig
 from .hubspot_config import HubspotConfig
+from .meta_config import MetaConfig
 from .orum_io_config import OrumIoConfig
 from .panda_doc_config import PandaDocConfig
 from .port_io_config import PortIoConfig
@@ -25,6 +26,7 @@ from .svix_config import SvixConfig
 from .telnyx_config import TelnyxConfig
 from .vapi_config import VapiConfig
 from .veriff_config import VeriffConfig
+from .vgs_config import VgsConfig
 from .zoom_config import ZoomConfig
 
 
@@ -51,11 +53,13 @@ class IngestSourceIn(BaseModel):
         t.Literal["hubspot"],
         t.Literal["incident-io"],
         t.Literal["lithic"],
+        t.Literal["meta"],
         t.Literal["nash"],
         t.Literal["orum-io"],
         t.Literal["panda-doc"],
         t.Literal["port-io"],
         t.Literal["pleo"],
+        t.Literal["psi-fi"],
         t.Literal["replicate"],
         t.Literal["resend"],
         t.Literal["rutter"],
@@ -74,6 +78,7 @@ class IngestSourceIn(BaseModel):
         t.Literal["render"],
         t.Literal["veriff"],
         t.Literal["airwallex"],
+        t.Literal["vgs"],
     ]
     config: t.Union[
         t.Dict[str, t.Any],
@@ -85,6 +90,7 @@ class IngestSourceIn(BaseModel):
         EasypostConfig,
         GithubConfig,
         HubspotConfig,
+        MetaConfig,
         OrumIoConfig,
         PandaDocConfig,
         PortIoConfig,
@@ -98,6 +104,7 @@ class IngestSourceIn(BaseModel):
         VapiConfig,
         VeriffConfig,
         AirwallexConfig,
+        VgsConfig,
     ]
 
     @model_validator(mode="wrap")
@@ -136,6 +143,8 @@ class IngestSourceIn(BaseModel):
             output.config = SvixConfig.model_validate(data.get("config", {}))
         elif output.type == "lithic":
             output.config = SvixConfig.model_validate(data.get("config", {}))
+        elif output.type == "meta":
+            output.config = MetaConfig.model_validate(data.get("config", {}))
         elif output.type == "nash":
             output.config = SvixConfig.model_validate(data.get("config", {}))
         elif output.type == "orum-io":
@@ -145,6 +154,8 @@ class IngestSourceIn(BaseModel):
         elif output.type == "port-io":
             output.config = PortIoConfig.model_validate(data.get("config", {}))
         elif output.type == "pleo":
+            output.config = SvixConfig.model_validate(data.get("config", {}))
+        elif output.type == "psi-fi":
             output.config = SvixConfig.model_validate(data.get("config", {}))
         elif output.type == "replicate":
             output.config = SvixConfig.model_validate(data.get("config", {}))
@@ -182,6 +193,8 @@ class IngestSourceIn(BaseModel):
             output.config = VeriffConfig.model_validate(data.get("config", {}))
         elif output.type == "airwallex":
             output.config = AirwallexConfig.model_validate(data.get("config", {}))
+        elif output.type == "vgs":
+            output.config = VgsConfig.model_validate(data.get("config", {}))
         else:
             raise ValueError(f"Unexpected type `{output.type}`")
         return output

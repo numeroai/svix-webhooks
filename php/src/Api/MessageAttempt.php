@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\EmptyResponse;
 use Svix\Models\ListResponseEndpointMessageOut;
 use Svix\Models\ListResponseMessageAttemptOut;
@@ -26,6 +27,8 @@ class MessageAttempt
      * relative to now or, if an iterator is provided, 90 days before/after the time indicated
      * by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
      * set the `before` or `after` parameter as appropriate.
+     *
+     * @throws ApiException
      */
     public function listByEndpoint(
         string $appId,
@@ -33,19 +36,18 @@ class MessageAttempt
         ?MessageAttemptListByEndpointOptions $options = null,
     ): ListResponseMessageAttemptOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/attempt/endpoint/{$endpointId}");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('status', $options->status);
-            $request->setQueryParam('status_code_class', $options->statusCodeClass);
-            $request->setQueryParam('channel', $options->channel);
-            $request->setQueryParam('tag', $options->tag);
-            $request->setQueryParam('before', $options->before);
-            $request->setQueryParam('after', $options->after);
-            $request->setQueryParam('with_content', $options->withContent);
-            $request->setQueryParam('with_msg', $options->withMsg);
-            $request->setQueryParam('event_types', $options->eventTypes);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('status', $options?->status);
+        $request->setQueryParam('status_code_class', $options?->statusCodeClass);
+        $request->setQueryParam('channel', $options?->channel);
+        $request->setQueryParam('tag', $options?->tag);
+        $request->setQueryParam('before', $options?->before);
+        $request->setQueryParam('after', $options?->after);
+        $request->setQueryParam('with_content', $options?->withContent);
+        $request->setQueryParam('with_msg', $options?->withMsg);
+        $request->setQueryParam('expanded_statuses', $options?->expandedStatuses);
+        $request->setQueryParam('event_types', $options?->eventTypes);
         $res = $this->client->send($request);
 
         return ListResponseMessageAttemptOut::fromJson($res);
@@ -58,6 +60,8 @@ class MessageAttempt
      * relative to now or, if an iterator is provided, 90 days before/after the time indicated
      * by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
      * set the `before` or `after` parameter as appropriate.
+     *
+     * @throws ApiException
      */
     public function listByMsg(
         string $appId,
@@ -65,19 +69,18 @@ class MessageAttempt
         ?MessageAttemptListByMsgOptions $options = null,
     ): ListResponseMessageAttemptOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/attempt/msg/{$msgId}");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('status', $options->status);
-            $request->setQueryParam('status_code_class', $options->statusCodeClass);
-            $request->setQueryParam('channel', $options->channel);
-            $request->setQueryParam('tag', $options->tag);
-            $request->setQueryParam('endpoint_id', $options->endpointId);
-            $request->setQueryParam('before', $options->before);
-            $request->setQueryParam('after', $options->after);
-            $request->setQueryParam('with_content', $options->withContent);
-            $request->setQueryParam('event_types', $options->eventTypes);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('status', $options?->status);
+        $request->setQueryParam('status_code_class', $options?->statusCodeClass);
+        $request->setQueryParam('channel', $options?->channel);
+        $request->setQueryParam('tag', $options?->tag);
+        $request->setQueryParam('endpoint_id', $options?->endpointId);
+        $request->setQueryParam('before', $options?->before);
+        $request->setQueryParam('after', $options?->after);
+        $request->setQueryParam('with_content', $options?->withContent);
+        $request->setQueryParam('expanded_statuses', $options?->expandedStatuses);
+        $request->setQueryParam('event_types', $options?->eventTypes);
         $res = $this->client->send($request);
 
         return ListResponseMessageAttemptOut::fromJson($res);
@@ -92,6 +95,8 @@ class MessageAttempt
      * relative to now or, if an iterator is provided, 90 days before/after the time indicated
      * by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
      * set the `before` or `after` parameter as appropriate.
+     *
+     * @throws ApiException
      */
     public function listAttemptedMessages(
         string $appId,
@@ -99,29 +104,34 @@ class MessageAttempt
         ?MessageAttemptListAttemptedMessagesOptions $options = null,
     ): ListResponseEndpointMessageOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/endpoint/{$endpointId}/msg");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('channel', $options->channel);
-            $request->setQueryParam('tag', $options->tag);
-            $request->setQueryParam('status', $options->status);
-            $request->setQueryParam('before', $options->before);
-            $request->setQueryParam('after', $options->after);
-            $request->setQueryParam('with_content', $options->withContent);
-            $request->setQueryParam('event_types', $options->eventTypes);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('channel', $options?->channel);
+        $request->setQueryParam('tag', $options?->tag);
+        $request->setQueryParam('status', $options?->status);
+        $request->setQueryParam('before', $options?->before);
+        $request->setQueryParam('after', $options?->after);
+        $request->setQueryParam('with_content', $options?->withContent);
+        $request->setQueryParam('expanded_statuses', $options?->expandedStatuses);
+        $request->setQueryParam('event_types', $options?->eventTypes);
         $res = $this->client->send($request);
 
         return ListResponseEndpointMessageOut::fromJson($res);
     }
 
-    /** `msg_id`: Use a message id or a message `eventId` */
+    /**
+     * `msg_id`: Use a message id or a message `eventId`.
+     *
+     * @throws ApiException
+     */
     public function get(
         string $appId,
         string $msgId,
         string $attemptId,
+        ?MessageAttemptGetOptions $options = null,
     ): MessageAttemptOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/msg/{$msgId}/attempt/{$attemptId}");
+        $request->setQueryParam('expanded_statuses', $options?->expandedStatuses);
         $res = $this->client->send($request);
 
         return MessageAttemptOut::fromJson($res);
@@ -132,6 +142,8 @@ class MessageAttempt
      *
      * Useful when an endpoint accidentally returned sensitive content.
      * The message can't be replayed or resent once its payload has been deleted or expired.
+     *
+     * @throws ApiException
      */
     public function expungeContent(
         string $appId,
@@ -147,6 +159,8 @@ class MessageAttempt
      *
      * Additionally includes metadata about the latest message attempt.
      * By default, endpoints are listed in ascending order by ID.
+     *
+     * @throws ApiException
      */
     public function listAttemptedDestinations(
         string $appId,
@@ -154,16 +168,18 @@ class MessageAttempt
         ?MessageAttemptListAttemptedDestinationsOptions $options = null,
     ): ListResponseMessageEndpointOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/msg/{$msgId}/endpoint");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
         $res = $this->client->send($request);
 
         return ListResponseMessageEndpointOut::fromJson($res);
     }
 
-    /** Resend a message to the specified endpoint. */
+    /**
+     * Resend a message to the specified endpoint.
+     *
+     * @throws ApiException
+     */
     public function resend(
         string $appId,
         string $msgId,
@@ -171,9 +187,7 @@ class MessageAttempt
         ?MessageAttemptResendOptions $options = null,
     ): EmptyResponse {
         $request = $this->client->newReq('POST', "/api/v1/app/{$appId}/msg/{$msgId}/endpoint/{$endpointId}/resend");
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $res = $this->client->send($request);
 
         return EmptyResponse::fromJson($res);

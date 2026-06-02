@@ -2,11 +2,7 @@ name: Kotlin Release
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Mega Releaser
-    types:
-      - completed
+  workflow_call:
 
 jobs:
   kotlin:
@@ -15,7 +11,7 @@ jobs:
     environment: release
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Java
         uses: actions/setup-java@v4

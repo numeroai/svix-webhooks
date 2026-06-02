@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::bail;
+use chrono::{Months, Utc};
 use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use svix_server::{
@@ -14,7 +15,7 @@ use svix_server::{
         types::{EndpointSecretInternal, OrganizationId},
     },
     db,
-    db::wipe_org,
+    db::{background_migrations, prune_messages, wipe_org},
     run, setup_tracing,
 };
 use tracing_subscriber::util::SubscriberInitExt;
@@ -70,11 +71,39 @@ enum Commands {
     #[clap()]
     Migrate,
 
+    /// Revert a background migration by id
+    #[clap()]
+    RevertBackgroundMigration {
+        /// id of the background migration to revert
+        id: String,
+    },
+
     #[clap()]
     Wipe {
         #[clap(value_parser = org_id_parser)]
         org_id: OrganizationId,
 
+        #[clap(long)]
+        yes_i_know_what_im_doing: bool,
+    },
+
+    /// Prune messages and their attempts older than a given date.
+    ///
+    /// The cutoff must be at least 3 months in the past. Records are deleted in
+    /// batches to avoid long-running transactions.
+    #[clap()]
+    Prune {
+        /// Cutoff timestamp in RFC 3339 format (e.g. "2024-01-01T00:00:00Z").
+        /// All messages created before this time (and their attempts) will be deleted.
+        /// Must be at least 3 months in the past.
+        #[clap(long)]
+        older_than: chrono::DateTime<Utc>,
+
+        /// Number of rows to delete per batch. Defaults to 10,000.
+        #[clap(long, default_value_t = 10_000)]
+        batch_size: u64,
+
+        /// Confirm that you understand this operation is irreversible.
         #[clap(long)]
         yes_i_know_what_im_doing: bool,
     },
@@ -141,7 +170,8 @@ async fn main() -> anyhow::Result<()> {
 
     let cfg = cfg::load()?;
 
-    let (tracing_subscriber, _guard) = setup_tracing(&cfg, /* for_test = */ false);
+    let (tracing_subscriber, _guard, otel_tracer_provider) =
+        setup_tracing(&cfg, /* for_test = */ false);
     tracing_subscriber.init();
 
     if let Some(wait_for_seconds) = args.wait_for {
@@ -176,7 +206,20 @@ async fn main() -> anyhow::Result<()> {
     match args.command {
         Some(Commands::Migrate) => {
             db::run_migrations(&cfg).await;
+            background_migrations::run(&cfg).await;
             println!("Migrations: success");
+        }
+        Some(Commands::RevertBackgroundMigration { id }) => {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .max_connections(cfg.db_pool_max_size.into())
+                .connect(&cfg.db_dsn)
+                .await?;
+            match background_migrations::try_revert(&pool, background_migrations::MIGRATIONS, &id)
+                .await?
+            {
+                true => println!("Migration reverted: {id}"),
+                false => println!("Nothing to revert for: {id}"),
+            }
         }
         Some(Commands::Jwt {
             command: JwtCommands::Generate { org_id },
@@ -204,9 +247,37 @@ async fn main() -> anyhow::Result<()> {
             if yes_i_know_what_im_doing {
                 wipe_org(&cfg, org_id).await;
             } else {
-                println!("Please confirm you wish to wipe this organization with the `--yes-i-know-what-im-doing` flag");
+                println!(
+                    "Please confirm you wish to wipe this organization with the `--yes-i-know-what-im-doing` flag"
+                );
             }
         }
+        Some(Commands::Prune {
+            older_than,
+            batch_size,
+            yes_i_know_what_im_doing,
+        }) => {
+            let three_months_ago = Utc::now()
+                .checked_sub_months(Months::new(3))
+                .expect("date arithmetic overflow");
+            if older_than >= three_months_ago {
+                eprintln!(
+                    "Warning: pruning messages newer than {} (3 months ago) can be unsafe.",
+                    three_months_ago.to_rfc3339()
+                );
+            }
+
+            if !yes_i_know_what_im_doing {
+                println!(
+                    "Please confirm you would like to irreversibly delete these messages, and that you confirm you have a backup of your database by passing the \
+                     `--yes-i-know-what-im-doing` flag"
+                );
+                return Ok(());
+            }
+
+            prune_messages(&cfg, older_than, batch_size).await?;
+        }
+
         Some(Commands::GenerateOpenapi) => {
             let mut openapi = svix_server::openapi::initialize_openapi();
 
@@ -230,6 +301,12 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    opentelemetry::global::shutdown_tracer_provider();
+    if let Some(provider) = otel_tracer_provider {
+        _ = tokio::task::spawn_blocking(move || {
+            _ = provider.shutdown();
+        })
+        .await;
+    }
+
     Ok(())
 }

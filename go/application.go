@@ -23,6 +23,8 @@ type ApplicationListOptions struct {
 	ExcludeAppsWithNoEndpoints *bool
 	// Exclude applications that have only disabled endpoints. Default is false.
 	ExcludeAppsWithDisabledEndpoints *bool
+	// Exclude applications that only have Svix Play endpoints. Default is false.
+	ExcludeAppsWithSvixPlayEndpoints *bool
 	// Limit the number of returned items
 	Limit *uint64
 	// The iterator returned from a prior invocation
@@ -46,6 +48,7 @@ func (application *Application) List(
 	if o != nil {
 		internal.SerializeParamToMap("exclude_apps_with_no_endpoints", o.ExcludeAppsWithNoEndpoints, queryMap, &err)
 		internal.SerializeParamToMap("exclude_apps_with_disabled_endpoints", o.ExcludeAppsWithDisabledEndpoints, queryMap, &err)
+		internal.SerializeParamToMap("exclude_apps_with_svix_play_endpoints", o.ExcludeAppsWithSvixPlayEndpoints, queryMap, &err)
 		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
 		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
 		internal.SerializeParamToMap("order", o.Order, queryMap, &err)

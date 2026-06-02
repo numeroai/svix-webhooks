@@ -1,25 +1,12 @@
 name: Go Lint
 on:
-  pull_request:
-    paths:
-      - "go/**"
-      - "go.sum"
-      - "go.mod"
-      - "codegen/lib-openapi.json"
-  push:
-    branches:
-      - main
-    paths:
-      - "go/**"
-      - "go.sum"
-      - "go.mod"
-      - "codegen/lib-openapi.json"
+  workflow_call:
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:

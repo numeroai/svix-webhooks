@@ -232,6 +232,21 @@ public abstract class IngestSourceOutConfig {
     @AllArgsConstructor
     @ToString
     @EqualsAndHashCode(callSuper = false)
+    @VariantName("meta")
+    public static class Meta extends IngestSourceOutConfig {
+        private final MetaConfigOut meta;
+
+        @Override
+        public JsonNode toJsonNode() {
+            return Utils.getObjectMapper().valueToTree(meta);
+        }
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
     @VariantName("nash")
     public static class Nash extends IngestSourceOutConfig {
         private final SvixConfigOut nash;
@@ -284,6 +299,21 @@ public abstract class IngestSourceOutConfig {
         @Override
         public JsonNode toJsonNode() {
             return Utils.getObjectMapper().valueToTree(portIo);
+        }
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
+    @VariantName("psi-fi")
+    public static class PsiFi extends IngestSourceOutConfig {
+        private final SvixConfigOut psiFi;
+
+        @Override
+        public JsonNode toJsonNode() {
+            return Utils.getObjectMapper().valueToTree(psiFi);
         }
     }
 
@@ -572,6 +602,21 @@ public abstract class IngestSourceOutConfig {
         }
     }
 
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
+    @VariantName("vgs")
+    public static class Vgs extends IngestSourceOutConfig {
+        private final VgsConfigOut vgs;
+
+        @Override
+        public JsonNode toJsonNode() {
+            return Utils.getObjectMapper().valueToTree(vgs);
+        }
+    }
+
     @FunctionalInterface
     private interface TypeFactory {
         IngestSourceOutConfig create(JsonNode config);
@@ -595,10 +640,12 @@ public abstract class IngestSourceOutConfig {
         TY_M.put("hubspot", c -> new Hubspot(m.convertValue(c, HubspotConfigOut.class)));
         TY_M.put("incident-io", c -> new IncidentIo(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("lithic", c -> new Lithic(m.convertValue(c, SvixConfigOut.class)));
+        TY_M.put("meta", c -> new Meta(m.convertValue(c, MetaConfigOut.class)));
         TY_M.put("nash", c -> new Nash(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("orum-io", c -> new OrumIo(m.convertValue(c, OrumIoConfigOut.class)));
         TY_M.put("panda-doc", c -> new PandaDoc(m.convertValue(c, PandaDocConfigOut.class)));
         TY_M.put("port-io", c -> new PortIo(m.convertValue(c, PortIoConfigOut.class)));
+        TY_M.put("psi-fi", c -> new PsiFi(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("pleo", c -> new Pleo(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("replicate", c -> new Replicate(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("resend", c -> new Resend(m.convertValue(c, SvixConfigOut.class)));
@@ -618,6 +665,7 @@ public abstract class IngestSourceOutConfig {
         TY_M.put("render", c -> new Render(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("veriff", c -> new Veriff(m.convertValue(c, VeriffConfigOut.class)));
         TY_M.put("airwallex", c -> new Airwallex(m.convertValue(c, AirwallexConfigOut.class)));
+        TY_M.put("vgs", c -> new Vgs(m.convertValue(c, VgsConfigOut.class)));
     }
 
     public static IngestSourceOutConfig fromTypeAndConfig(String type, JsonNode config) {

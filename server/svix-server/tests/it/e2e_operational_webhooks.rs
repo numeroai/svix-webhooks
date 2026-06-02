@@ -14,8 +14,8 @@ use svix_server::{
     core::{
         security::{generate_org_token, management_org_id},
         types::{
-            metadata::Metadata, ApplicationId, ApplicationUid, BaseId, EndpointId, EndpointUid,
-            MessageAttemptId, MessageId, MessageUid, OrganizationId,
+            ApplicationId, ApplicationUid, BaseId, EndpointId, EndpointUid, MessageAttemptId,
+            MessageId, MessageUid, OrganizationId, metadata::Metadata,
         },
     },
     v1::endpoints::{
@@ -25,10 +25,11 @@ use svix_server::{
 };
 
 use crate::utils::{
+    TestClient, TestReceiver,
     common_calls::{
         create_test_app, create_test_endpoint, create_test_message, default_test_endpoint,
     },
-    get_default_test_config, TestClient, TestReceiver,
+    get_default_test_config,
 };
 
 /// Sent when an endpoint has been automatically disabled after continuous failures.
@@ -125,7 +126,7 @@ fn start_svix_server_with_operational_webhooks(
     let cfg = Arc::new(cfg);
 
     let jh = tokio::spawn(svix_server::run_with_prefix(
-        Some(svix_ksuid::Ksuid::new(None, None).to_string()),
+        Some(svix_ksuid::Ksuid::now(None).to_string()),
         cfg,
         Some(listener),
     ));
@@ -138,6 +139,7 @@ fn start_svix_server_with_operational_webhooks(
     )
 }
 
+#[allow(deprecated)]
 #[tokio::test]
 async fn test_endpoint_create_update_and_delete() {
     let cfg = get_default_test_config();
@@ -151,6 +153,7 @@ async fn test_endpoint_create_update_and_delete() {
             ApplicationIn {
                 name: "TestOperationalWebhookApplication".to_owned(),
                 rate_limit: None,
+                throttle_rate: None,
                 uid: Some(ApplicationUid(org_id.to_string())),
                 metadata: Metadata::default(),
             },
@@ -297,6 +300,7 @@ async fn test_endpoint_create_update_and_delete() {
     };
 }
 
+#[allow(deprecated)]
 #[tokio::test]
 async fn test_message_attempt_operational_webhooks() {
     let mut cfg = get_default_test_config();
@@ -312,6 +316,7 @@ async fn test_message_attempt_operational_webhooks() {
             ApplicationIn {
                 name: "TestOperationalWebhookApplication".to_owned(),
                 rate_limit: None,
+                throttle_rate: None,
                 uid: Some(ApplicationUid(org_id.to_string())),
                 metadata: Metadata::default(),
             },

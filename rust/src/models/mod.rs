@@ -17,6 +17,7 @@ pub mod application_in;
 pub mod application_out;
 pub mod application_patch;
 pub mod application_token_expire_in;
+pub mod authentication_source;
 pub mod azure_blob_storage_config;
 pub mod azure_blob_storage_patch_config;
 pub mod background_task_finished_event;
@@ -24,6 +25,7 @@ pub mod background_task_finished_event2;
 pub mod background_task_out;
 pub mod background_task_status;
 pub mod background_task_type;
+pub mod bulk_replay_in;
 pub mod checkbook_config;
 pub mod checkbook_config_out;
 pub mod connector_in;
@@ -144,8 +146,12 @@ pub mod message_attempt_trigger_type;
 pub mod message_endpoint_out;
 pub mod message_in;
 pub mod message_out;
+pub mod message_precheck_in;
+pub mod message_precheck_out;
 pub mod message_status;
 pub mod message_status_text;
+pub mod meta_config;
+pub mod meta_config_out;
 pub mod operational_webhook_endpoint_headers_in;
 pub mod operational_webhook_endpoint_headers_out;
 pub mod operational_webhook_endpoint_in;
@@ -198,8 +204,10 @@ pub mod stream_portal_access_in;
 pub mod stream_sink_in;
 pub mod stream_sink_out;
 pub mod stream_sink_patch;
+pub mod stream_token_expire_in;
 pub mod stripe_config;
 pub mod stripe_config_out;
+pub mod subscribe_in;
 pub mod svix_config;
 pub mod svix_config_out;
 pub mod telnyx_config;
@@ -208,6 +216,9 @@ pub mod vapi_config;
 pub mod vapi_config_out;
 pub mod veriff_config;
 pub mod veriff_config_out;
+pub mod vgs_config;
+pub mod vgs_config_out;
+pub mod whoami_out;
 pub mod zoom_config;
 pub mod zoom_config_out;
 // not currently generated
@@ -235,6 +246,7 @@ pub use self::{
     application_out::ApplicationOut,
     application_patch::ApplicationPatch,
     application_token_expire_in::ApplicationTokenExpireIn,
+    authentication_source::AuthenticationSource,
     azure_blob_storage_config::AzureBlobStorageConfig,
     azure_blob_storage_patch_config::AzureBlobStoragePatchConfig,
     background_task_finished_event::BackgroundTaskFinishedEvent,
@@ -242,6 +254,7 @@ pub use self::{
     background_task_out::BackgroundTaskOut,
     background_task_status::BackgroundTaskStatus,
     background_task_type::BackgroundTaskType,
+    bulk_replay_in::BulkReplayIn,
     checkbook_config::CheckbookConfig,
     checkbook_config_out::CheckbookConfigOut,
     connector_in::ConnectorIn,
@@ -362,8 +375,12 @@ pub use self::{
     message_endpoint_out::MessageEndpointOut,
     message_in::MessageIn,
     message_out::MessageOut,
+    message_precheck_in::MessagePrecheckIn,
+    message_precheck_out::MessagePrecheckOut,
     message_status::MessageStatus,
     message_status_text::MessageStatusText,
+    meta_config::MetaConfig,
+    meta_config_out::MetaConfigOut,
     operational_webhook_endpoint_headers_in::OperationalWebhookEndpointHeadersIn,
     operational_webhook_endpoint_headers_out::OperationalWebhookEndpointHeadersOut,
     operational_webhook_endpoint_in::OperationalWebhookEndpointIn,
@@ -416,8 +433,10 @@ pub use self::{
     stream_sink_in::{StreamSinkIn, StreamSinkInConfig},
     stream_sink_out::{StreamSinkOut, StreamSinkOutConfig},
     stream_sink_patch::{StreamSinkPatch, StreamSinkPatchConfig},
+    stream_token_expire_in::StreamTokenExpireIn,
     stripe_config::StripeConfig,
     stripe_config_out::StripeConfigOut,
+    subscribe_in::SubscribeIn,
     svix_config::SvixConfig,
     svix_config_out::SvixConfigOut,
     telnyx_config::TelnyxConfig,
@@ -426,6 +445,9 @@ pub use self::{
     vapi_config_out::VapiConfigOut,
     veriff_config::VeriffConfig,
     veriff_config_out::VeriffConfigOut,
+    vgs_config::VgsConfig,
+    vgs_config_out::VgsConfigOut,
+    whoami_out::WhoamiOut,
     zoom_config::ZoomConfig,
     zoom_config_out::ZoomConfigOut,
 };

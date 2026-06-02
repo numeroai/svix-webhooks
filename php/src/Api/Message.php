@@ -5,10 +5,13 @@ declare(strict_types=1);
 
 namespace Svix\Api;
 
+use Svix\Exception\ApiException;
 use Svix\Models\ExpungeAllContentsOut;
 use Svix\Models\ListResponseMessageOut;
 use Svix\Models\MessageIn;
 use Svix\Models\MessageOut;
+use Svix\Models\MessagePrecheckIn;
+use Svix\Models\MessagePrecheckOut;
 use Svix\Request\SvixHttpClient;
 
 class Message
@@ -31,22 +34,22 @@ class Message
      * relative to now or, if an iterator is provided, 90 days before/after the time indicated
      * by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
      * set the `before` or `after` parameter as appropriate.
+     *
+     * @throws ApiException
      */
     public function list(
         string $appId,
         ?MessageListOptions $options = null,
     ): ListResponseMessageOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/msg");
-        if (null !== $options) {
-            $request->setQueryParam('limit', $options->limit);
-            $request->setQueryParam('iterator', $options->iterator);
-            $request->setQueryParam('channel', $options->channel);
-            $request->setQueryParam('before', $options->before);
-            $request->setQueryParam('after', $options->after);
-            $request->setQueryParam('with_content', $options->withContent);
-            $request->setQueryParam('tag', $options->tag);
-            $request->setQueryParam('event_types', $options->eventTypes);
-        }
+        $request->setQueryParam('limit', $options?->limit);
+        $request->setQueryParam('iterator', $options?->iterator);
+        $request->setQueryParam('channel', $options?->channel);
+        $request->setQueryParam('before', $options?->before);
+        $request->setQueryParam('after', $options?->after);
+        $request->setQueryParam('with_content', $options?->withContent);
+        $request->setQueryParam('tag', $options?->tag);
+        $request->setQueryParam('event_types', $options?->eventTypes);
         $res = $this->client->send($request);
 
         return ListResponseMessageOut::fromJson($res);
@@ -62,6 +65,8 @@ class Message
      * Messages can also have `channels`, which similar to event types let endpoints filter by them. Unlike event types, messages can have multiple channels, and channels don't imply a specific message content or schema.
      *
      * The `payload` property is the webhook's body (the actual webhook message). Svix supports payload sizes of up to 1MiB, though it's generally a good idea to keep webhook payloads small, probably no larger than 40kb.
+     *
+     * @throws ApiException
      */
     public function create(
         string $appId,
@@ -69,10 +74,8 @@ class Message
         ?MessageCreateOptions $options = null,
     ): MessageOut {
         $request = $this->client->newReq('POST', "/api/v1/app/{$appId}/msg");
-        if (null !== $options) {
-            $request->setQueryParam('with_content', $options->withContent);
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setQueryParam('with_content', $options?->withContent);
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $request->setBody(json_encode($messageIn));
         $res = $this->client->send($request);
 
@@ -95,30 +98,55 @@ class Message
      *   }
      * }
      * ```
+     *
+     * @throws ApiException
      */
     public function expungeAllContents(
         string $appId,
         ?MessageExpungeAllContentsOptions $options = null,
     ): ExpungeAllContentsOut {
         $request = $this->client->newReq('POST', "/api/v1/app/{$appId}/msg/expunge-all-contents");
-        if (null !== $options) {
-            $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
-        }
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
         $res = $this->client->send($request);
 
         return ExpungeAllContentsOut::fromJson($res);
     }
 
-    /** Get a message by its ID or eventID. */
+    /**
+     * A pre-check call for `message.create` that checks whether any active endpoints are
+     * listening to this message.
+     *
+     * Note: most people shouldn't be using this API. Svix doesn't bill you for
+     * messages not actually sent, so using this API doesn't save money.
+     * If unsure, please ask Svix support before using this API.
+     *
+     * @throws ApiException
+     */
+    public function precheck(
+        string $appId,
+        MessagePrecheckIn $messagePrecheckIn,
+        ?MessagePrecheckOptions $options = null,
+    ): MessagePrecheckOut {
+        $request = $this->client->newReq('POST', "/api/v1/app/{$appId}/msg/precheck/active");
+        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
+        $request->setBody(json_encode($messagePrecheckIn));
+        $res = $this->client->send($request);
+
+        return MessagePrecheckOut::fromJson($res);
+    }
+
+    /**
+     * Get a message by its ID or eventID.
+     *
+     * @throws ApiException
+     */
     public function get(
         string $appId,
         string $msgId,
         ?MessageGetOptions $options = null,
     ): MessageOut {
         $request = $this->client->newReq('GET', "/api/v1/app/{$appId}/msg/{$msgId}");
-        if (null !== $options) {
-            $request->setQueryParam('with_content', $options->withContent);
-        }
+        $request->setQueryParam('with_content', $options?->withContent);
         $res = $this->client->send($request);
 
         return MessageOut::fromJson($res);
@@ -129,6 +157,8 @@ class Message
      *
      * Useful in cases when a message was accidentally sent with sensitive content.
      * The message can't be replayed or resent once its payload has been deleted or expired.
+     *
+     * @throws ApiException
      */
     public function expungeContent(
         string $appId,

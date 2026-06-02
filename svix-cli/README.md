@@ -19,18 +19,33 @@ A CLI to interact with the Svix API.
 
 ### Pre-built executables
 
+### Via NPM
+
+The Svix CLI is published on npm as [`svix-cli`](https://www.npmjs.com/package/svix-cli). You can run it directly with `npx` without installing anything:
+
+```sh
+npx svix-cli --help
+```
+
+Or install it globally:
+
+```sh
+npm install -g svix-cli
+svix-cli --help
+```
+
 #### Via installer scripts
 
 Pre-built binaries are available for Linux, macOS via shell script installers.
 
 ```
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/svix/svix-webhooks/releases/download/v1.84.1/svix-cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/svix/svix-webhooks/releases/download/v1.95.1/svix-cli-installer.sh | sh
 ```
 
 For Windows users, installation can be done via powershell:
 
 ```
-powershell -ExecutionPolicy ByPass -c "irm https://github.com/svix-onelson/svix-webhooks/releases/download/v1.84.1/svix-cli-installer.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/svix-onelson/svix-webhooks/releases/download/v1.95.1/svix-cli-installer.ps1 | iex"
 ```
 
 These scripts will install the binaries to `~/.svix/bin` and also add this directory to your `PATH` by default.

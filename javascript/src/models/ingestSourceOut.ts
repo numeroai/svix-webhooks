@@ -16,6 +16,7 @@ import { type DocusignConfigOut, DocusignConfigOutSerializer } from "./docusignC
 import { type EasypostConfigOut, EasypostConfigOutSerializer } from "./easypostConfigOut";
 import { type GithubConfigOut, GithubConfigOutSerializer } from "./githubConfigOut";
 import { type HubspotConfigOut, HubspotConfigOutSerializer } from "./hubspotConfigOut";
+import { type MetaConfigOut, MetaConfigOutSerializer } from "./metaConfigOut";
 import { type OrumIoConfigOut, OrumIoConfigOutSerializer } from "./orumIoConfigOut";
 import { type PandaDocConfigOut, PandaDocConfigOutSerializer } from "./pandaDocConfigOut";
 import { type PortIoConfigOut, PortIoConfigOutSerializer } from "./portIoConfigOut";
@@ -28,6 +29,7 @@ import { type SvixConfigOut, SvixConfigOutSerializer } from "./svixConfigOut";
 import { type TelnyxConfigOut, TelnyxConfigOutSerializer } from "./telnyxConfigOut";
 import { type VapiConfigOut, VapiConfigOutSerializer } from "./vapiConfigOut";
 import { type VeriffConfigOut, VeriffConfigOutSerializer } from "./veriffConfigOut";
+import { type VgsConfigOut, VgsConfigOutSerializer } from "./vgsConfigOut";
 import { type ZoomConfigOut, ZoomConfigOutSerializer } from "./zoomConfigOut";
 interface _IngestSourceOutFields {
   createdAt: Date;
@@ -114,6 +116,11 @@ interface IngestSourceOutLithic {
   config: SvixConfigOut;
 }
 
+interface IngestSourceOutMeta {
+  type: "meta";
+  config: MetaConfigOut;
+}
+
 interface IngestSourceOutNash {
   type: "nash";
   config: SvixConfigOut;
@@ -132,6 +139,11 @@ interface IngestSourceOutPandaDoc {
 interface IngestSourceOutPortIo {
   type: "port-io";
   config: PortIoConfigOut;
+}
+
+interface IngestSourceOutPsiFi {
+  type: "psi-fi";
+  config: SvixConfigOut;
 }
 
 interface IngestSourceOutPleo {
@@ -229,6 +241,11 @@ interface IngestSourceOutAirwallex {
   config: AirwallexConfigOut;
 }
 
+interface IngestSourceOutVgs {
+  type: "vgs";
+  config: VgsConfigOut;
+}
+
 export type IngestSourceOut = _IngestSourceOutFields &
   (
     | IngestSourceOutGenericWebhook
@@ -245,10 +262,12 @@ export type IngestSourceOut = _IngestSourceOutFields &
     | IngestSourceOutHubspot
     | IngestSourceOutIncidentIo
     | IngestSourceOutLithic
+    | IngestSourceOutMeta
     | IngestSourceOutNash
     | IngestSourceOutOrumIo
     | IngestSourceOutPandaDoc
     | IngestSourceOutPortIo
+    | IngestSourceOutPsiFi
     | IngestSourceOutPleo
     | IngestSourceOutReplicate
     | IngestSourceOutResend
@@ -268,6 +287,7 @@ export type IngestSourceOut = _IngestSourceOutFields &
     | IngestSourceOutRender
     | IngestSourceOutVeriff
     | IngestSourceOutAirwallex
+    | IngestSourceOutVgs
   );
 
 export const IngestSourceOutSerializer = {
@@ -304,6 +324,8 @@ export const IngestSourceOutSerializer = {
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
         case "lithic":
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
+        case "meta":
+          return MetaConfigOutSerializer._fromJsonObject(object["config"]);
         case "nash":
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
         case "orum-io":
@@ -312,6 +334,8 @@ export const IngestSourceOutSerializer = {
           return PandaDocConfigOutSerializer._fromJsonObject(object["config"]);
         case "port-io":
           return PortIoConfigOutSerializer._fromJsonObject(object["config"]);
+        case "psi-fi":
+          return SvixConfigOutSerializer._fromJsonObject(object["config"]);
         case "pleo":
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
         case "replicate":
@@ -350,10 +374,13 @@ export const IngestSourceOutSerializer = {
           return VeriffConfigOutSerializer._fromJsonObject(object["config"]);
         case "airwallex":
           return AirwallexConfigOutSerializer._fromJsonObject(object["config"]);
+        case "vgs":
+          return VgsConfigOutSerializer._fromJsonObject(object["config"]);
         default:
           throw new Error(`Unexpected type: ${type}`);
       }
     }
+
     return {
       type,
       config: getConfig(type),
@@ -413,6 +440,9 @@ export const IngestSourceOutSerializer = {
       case "lithic":
         config = SvixConfigOutSerializer._toJsonObject(self.config);
         break;
+      case "meta":
+        config = MetaConfigOutSerializer._toJsonObject(self.config);
+        break;
       case "nash":
         config = SvixConfigOutSerializer._toJsonObject(self.config);
         break;
@@ -424,6 +454,9 @@ export const IngestSourceOutSerializer = {
         break;
       case "port-io":
         config = PortIoConfigOutSerializer._toJsonObject(self.config);
+        break;
+      case "psi-fi":
+        config = SvixConfigOutSerializer._toJsonObject(self.config);
         break;
       case "pleo":
         config = SvixConfigOutSerializer._toJsonObject(self.config);
@@ -481,6 +514,9 @@ export const IngestSourceOutSerializer = {
         break;
       case "airwallex":
         config = AirwallexConfigOutSerializer._toJsonObject(self.config);
+        break;
+      case "vgs":
+        config = VgsConfigOutSerializer._toJsonObject(self.config);
         break;
     }
 

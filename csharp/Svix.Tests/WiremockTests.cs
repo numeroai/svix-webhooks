@@ -98,13 +98,16 @@ namespace Svix.Tests
         [Fact]
         public void StringEnumCorrectlyDeserialized()
         {
-            string raw_json = """"{"id":"asd","status":"finished","task":"application.stats"}"""";
+            string raw_json =
+                """"{"id":"asd","status":"finished","task":"application.stats","updatedAt":"2025-03-03T03:03:03.000000Z"}"""";
+
             var loaded_from_str = JsonConvert.DeserializeObject<ReplayOut>(raw_json);
             var expected = new ReplayOut
             {
                 Id = "asd",
                 Status = BackgroundTaskStatus.Finished,
                 Task = BackgroundTaskType.ApplicationStats,
+                UpdatedAt = new DateTime(2025, 3, 3, 3, 3, 3),
             };
             Assert.Equal(expected.Id, loaded_from_str.Id);
             Assert.Equal(expected.Status, loaded_from_str.Status);
@@ -162,6 +165,7 @@ namespace Svix.Tests
                 "svix-libs/",
                 stub.LogEntries[0].RequestMessage.Headers["User-Agent"][0]
             );
+            Assert.Contains("dotnet/v", stub.LogEntries[0].RequestMessage.Headers["User-Agent"][0]);
         }
 
         [Fact]

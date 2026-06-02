@@ -2,8 +2,9 @@
 name = "svix-bridge-types"
 version.workspace = true
 edition = "2021"
-rust-version = "1.88"
+rust-version = "1.91"
 publish = false
+license.workspace = true
 
 [dependencies]
 async-trait = "0.1"

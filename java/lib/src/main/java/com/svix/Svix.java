@@ -6,10 +6,12 @@ import lombok.Getter;
 
 import okhttp3.HttpUrl;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Getter
 public class Svix {
+    private final SvixHttpClient httpClient;
     private final Application application;
     private final Authentication authentication;
     private final BackgroundTask backgroundTask;
@@ -60,26 +62,27 @@ public class Svix {
             throw new IllegalArgumentException("Invalid base url");
         }
 
-        Map<String, String> defaultHeaders =
-                Map.of(
-                        "User-Agent", "svix-libs/" + Version.VERSION + "/java",
-                        "Authorization", "Bearer " + token);
+        Map<String, String> defaultHeaders = new HashMap<>();
+        String userAgent = (
+            "svix-libs/" + Version.VERSION + "/java jre/" + System.getProperty("java.runtime.version")
+        );
+        defaultHeaders.put("User-Agent", userAgent);
+        defaultHeaders.put("Authorization", "Bearer " + token);
 
-        SvixHttpClient httpClient =
-                new SvixHttpClient(parsedUrl, defaultHeaders, options.getRetrySchedule());
+        this.httpClient = new SvixHttpClient(parsedUrl, defaultHeaders, options.getRetrySchedule());
 
-        this.application = new Application(httpClient);
-        this.authentication = new Authentication(httpClient);
-        this.backgroundTask = new BackgroundTask(httpClient);
-        this.endpoint = new Endpoint(httpClient);
-        this.eventType = new EventType(httpClient);
-        this.ingest = new Ingest(httpClient);
-        this.integration = new Integration(httpClient);
-        this.message = new Message(httpClient);
-        this.messageAttempt = new MessageAttempt(httpClient);
-        this.statistics = new Statistics(httpClient);
-        this.streaming = new Streaming(httpClient);
-        this.operationalWebhook = new OperationalWebhook(httpClient);
-        this.operationalWebhookEndpoint = new OperationalWebhookEndpoint(httpClient);
+        this.application = new Application(this.httpClient);
+        this.authentication = new Authentication(this.httpClient);
+        this.backgroundTask = new BackgroundTask(this.httpClient);
+        this.endpoint = new Endpoint(this.httpClient);
+        this.eventType = new EventType(this.httpClient);
+        this.ingest = new Ingest(this.httpClient);
+        this.integration = new Integration(this.httpClient);
+        this.message = new Message(this.httpClient);
+        this.messageAttempt = new MessageAttempt(this.httpClient);
+        this.statistics = new Statistics(this.httpClient);
+        this.streaming = new Streaming(this.httpClient);
+        this.operationalWebhook = new OperationalWebhook(this.httpClient);
+        this.operationalWebhookEndpoint = new OperationalWebhookEndpoint(this.httpClient);
     }
 }

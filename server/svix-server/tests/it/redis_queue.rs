@@ -15,7 +15,7 @@ use svix_server::{
         ApplicationId, BaseId, EndpointId, MessageAttemptTriggerType, MessageId, OrganizationId,
     },
     queue::{
-        new_pair, MessageTask, QueueTask, TaskQueueConsumer, TaskQueueDelivery, TaskQueueProducer,
+        MessageTask, QueueTask, TaskQueueConsumer, TaskQueueDelivery, TaskQueueProducer, new_pair,
     },
     redis::RedisManager,
     v1::endpoints::message::MessageOut,
@@ -167,7 +167,7 @@ async fn test_redis_streams_dlq() {
     cfg.redis_pending_duration_secs = 1;
 
     let cfg = std::sync::Arc::new(cfg);
-    let prefix = svix_ksuid::Ksuid::new(None, None).to_string();
+    let prefix = svix_ksuid::Ksuid::now(None).to_string();
 
     let pool = get_pool(&cfg).await;
     let mut conn = pool.get().await.unwrap();

@@ -1,8 +1,9 @@
 # frozen_string_literal: true
+
+require "cgi"
 require "uri"
 require "net/http"
 require "securerandom"
-
 
 module Svix
   class SvixHttpClient
@@ -43,18 +44,24 @@ module Svix
         raise ArgumentError, "Unsupported HTTP method: #{method}"
       end
 
+      user_agent_fields = [
+        "svix-libs/#{VERSION}/ruby",
+        "ruby/#{RUBY_VERSION}",
+        "#{RbConfig::CONFIG["host_os"]}/#{RbConfig::CONFIG["host_cpu"]}"
+      ]
+
       # Create request object
       request = request_class.new(uri.request_uri)
       request["Authorization"] = "Bearer #{@token}"
-      request["User-Agent"] = "svix-libs/#{VERSION}/ruby"
-      request["svix-req-id"] = rand(0...(2 ** 64))
+      request["User-Agent"] = user_agent_fields.join(" ")
+      request["svix-req-id"] = rand(0...(2**64))
 
       # Add headers
       headers.each { |key, value| request[key] = value }
 
       # Check if idempotency-key header already exists
       if !request.key?("idempotency-key") && method.to_s.upcase == "POST"
-        request["idempotency-key"] = "auto_" + SecureRandom.uuid_v4.to_s
+        request["idempotency-key"] = "auto_" + SecureRandom.uuid.to_s
       end
 
       # Add body for non-GET requests
@@ -73,9 +80,9 @@ module Svix
       else
         fail(
           ApiError.new(
-            :code => Integer(res.code),
-            :response_headers => res.each_header.to_h,
-            :response_body => res.body
+            code: Integer(res.code),
+            response_headers: res.each_header.to_h,
+            response_body: res.body
           )
         )
       end
@@ -100,14 +107,18 @@ module Svix
     private def encode_query_params(query_params = {})
       encoded_query_pairs = []
       query_params.each do |k, v|
-        unless v.nil?
-          if v.kind_of?(Array)
-            encoded_query_pairs.append("#{k}=" + CGI::escape(v.sort.join(",")))
-          elsif v.kind_of?(Time)
-            encoded_query_pairs.append("#{k}=#{CGI::escape(v.utc.to_datetime.rfc3339)}")
+        if !v.nil?
+          if v.is_a?(Array)
+            encoded_query_pairs.append("#{k}=" + CGI.escape(v.sort.join(",")))
+          elsif v.is_a?(Time)
+            encoded_query_pairs.append("#{k}=#{CGI.escape(v.utc.to_datetime.rfc3339)}")
           else
-            encoded_query_pairs.append("#{k}=#{CGI::escape(v)}")
+            encoded_query_pairs.append("#{k}=#{CGI.escape(v)}")
           end
+        elsif k == "expanded_statuses"
+          # HACK: default expanded_statuses to true, it only defaults to false
+          #       server-side because of backwards-compatibility for old SDKs
+          encoded_query_pairs.append("#{k}=true")
         end
       end
 

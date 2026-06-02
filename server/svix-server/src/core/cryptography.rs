@@ -3,13 +3,12 @@
 
 use std::fmt::Debug;
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
     Key, XChaCha20Poly1305, XNonce,
+    aead::{Aead, KeyInit},
 };
 use ed25519_compact::*;
-use rand::Rng;
 
 use crate::error::Result;
 
@@ -74,7 +73,7 @@ impl Encryption {
     pub fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         if let Some(main_key) = self.0.as_ref() {
             let cipher = XChaCha20Poly1305::new(main_key);
-            let nonce: [u8; Self::NONCE_SIZE] = rand::thread_rng().gen();
+            let nonce: [u8; Self::NONCE_SIZE] = rand::random();
             let nonce = XNonce::from_slice(&nonce);
             let mut ciphertext = cipher
                 .encrypt(nonce, data)

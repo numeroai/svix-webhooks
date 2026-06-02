@@ -2,40 +2,42 @@
 // SPDX-License-Identifier: MIT
 
 use aide::axum::{
-    routing::{get_with, post_with},
     ApiRouter,
+    routing::{get_with, post_with},
 };
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use chrono::{DateTime, Utc};
 use futures::FutureExt;
 use schemars::JsonSchema;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, TransactionTrait};
 use serde::{Deserialize, Serialize};
-use svix_server_derive::{aide_annotate, ModelOut};
+use svix_server_derive::{ModelOut, aide_annotate};
 use validator::{Validate, ValidationError};
 
 use crate::{
+    AppState,
     core::{
+        can_fail::CanFail as _,
+        message_app::CreateMessageApp,
         permissions,
-        types::{metadata::Metadata, ApplicationId, ApplicationUid, OrganizationId},
+        types::{ApplicationId, ApplicationUid, OrganizationId, metadata::Metadata},
     },
     db::models::{application, applicationmetadata},
-    error::{http_error_on_conflict, HttpError, Result, Traceable},
+    error::{HttpError, Result, Traceable, http_error_on_conflict},
     v1::utils::{
-        apply_pagination, openapi_tag,
+        ApplicationPath, IteratorDirection, JsonStatusUpsert, ListResponse, ModelIn, ModelOut,
+        NoContent, Ordering, Pagination, PaginationLimit, ReversibleIterator, ValidatedJson,
+        ValidatedQuery, apply_pagination, openapi_tag,
         patch::{
-            patch_field_non_nullable, patch_field_nullable, UnrequiredField,
-            UnrequiredNullableField,
+            UnrequiredField, UnrequiredNullableField, patch_field_non_nullable,
+            patch_field_nullable,
         },
         validate_no_control_characters, validate_no_control_characters_unrequired,
-        validation_error, ApplicationPath, IteratorDirection, JsonStatusUpsert, ListResponse,
-        ModelIn, ModelOut, NoContent, Ordering, Pagination, PaginationLimit, ReversibleIterator,
-        ValidatedJson, ValidatedQuery,
+        validation_error,
     },
-    AppState,
 };
 
 fn application_name_example() -> &'static str {
@@ -52,9 +54,21 @@ pub struct ApplicationIn {
     #[schemars(example = "application_name_example")]
     pub name: String,
 
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     #[validate(range(min = 1, message = "Application rate limits must be at least 1 if set"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_limit: Option<u16>,
+
+    /// Maximum messages per second to send to this application's endpoints.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    #[validate(range(
+        min = 1,
+        message = "Application throttle rate must be at least 1 if set"
+    ))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle_rate: Option<u16>,
     /// Optional unique identifier for the application
     #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,16 +82,19 @@ pub struct ApplicationIn {
 impl ModelIn for ApplicationIn {
     type ActiveModel = (application::ActiveModel, applicationmetadata::ActiveModel);
 
+    #[allow(deprecated)]
     fn update_model(self, (app, app_metadata): &mut Self::ActiveModel) {
         let ApplicationIn {
             name,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             metadata,
         } = self;
 
         app.name = Set(name);
-        app.rate_limit = Set(rate_limit.map(|x| x.into()));
+        app.rate_limit = Set(throttle_rate.or(rate_limit).map(|x| x.into()));
         app.uid = Set(uid);
         app_metadata.data = Set(metadata);
     }
@@ -93,9 +110,18 @@ pub struct ApplicationPatch {
     )]
     pub name: UnrequiredField<String>,
 
-    #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     #[validate(custom = "validate_rate_limit_patch")]
+    #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
     pub rate_limit: UnrequiredNullableField<u16>,
+
+    /// Maximum messages per second to send to this application's endpoints.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    #[validate(custom = "validate_rate_limit_patch")]
+    #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
+    pub throttle_rate: UnrequiredNullableField<u16>,
 
     #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
     #[validate]
@@ -108,10 +134,13 @@ pub struct ApplicationPatch {
 impl ModelIn for ApplicationPatch {
     type ActiveModel = (application::ActiveModel, applicationmetadata::ActiveModel);
 
+    #[allow(deprecated)]
     fn update_model(self, (app, app_metadata): &mut Self::ActiveModel) {
         let ApplicationPatch {
             name,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             metadata,
         } = self;
@@ -122,6 +151,12 @@ impl ModelIn for ApplicationPatch {
 
         patch_field_non_nullable!(app, name);
         patch_field_nullable!(app, rate_limit, rate_limit_map);
+
+        match throttle_rate {
+            UnrequiredNullableField::Some(v) => app.rate_limit = Set(Some(v.into())),
+            UnrequiredNullableField::None => app.rate_limit = Set(None),
+            UnrequiredNullableField::Absent => {}
+        }
         patch_field_nullable!(app, uid);
         patch_field_non_nullable!(app_metadata, data);
     }
@@ -169,8 +204,14 @@ pub struct ApplicationOut {
     pub uid: Option<ApplicationUid>,
     #[schemars(example = "application_name_example")]
     pub name: String,
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_limit: Option<u16>,
+    /// Maximum messages per second to send to this application's endpoints.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    pub throttle_rate: Option<u16>,
 
     pub id: ApplicationId,
     pub created_at: DateTime<Utc>,
@@ -179,11 +220,13 @@ pub struct ApplicationOut {
 }
 
 impl From<(application::Model, applicationmetadata::Model)> for ApplicationOut {
+    #[allow(deprecated)]
     fn from((app, metadata): (application::Model, applicationmetadata::Model)) -> Self {
         Self {
             uid: app.uid,
             name: app.name,
             rate_limit: app.rate_limit.map(|x| x as u16),
+            throttle_rate: app.rate_limit.map(|x| x as u16),
             id: app.id,
             created_at: app.created_at.into(),
             updated_at: app.updated_at.into(),
@@ -312,21 +355,24 @@ async fn get_application(
 /// Update an application.
 #[aide_annotate(op_id = "v1.application.update")]
 async fn update_application(
-    State(AppState { ref db, .. }): State<AppState>,
+    State(AppState {
+        ref db, ref cache, ..
+    }): State<AppState>,
     Path(ApplicationPath { app_id }): Path<ApplicationPath>,
     permissions::Organization { org_id }: permissions::Organization,
     ValidatedJson(data): ValidatedJson<ApplicationIn>,
 ) -> Result<JsonStatusUpsert<ApplicationOut>> {
-    let (app, metadata, create_models) = if let Some((app, metadata)) =
+    let (app, app_and_org_id, metadata, create_models) = if let Some((app, metadata)) =
         application::Model::fetch_with_metadata(db, org_id.clone(), app_id)
             .await
             .trace()?
     {
-        (app.into(), metadata.into(), false)
+        let ids = Some((app.id.clone(), app.org_id.clone()));
+        (app.into(), ids, metadata.into(), false)
     } else {
         let app = application::ActiveModel::new(org_id);
         let metadata = applicationmetadata::ActiveModel::new(app.id.clone().unwrap(), None);
-        (app, metadata, true)
+        (app, None, metadata, true)
     };
 
     let mut models = (app, metadata);
@@ -348,6 +394,12 @@ async fn update_application(
         })
         .await?;
 
+    if let Some((app_id, org_id)) = app_and_org_id {
+        CreateMessageApp::invalidate(cache, &app_id, &org_id)
+            .await
+            .can_fail("invalidating CMA cache");
+    }
+
     if create_models {
         Ok(JsonStatusUpsert::Created((app, metadata).into()))
     } else {
@@ -358,7 +410,9 @@ async fn update_application(
 /// Partially update an application.
 #[aide_annotate]
 async fn patch_application(
-    State(AppState { ref db, .. }): State<AppState>,
+    State(AppState {
+        ref db, ref cache, ..
+    }): State<AppState>,
     permissions::OrganizationWithApplication { app }: permissions::OrganizationWithApplication,
     ValidatedJson(data): ValidatedJson<ApplicationPatch>,
 ) -> Result<Json<ApplicationOut>> {
@@ -380,19 +434,33 @@ async fn patch_application(
         })
         .await?;
 
+    CreateMessageApp::invalidate(cache, &app.id, &app.org_id)
+        .await
+        .can_fail("invalidating CMA cache");
+
     Ok(Json((app, metadata).into()))
 }
 
 /// Delete an application.
 #[aide_annotate(op_id = "v1.application.delete")]
 async fn delete_application(
-    State(AppState { ref db, .. }): State<AppState>,
+    State(AppState {
+        ref db, ref cache, ..
+    }): State<AppState>,
     permissions::OrganizationWithApplication { app }: permissions::OrganizationWithApplication,
 ) -> Result<NoContent> {
+    let app_id = app.id.clone();
+    let org_id = app.org_id.clone();
+
     let mut app: application::ActiveModel = app.into();
     app.deleted = Set(true);
     app.uid = Set(None); // We don't want deleted UIDs to clash
     app.update(db).await?;
+
+    CreateMessageApp::invalidate(cache, &app_id, &org_id)
+        .await
+        .can_fail("invalidating CMA cache");
+
     Ok(NoContent)
 }
 
@@ -429,6 +497,7 @@ mod tests {
     const UID_INVALID: &str = "$$invalid-uid";
     const UID_VALID: &str = "valid-uid";
 
+    #[allow(deprecated)]
     #[test]
     fn test_application_in_validation() {
         let invalid_1: ApplicationIn =
@@ -456,6 +525,7 @@ mod tests {
     }
 
     // FIXME: How to eliminate the repetition here?
+    #[allow(deprecated)]
     #[test]
     fn test_application_patch_validation() {
         let invalid_1: ApplicationPatch =

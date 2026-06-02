@@ -13,7 +13,7 @@ use tower_http::{
     classify::ServerErrorsFailureClass,
     trace::{MakeSpan, OnFailure, OnResponse},
 };
-use tracing::field::{debug, Empty};
+use tracing::field::{Empty, debug};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// An implementor of [`MakeSpan`] which creates `tracing` spans populated with information about
@@ -55,7 +55,7 @@ impl<B> MakeSpan<B> for AxumOtelSpanCreator {
                     .get("svix-req-id")
                     .and_then(|v| v.to_str().map(ToOwned::to_owned).ok())
             })
-            .unwrap_or_else(|| KsuidMs::new(None, None).to_string());
+            .unwrap_or_else(|| KsuidMs::now(None).to_string());
 
         let remote_context = opentelemetry::global::get_text_map_propagator(|p| {
             p.extract(&opentelemetry_http::HeaderExtractor(request.headers()))

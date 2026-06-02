@@ -1,9 +1,89 @@
 # Changelog
 
-## Version 1.84.0
-* Libs/(JavaScript Python): Updated webhook verification logic to use official standard webhooks packages
-* Cli: support disabling TLS verification when relaying requests (`svix listen`)
+## Unreleased
+* Libs: Add `health.get` to Go, Python and Rust SDK
+  * It was previously missing from these SDKs for historical reasons
 
+## Version 1.95.1
+* Libs/Python: Fix release workflow (1.95.0 of the Python SDK failed publishing)
+
+## Version 1.95.0
+* Libs/All: Enable server-side support of 'canceled' message-attempt status by default
+  * If you were previously comparing attempt statuses against 'success', note that the
+    result of the comparison will now change for messages canceled by a transformation script
+* Libs/Python: Move from `setup.py` to [PEP-518](https://peps.python.org/pep-0518/)-compliant `pyproject.toml` build system
+* Libs/Python: Clarify that the minimum-supported Python interpreter version is 3.8
+* Libs/Python: Actually run tests against all supported python versions
+* Libs/PHP: Fix deprecation warning for `DateTimeImmutable` construction from `null` (thanks [@VincentLanglet])
+
+[@VincentLanglet]: https://github.com/VincentLanglet
+
+## Version 1.94.0
+* Libs **(New)**: Webhooks AutoConfig SDK
+* Libs/Java: Restore compatibility with Java 1.8 in Webhooks verification
+
+## Version 1.93.0
+* Server: Warn when Redis pending timeout is shorter than worker request timeout + buffer (thanks [@vinay0826])
+* Server: Add missing messageattempt index (as a new kind of background migration)
+* CLI: Show input / output JSON examples in `--help` output
+* Libs/Java: Restore compatibility with Java 1.8
+
+## Version 1.92.2
+* Libs/JavaScript: Remove dependency on `uuid` (thanks [@ulrichstark])
+
+[@ulrichstark]: https://github.com/ulrichstark
+
+## Version 1.91.1
+* Fix docker build
+
+## Version 1.91.0
+* Server: Remove old endpoint secrets on rotation
+* Libs/Ruby: various fixes to the ruby sdk
+
+## Version 1.90.0
+* Server: Add `throttleRate` to endpoint and application
+  * This replaces `rateLimit` because the name caused some confusion
+    (but is kept as a deprecated field for backwards compatibility)
+* Libs/All: Update to latest Svix Cloud spec
+
+## Version 1.89.0
+* Server: Add a prune helper command to delete old data
+* Server: Invalidate CMA cache when creating/updating endpoints or apps
+* Server: Return empty JSON object from v1.message-attempt.resend
+* Server: Build Docker image with Rust 1.94
+* Bridge: Add support for PLAIN sasl auth for confluent cloud
+* Bridge: Build Docker image with Rust 1.94
+* Libs/Python: Set `__str__` on errors
+
+## Version 1.88.0
+* Libs/Go: Add support for `v1.management.authentication.patch-api-token` (Internal endpoint)
+* Libs/Go: Add TransportWrapper option to SvixOptions (thanks [@piotrdomagalski])
+
+[@piotrdomagalski]: https://github.com/piotrdomagalski
+
+## Version 1.87.0
+* Server: Respect `retry-after` header on error responses (within limits) (thanks [@vinay0826])
+
+[@vinay0826]: https://github.com/vinay0826
+
+## Version 1.86.0
+* Server: Fix non-determinism with regards to overrides of specific header names
+* Server: Bump MSRV to 1.88.0
+* Libs/All: Add support for `v1.message.create-precheck` (Svix Cloud exclusive endpoint)
+
+## Version 1.85.0
+* Libs/Ruby: Return nil if payload is empty, instead of attempting to parse as JSON (thanks [@donovanlopez])
+* Libs/Rust: Bump MSRV to 1.88.0
+* CLI: Bump MSRV to 1.88.0
+
+[@donovanlopez]: https://github.com/donovanlopez
+
+## Version 1.84.1
+* Libs/JavaScript: Updated webhook verification logic to use official standard webhooks packages
+
+## Version 1.84.0
+* Libs/Python: Updated webhook verification logic to use official standard webhooks packages
+* CLI: support disabling TLS verification when relaying requests (`svix listen`)
 
 ## Version 1.83.0
 * Server: Add `status_text` field to `MessageAttemptOut` to match Svix Cloud

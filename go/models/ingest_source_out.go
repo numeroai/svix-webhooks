@@ -17,6 +17,7 @@ import (
 //   - "easypost": Use EasypostConfigOut
 //   - "github": Use GithubConfigOut
 //   - "hubspot": Use HubspotConfigOut
+//   - "meta": Use MetaConfigOut
 //   - "orum-io": Use OrumIoConfigOut
 //   - "panda-doc": Use PandaDocConfigOut
 //   - "port-io": Use PortIoConfigOut
@@ -25,10 +26,11 @@ import (
 //   - "shopify": Use ShopifyConfigOut
 //   - "slack": Use SlackConfigOut
 //   - "stripe": Use StripeConfigOut
-//   - "beehiiv","brex","clerk","guesty","incident-io","lithic","nash","pleo","replicate","resend","safebase","sardine","stych","svix","open-ai","render": Use SvixConfigOut
+//   - "beehiiv","brex","clerk","guesty","incident-io","lithic","nash","psi-fi","pleo","replicate","resend","safebase","sardine","stych","svix","open-ai","render": Use SvixConfigOut
 //   - "telnyx": Use TelnyxConfigOut
 //   - "vapi": Use VapiConfigOut
 //   - "veriff": Use VeriffConfigOut
+//   - "vgs": Use VgsConfigOut
 //   - "zoom": Use ZoomConfigOut
 type IngestSourceOut struct {
 	CreatedAt time.Time             `json:"createdAt"`
@@ -59,10 +61,12 @@ const (
 	IngestSourceOutTypeHubspot        IngestSourceOutType = "hubspot"
 	IngestSourceOutTypeIncidentIo     IngestSourceOutType = "incident-io"
 	IngestSourceOutTypeLithic         IngestSourceOutType = "lithic"
+	IngestSourceOutTypeMeta           IngestSourceOutType = "meta"
 	IngestSourceOutTypeNash           IngestSourceOutType = "nash"
 	IngestSourceOutTypeOrumIo         IngestSourceOutType = "orum-io"
 	IngestSourceOutTypePandaDoc       IngestSourceOutType = "panda-doc"
 	IngestSourceOutTypePortIo         IngestSourceOutType = "port-io"
+	IngestSourceOutTypePsiFi          IngestSourceOutType = "psi-fi"
 	IngestSourceOutTypePleo           IngestSourceOutType = "pleo"
 	IngestSourceOutTypeReplicate      IngestSourceOutType = "replicate"
 	IngestSourceOutTypeResend         IngestSourceOutType = "resend"
@@ -82,6 +86,7 @@ const (
 	IngestSourceOutTypeRender         IngestSourceOutType = "render"
 	IngestSourceOutTypeVeriff         IngestSourceOutType = "veriff"
 	IngestSourceOutTypeAirwallex      IngestSourceOutType = "airwallex"
+	IngestSourceOutTypeVgs            IngestSourceOutType = "vgs"
 )
 
 type IngestSourceOutConfig interface {
@@ -97,6 +102,7 @@ func (DocusignConfigOut) isIngestSourceOutConfig()  {}
 func (EasypostConfigOut) isIngestSourceOutConfig()  {}
 func (GithubConfigOut) isIngestSourceOutConfig()    {}
 func (HubspotConfigOut) isIngestSourceOutConfig()   {}
+func (MetaConfigOut) isIngestSourceOutConfig()      {}
 func (OrumIoConfigOut) isIngestSourceOutConfig()    {}
 func (PandaDocConfigOut) isIngestSourceOutConfig()  {}
 func (PortIoConfigOut) isIngestSourceOutConfig()    {}
@@ -110,6 +116,7 @@ func (TelnyxConfigOut) isIngestSourceOutConfig()    {}
 func (VapiConfigOut) isIngestSourceOutConfig()      {}
 func (VeriffConfigOut) isIngestSourceOutConfig()    {}
 func (AirwallexConfigOut) isIngestSourceOutConfig() {}
+func (VgsConfigOut) isIngestSourceOutConfig()       {}
 
 func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 	type Alias IngestSourceOut
@@ -157,6 +164,10 @@ func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 		var c HubspotConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
+	case "meta":
+		var c MetaConfigOut
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
 	case "orum-io":
 		var c OrumIoConfigOut
 		err = json.Unmarshal(aux.Config, &c)
@@ -189,7 +200,7 @@ func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 		var c StripeConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
-	case "beehiiv", "brex", "clerk", "guesty", "incident-io", "lithic", "nash", "pleo", "replicate", "resend", "safebase", "sardine", "stych", "svix", "open-ai", "render":
+	case "beehiiv", "brex", "clerk", "guesty", "incident-io", "lithic", "nash", "psi-fi", "pleo", "replicate", "resend", "safebase", "sardine", "stych", "svix", "open-ai", "render":
 		var c SvixConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
@@ -203,6 +214,10 @@ func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 		i.Config = c
 	case "veriff":
 		var c VeriffConfigOut
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
+	case "vgs":
+		var c VgsConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
 	case "zoom":
@@ -243,10 +258,12 @@ var IngestSourceOutTypeFromString = map[string]IngestSourceOutType{
 	"hubspot":         IngestSourceOutTypeHubspot,
 	"incident-io":     IngestSourceOutTypeIncidentIo,
 	"lithic":          IngestSourceOutTypeLithic,
+	"meta":            IngestSourceOutTypeMeta,
 	"nash":            IngestSourceOutTypeNash,
 	"orum-io":         IngestSourceOutTypeOrumIo,
 	"panda-doc":       IngestSourceOutTypePandaDoc,
 	"port-io":         IngestSourceOutTypePortIo,
+	"psi-fi":          IngestSourceOutTypePsiFi,
 	"pleo":            IngestSourceOutTypePleo,
 	"replicate":       IngestSourceOutTypeReplicate,
 	"resend":          IngestSourceOutTypeResend,
@@ -266,4 +283,5 @@ var IngestSourceOutTypeFromString = map[string]IngestSourceOutType{
 	"render":          IngestSourceOutTypeRender,
 	"veriff":          IngestSourceOutTypeVeriff,
 	"airwallex":       IngestSourceOutTypeAirwallex,
+	"vgs":             IngestSourceOutTypeVgs,
 }

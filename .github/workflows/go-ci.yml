@@ -1,22 +1,7 @@
 name: Go CI
 
 on:
-  pull_request:
-    paths:
-      - "go/**"
-      - "go.sum"
-      - "go.mod"
-      - "codegen/lib-openapi.json"
-      - ".github/workflows/go-ci.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "go/**"
-      - "go.sum"
-      - "go.mod"
-      - "codegen/lib-openapi.json"
-      - ".github/workflows/go-ci.yml"
+  workflow_call:
 
 jobs:
   build:
@@ -25,7 +10,7 @@ jobs:
       matrix:
         version: ["1.23.x", "1.21.x"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup Go
         uses: actions/setup-go@v5
         with:

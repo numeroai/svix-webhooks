@@ -7,10 +7,9 @@ use std::{
     sync::LazyLock,
 };
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Utc};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use rand::Rng;
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,7 +18,10 @@ use validator::{Validate, ValidationErrors};
 
 use crate::v1::utils::validation_error;
 
+mod case_preserving_header_map;
 pub mod metadata;
+
+pub use case_preserving_header_map::CasePreservingHeaderMap;
 
 use super::cryptography::{AsymmetricKey, Encryption};
 
@@ -200,7 +202,7 @@ pub trait BaseId: Deref<Target = String> {
 
     fn generate_(dt: Option<DateTime<Utc>>, payload: Option<&[u8]>) -> String {
         let ksuid = KsuidMs::new(dt, payload);
-        format!("{}{}", Self::PREFIX, ksuid.to_string())
+        format!("{}{ksuid}", Self::PREFIX)
     }
 
     fn new(dt: Option<DateTime<Utc>>, payload: Option<&[u8]>) -> Self::Output;
@@ -640,6 +642,11 @@ json_wrapper!(ExpiringSigningKeys);
 impl ExpiringSigningKeys {
     pub const MAX_OLD_KEYS: usize = 10;
     pub const OLD_KEY_EXPIRY_HOURS: i64 = 24;
+
+    pub fn unexpired_keys(&self) -> impl Iterator<Item = &ExpiringSigningKey> {
+        let now = Utc::now();
+        self.0.iter().filter(move |x| x.expiration > now)
+    }
 }
 
 /// The type of encryption key
@@ -732,7 +739,7 @@ impl EndpointSecretInternal {
     }
 
     pub fn generate_symmetric(encryption: &Encryption) -> crate::error::Result<Self> {
-        let buf: [u8; Self::KEY_SIZE] = rand::thread_rng().gen();
+        let buf: [u8; Self::KEY_SIZE] = rand::random();
         Self::new(encryption, EndpointSecretType::Hmac256, &buf)
     }
 
@@ -966,7 +973,7 @@ impl EndpointSecret {
                 format!(
                     "{}{}",
                     EndpointSecretType::Ed25519.secret_prefix(),
-                    &STANDARD.encode(key.0.sk.as_slice())
+                    STANDARD.encode(key.0.sk.as_slice())
                 )
             }
         }
@@ -985,7 +992,7 @@ impl EndpointSecret {
                 format!(
                     "{}{}",
                     EndpointSecretType::Ed25519.public_prefix(),
-                    &STANDARD.encode(key.pubkey())
+                    STANDARD.encode(key.pubkey())
                 )
             }
         }
@@ -1419,12 +1426,12 @@ pub type FeatureFlagSet = HashSet<FeatureFlag>;
 mod tests {
     use std::collections::HashMap;
 
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     use validator::Validate;
 
     use super::{
-        validate_header_map, ApplicationId, ApplicationUid, EndpointHeaders, EndpointHeadersPatch,
-        EndpointSecret, EventChannel, EventTypeName,
+        ApplicationId, ApplicationUid, EndpointHeaders, EndpointHeadersPatch, EndpointSecret,
+        EventChannel, EventTypeName, validate_header_map,
     };
     use crate::core::cryptography::AsymmetricKey;
 

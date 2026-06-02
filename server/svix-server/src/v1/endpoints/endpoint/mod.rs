@@ -8,32 +8,33 @@ mod secrets;
 use std::collections::{HashMap, HashSet};
 
 use aide::axum::{
-    routing::{get_with, post_with},
     ApiRouter,
+    routing::{get_with, post_with},
 };
 use axum::{
-    extract::{Path, Query, State},
     Json,
+    extract::{Path, Query, State},
 };
 use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, ColumnTrait, FromQueryResult, QuerySelect};
 use serde::{Deserialize, Serialize};
-use svix_server_derive::{aide_annotate, ModelIn, ModelOut};
+use svix_server_derive::{ModelIn, ModelOut, aide_annotate};
 use url::Url;
 use validator::{Validate, ValidationError};
 
 use self::secrets::generate_secret;
-use super::message::{create_message_inner, MessageIn, MessageOut, RawPayload};
+use super::message::{MessageIn, MessageOut, RawPayload, create_message_inner};
 use crate::{
+    AppState,
     cfg::DefaultSignatureType,
     core::{
         cryptography::Encryption,
         permissions,
         types::{
-            metadata::Metadata, ApplicationIdOrUid, EndpointHeaders, EndpointHeadersPatch,
-            EndpointId, EndpointSecret, EndpointSecretInternal, EndpointUid, EventChannelSet,
-            EventTypeName, EventTypeNameSet, MessageStatus,
+            ApplicationIdOrUid, EndpointHeaders, EndpointHeadersPatch, EndpointId, EndpointSecret,
+            EndpointSecretInternal, EndpointUid, EventChannelSet, EventTypeName, EventTypeNameSet,
+            MessageStatus, metadata::Metadata,
         },
     },
     db::models::{
@@ -42,15 +43,14 @@ use crate::{
     },
     error::{self, HttpError},
     v1::utils::{
-        openapi_tag,
+        ApplicationEndpointPath, ModelIn, ValidatedJson, openapi_tag,
         patch::{
-            patch_field_non_nullable, patch_field_nullable, UnrequiredField,
-            UnrequiredNullableField,
+            UnrequiredField, UnrequiredNullableField, patch_field_non_nullable,
+            patch_field_nullable,
         },
         validate_no_control_characters, validate_no_control_characters_unrequired,
-        validation_error, ApplicationEndpointPath, ModelIn, ValidatedJson,
+        validation_error,
     },
-    AppState,
 };
 
 pub fn validate_event_types_ids(event_types_ids: &EventTypeNameSet) -> Result<(), ValidationError> {
@@ -149,9 +149,22 @@ pub struct EndpointIn {
     #[schemars(example = "example_endpoint_description")]
     pub description: String,
 
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     #[validate(range(min = 1, message = "Endpoint rate limits must be at least one if set"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_limit: Option<u16>,
+
+    /// Maximum messages per second to send to this endpoint.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    #[validate(range(
+        min = 1,
+        message = "Endpoint throttle rate must be at least one if set"
+    ))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle_rate: Option<u16>,
+
     /// Optional unique identifier for the endpoint
     #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -215,7 +228,9 @@ impl ModelIn for EndpointIn {
     fn update_model(self, model: &mut Self::ActiveModel) {
         let EndpointIn {
             description,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             url,
             version,
@@ -227,7 +242,7 @@ impl ModelIn for EndpointIn {
         } = self;
 
         model.description = Set(description);
-        model.rate_limit = Set(rate_limit.map(|x| x.into()));
+        model.rate_limit = Set(throttle_rate.or(rate_limit).map(|x| x.into()));
         model.uid = Set(uid);
         model.url = Set(url.into());
         model.version = Set(version.unwrap_or(1).into());
@@ -245,9 +260,21 @@ struct EndpointUpdate {
     #[schemars(example = "example_endpoint_description")]
     pub description: String,
 
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     #[validate(range(min = 1, message = "Endpoint rate limits must be at least one if set"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_limit: Option<u16>,
+
+    /// Maximum messages per second to send to this endpoint.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    #[validate(range(
+        min = 1,
+        message = "Endpoint throttle rate must be at least one if set"
+    ))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle_rate: Option<u16>,
 
     /// Optional unique identifier for the endpoint
     #[validate]
@@ -291,7 +318,9 @@ impl ModelIn for EndpointUpdate {
     fn update_model(self, model: &mut Self::ActiveModel) {
         let EndpointUpdate {
             description,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             url,
             version,
@@ -302,7 +331,7 @@ impl ModelIn for EndpointUpdate {
         } = self;
 
         model.description = Set(description);
-        model.rate_limit = Set(rate_limit.map(|x| x.into()));
+        model.rate_limit = Set(throttle_rate.or(rate_limit).map(|x| x.into()));
         model.uid = Set(uid);
         model.url = Set(url.into());
         model.version = Set(version.unwrap_or(1).into());
@@ -317,7 +346,9 @@ impl EndpointUpdate {
     pub fn into_in_with_default_key(self) -> EndpointIn {
         let EndpointUpdate {
             description,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             url,
             version,
@@ -329,7 +360,9 @@ impl EndpointUpdate {
 
         EndpointIn {
             description,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             url,
             version,
@@ -351,9 +384,18 @@ pub struct EndpointPatch {
     #[validate(custom = "validate_no_control_characters_unrequired")]
     pub description: UnrequiredField<String>,
 
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     #[validate(custom = "validate_rate_limit_patch")]
     #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
     pub rate_limit: UnrequiredNullableField<u16>,
+
+    /// Maximum messages per second to send to this endpoint.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    #[validate(custom = "validate_rate_limit_patch")]
+    #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
+    pub throttle_rate: UnrequiredNullableField<u16>,
 
     #[validate]
     #[serde(default, skip_serializing_if = "UnrequiredNullableField::is_absent")]
@@ -396,7 +438,9 @@ impl ModelIn for EndpointPatch {
     fn update_model(self, model: &mut Self::ActiveModel) {
         let EndpointPatch {
             description,
+            #[allow(deprecated)]
             rate_limit,
+            throttle_rate,
             uid,
             url,
             version,
@@ -411,6 +455,12 @@ impl ModelIn for EndpointPatch {
 
         patch_field_non_nullable!(model, description);
         patch_field_nullable!(model, rate_limit, map);
+
+        match throttle_rate {
+            UnrequiredNullableField::Some(v) => model.rate_limit = Set(Some(v.into())),
+            UnrequiredNullableField::None => model.rate_limit = Set(None),
+            UnrequiredNullableField::Absent => {}
+        }
         patch_field_nullable!(model, uid);
         patch_field_non_nullable!(model, url);
         patch_field_non_nullable!(model, version, map);
@@ -459,7 +509,13 @@ fn validate_minimum_version_patch(version: &UnrequiredField<u16>) -> Result<(), 
 pub struct EndpointOutCommon {
     /// An example endpoint name
     pub description: String,
+    /// Deprecated, use `throttleRate` instead.
+    #[deprecated]
     pub rate_limit: Option<u16>,
+    /// Maximum messages per second to send to this endpoint.
+    ///
+    /// Outgoing messages will be throttled to this rate.
+    pub throttle_rate: Option<u16>,
     /// Optional unique identifier for the endpoint
     pub uid: Option<EndpointUid>,
     #[schemars(url, length(min = 1, max = 65_536), example = "example_endpoint_url")]
@@ -488,6 +544,7 @@ impl From<endpoint::Model> for EndpointOutCommon {
         Self {
             description: model.description,
             rate_limit: model.rate_limit.map(|x| x as u16),
+            throttle_rate: model.rate_limit.map(|x| x as u16),
             uid: model.uid,
             url: model.url,
             version: model.version as u16,
@@ -890,7 +947,7 @@ mod tests {
     use serde_json::json;
     use validator::Validate;
 
-    use super::{validate_url, EndpointHeadersOut, EndpointHeadersPatchIn, EndpointIn};
+    use super::{EndpointHeadersOut, EndpointHeadersPatchIn, EndpointIn, validate_url};
     use crate::core::types::EndpointHeaders;
 
     const URL_VALID: &str = "https://www.example.com";

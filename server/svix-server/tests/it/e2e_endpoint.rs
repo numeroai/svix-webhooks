@@ -8,15 +8,15 @@ use std::{
 };
 
 use anyhow::Result;
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Utc};
 use ed25519_compact::Signature;
 use reqwest::{StatusCode, Url};
 use sea_orm::{
-    ActiveModelBehavior, ActiveModelTrait, ConnectionTrait, DatabaseBackend, QueryResult, Set,
-    Statement,
+    ActiveModelBehavior, ActiveModelTrait, ConnectionTrait, DatabaseBackend, IntoActiveModel,
+    QueryResult, Set, Statement,
 };
-use serde::{de::IgnoredAny, Deserialize};
+use serde::{Deserialize, de::IgnoredAny};
 use serde_json::json;
 use svix::webhooks::Webhook;
 use svix_server::{
@@ -30,7 +30,7 @@ use svix_server::{
             MessageAttemptTriggerType, MessageId, MessageStatus, OrganizationId,
         },
     },
-    db::models::{message, messageattempt},
+    db::models::{endpoint, message, messageattempt},
     v1::{
         endpoints::{
             endpoint::{
@@ -45,6 +45,7 @@ use svix_server::{
 };
 
 use crate::utils::{
+    TestClient, TestReceiver,
     common_calls::{
         common_test_list, create_test_app, create_test_endpoint, create_test_message,
         default_test_endpoint, delete_test_app, endpoint_in, event_type_in,
@@ -52,7 +53,7 @@ use crate::utils::{
         recover_webhooks,
     },
     get_default_test_config, start_svix_server, start_svix_server_with_cfg,
-    start_svix_server_with_cfg_and_org_id, TestClient, TestReceiver,
+    start_svix_server_with_cfg_and_org_id,
 };
 
 async fn get_endpoint(
@@ -556,7 +557,7 @@ async fn test_crud() {
     assert!(list_app_1.data.contains(&app_1_ep_3));
 
     let list_app_2: ListResponse<EndpointOut> = client
-        .get(&format!("api/v1/app/{}/endpoint/", &app_2), StatusCode::OK)
+        .get(&format!("api/v1/app/{app_2}/endpoint/"), StatusCode::OK)
         .await
         .unwrap();
     assert_eq!(list_app_2.data.len(), 2);
@@ -698,7 +699,7 @@ async fn test_endpoint_list_ordering() {
     // Iterate in ascending order
     let list: ListResponse<EndpointOut> = client
         .get(
-            &format!("api/v1/app/{}/endpoint/?limit=3&order=ascending", &app_id),
+            &format!("api/v1/app/{app_id}/endpoint/?limit=3&order=ascending"),
             StatusCode::OK,
         )
         .await
@@ -819,7 +820,7 @@ async fn test_uid() {
     ep_1.uid = Some(uid.clone());
     client
         .post::<_, IgnoredAny>(
-            &format!("api/v1/app/{}/endpoint/", &app_id),
+            &format!("api/v1/app/{app_id}/endpoint/"),
             ep_1,
             StatusCode::CREATED,
         )
@@ -992,6 +993,9 @@ async fn test_recovery_expected_retry_counts() {
 #[tokio::test]
 async fn test_endpoint_rotate_max() {
     let (client, _jh) = start_svix_server().await;
+    let cfg = get_default_test_config();
+    let db = Arc::new(cfg);
+    let db = svix_server::db::init_db(&db).await;
 
     let app_id = create_test_app(&client, "app1").await.unwrap().id;
 
@@ -1011,6 +1015,7 @@ async fn test_endpoint_rotate_max() {
             .unwrap();
     }
 
+    // We now have MAX_OLD_KEYS unexpired keys, so we should be unable to perform a rotation
     let _: IgnoredAny = client
         .post(
             &format!("api/v1/app/{app_id}/endpoint/{endp_id}/secret/rotate/"),
@@ -1019,6 +1024,51 @@ async fn test_endpoint_rotate_max() {
         )
         .await
         .unwrap();
+
+    // Manually expire a key, and verify that we can now perform a rotation
+    let mut endpoint = endpoint::Entity::secure_find_by_id(app_id.clone(), endp_id.clone())
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mut modified_keys = endpoint.old_keys.take();
+    modified_keys
+        .as_mut()
+        .unwrap()
+        .0
+        .last_mut()
+        .unwrap()
+        .expiration = Utc::now() - Duration::from_secs(1);
+    let mut updated_endpoint = endpoint.into_active_model();
+
+    updated_endpoint.old_keys = Set(modified_keys);
+    updated_endpoint.update(&db).await.unwrap();
+
+    // Check that the rotation actually worked
+    let new_secret = EndpointSecretInternal::generate_symmetric(&Encryption::new_noop())
+        .unwrap()
+        .into_endpoint_secret(&Encryption::new_noop())
+        .unwrap();
+
+    client
+        .post_without_response(
+            &format!("api/v1/app/{app_id}/endpoint/{endp_id}/secret/rotate/"),
+            json!({ "key": new_secret }),
+            StatusCode::NO_CONTENT,
+        )
+        .await
+        .unwrap();
+
+    let actual_secret: EndpointSecretOut = client
+        .get(
+            &format!("api/v1/app/{app_id}/endpoint/{endp_id}/secret/"),
+            StatusCode::OK,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(new_secret, actual_secret.key);
 }
 
 #[tokio::test]
@@ -1179,7 +1229,7 @@ async fn test_endpoint_rotate_signing_symmetric_and_asymmetric() {
                     .unwrap()
                     .to_str()
                     .unwrap();
-                let to_sign = format!("{msg_id}.{timestamp}.{}", &last_body);
+                let to_sign = format!("{msg_id}.{timestamp}.{last_body}");
                 let found =
                     signatures
                         .split(' ')
@@ -1871,6 +1921,7 @@ async fn test_endpoint_filter_channels() {
     assert_eq!(updated_ep_with_channel.ep.channels.unwrap(), expected_ec);
 }
 
+#[allow(deprecated)]
 #[tokio::test]
 async fn test_rate_limit() {
     let (client, _jh) = start_svix_server().await;
@@ -2011,7 +2062,7 @@ async fn test_msg_channels_filter() {
 
         let msg: MessageOut = client
             .post(
-                &format!("api/v1/app/{}/msg/", &app_id),
+                &format!("api/v1/app/{app_id}/msg/"),
                 message_in,
                 StatusCode::ACCEPTED,
             )

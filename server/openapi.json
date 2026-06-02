@@ -58,6 +58,15 @@
                         "type": "string"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
+                        "format": "uint16",
+                        "minimum": 1,
+                        "nullable": true,
+                        "type": "integer"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this application's endpoints.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
                         "minimum": 1,
                         "nullable": true,
@@ -99,6 +108,15 @@
                         "type": "string"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
+                        "format": "uint16",
+                        "minimum": 0,
+                        "nullable": true,
+                        "type": "integer"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this application's endpoints.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
                         "minimum": 0,
                         "nullable": true,
@@ -138,6 +156,15 @@
                         "type": "string"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
+                        "format": "uint16",
+                        "minimum": 0,
+                        "nullable": true,
+                        "type": "integer"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this application's endpoints.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
                         "minimum": 0,
                         "nullable": true,
@@ -184,6 +211,9 @@
                     "token",
                     "url"
                 ],
+                "type": "object"
+            },
+            "EmptyResponse": {
                 "type": "object"
             },
             "EndpointCreatedEvent": {
@@ -474,6 +504,8 @@
                         "type": "object"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
                         "format": "uint16",
                         "minimum": 1,
                         "nullable": true,
@@ -485,6 +517,13 @@
                         "nullable": true,
                         "pattern": "^(whsec_)?[a-zA-Z0-9+/=]{32,100}$",
                         "type": "string"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
+                        "format": "uint16",
+                        "minimum": 1,
+                        "nullable": true,
+                        "type": "integer"
                     },
                     "uid": {
                         "description": "Optional unique identifier for the endpoint",
@@ -646,6 +685,15 @@
                         "type": "object"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
+                        "format": "uint16",
+                        "minimum": 0,
+                        "nullable": true,
+                        "type": "integer"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
                         "minimum": 0,
                         "nullable": true,
@@ -727,6 +775,15 @@
                         "type": "object"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
+                        "format": "uint16",
+                        "minimum": 0,
+                        "nullable": true,
+                        "type": "integer"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
                         "minimum": 0,
                         "nullable": true,
@@ -877,6 +934,15 @@
                         "type": "object"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
+                        "format": "uint16",
+                        "minimum": 1,
+                        "nullable": true,
+                        "type": "integer"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
                         "minimum": 1,
                         "nullable": true,
@@ -1888,6 +1954,8 @@
                         "type": "string"
                     },
                     "rateLimit": {
+                        "deprecated": true,
+                        "description": "Deprecated, use `throttleRate` instead.",
                         "format": "uint16",
                         "minimum": 0,
                         "nullable": true,
@@ -1895,6 +1963,13 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/MessageStatus"
+                    },
+                    "throttleRate": {
+                        "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
+                        "format": "uint16",
+                        "minimum": 0,
+                        "nullable": true,
+                        "type": "integer"
                     },
                     "uid": {
                         "description": "Optional unique identifier for the endpoint",
@@ -6493,7 +6568,14 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "no content"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmptyResponse"
+                                }
+                            }
+                        },
+                        "description": ""
                     },
                     "401": {
                         "content": {

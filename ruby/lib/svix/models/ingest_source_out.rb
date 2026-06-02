@@ -10,6 +10,7 @@ require_relative "./docusign_config_out"
 require_relative "./easypost_config_out"
 require_relative "./github_config_out"
 require_relative "./hubspot_config_out"
+require_relative "./meta_config_out"
 require_relative "./orum_io_config_out"
 require_relative "./panda_doc_config_out"
 require_relative "./port_io_config_out"
@@ -22,6 +23,7 @@ require_relative "./svix_config_out"
 require_relative "./telnyx_config_out"
 require_relative "./vapi_config_out"
 require_relative "./veriff_config_out"
+require_relative "./vgs_config_out"
 require_relative "./zoom_config_out"
 
 module Svix
@@ -81,6 +83,9 @@ module Svix
     class Lithic < SvixConfigOut
     end
 
+    class Meta < MetaConfigOut
+    end
+
     class Nash < SvixConfigOut
     end
 
@@ -91,6 +96,9 @@ module Svix
     end
 
     class PortIo < PortIoConfigOut
+    end
+
+    class PsiFi < SvixConfigOut
     end
 
     class Pleo < SvixConfigOut
@@ -149,6 +157,9 @@ module Svix
 
     class Airwallex < AirwallexConfigOut
     end
+
+    class Vgs < VgsConfigOut
+    end
   end
 
   class IngestSourceOut
@@ -180,10 +191,12 @@ module Svix
       IngestSourceOutConfig::Hubspot => "hubspot",
       IngestSourceOutConfig::IncidentIo => "incident-io",
       IngestSourceOutConfig::Lithic => "lithic",
+      IngestSourceOutConfig::Meta => "meta",
       IngestSourceOutConfig::Nash => "nash",
       IngestSourceOutConfig::OrumIo => "orum-io",
       IngestSourceOutConfig::PandaDoc => "panda-doc",
       IngestSourceOutConfig::PortIo => "port-io",
+      IngestSourceOutConfig::PsiFi => "psi-fi",
       IngestSourceOutConfig::Pleo => "pleo",
       IngestSourceOutConfig::Replicate => "replicate",
       IngestSourceOutConfig::Resend => "resend",
@@ -202,7 +215,8 @@ module Svix
       IngestSourceOutConfig::OpenAi => "open-ai",
       IngestSourceOutConfig::Render => "render",
       IngestSourceOutConfig::Veriff => "veriff",
-      IngestSourceOutConfig::Airwallex => "airwallex"
+      IngestSourceOutConfig::Airwallex => "airwallex",
+      IngestSourceOutConfig::Vgs => "vgs"
     }
     private_constant :TYPE_TO_NAME
     NAME_TO_TYPE = TYPE_TO_NAME.invert

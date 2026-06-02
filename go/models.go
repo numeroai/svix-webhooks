@@ -27,6 +27,7 @@ type (
 	BackgroundTaskOut                         = models.BackgroundTaskOut
 	BackgroundTaskStatus                      = models.BackgroundTaskStatus
 	BackgroundTaskType                        = models.BackgroundTaskType
+	BulkReplayIn                              = models.BulkReplayIn
 	CheckbookConfig                           = models.CheckbookConfig
 	CheckbookConfigOut                        = models.CheckbookConfigOut
 	ConnectorIn                               = models.ConnectorIn
@@ -147,8 +148,12 @@ type (
 	MessageEndpointOut                        = models.MessageEndpointOut
 	MessageIn                                 = models.MessageIn
 	MessageOut                                = models.MessageOut
+	MessagePrecheckIn                         = models.MessagePrecheckIn
+	MessagePrecheckOut                        = models.MessagePrecheckOut
 	MessageStatus                             = models.MessageStatus
 	MessageStatusText                         = models.MessageStatusText
+	MetaConfig                                = models.MetaConfig
+	MetaConfigOut                             = models.MetaConfigOut
 	OperationalWebhookEndpointHeadersIn       = models.OperationalWebhookEndpointHeadersIn
 	OperationalWebhookEndpointHeadersOut      = models.OperationalWebhookEndpointHeadersOut
 	OperationalWebhookEndpointIn              = models.OperationalWebhookEndpointIn
@@ -201,6 +206,7 @@ type (
 	StreamSinkIn                              = models.StreamSinkIn
 	StreamSinkOut                             = models.StreamSinkOut
 	StreamSinkPatch                           = models.StreamSinkPatch
+	StreamTokenExpireIn                       = models.StreamTokenExpireIn
 	StripeConfig                              = models.StripeConfig
 	StripeConfigOut                           = models.StripeConfigOut
 	SvixConfig                                = models.SvixConfig
@@ -211,6 +217,8 @@ type (
 	VapiConfigOut                             = models.VapiConfigOut
 	VeriffConfig                              = models.VeriffConfig
 	VeriffConfigOut                           = models.VeriffConfigOut
+	VgsConfig                                 = models.VgsConfig
+	VgsConfigOut                              = models.VgsConfigOut
 	ZoomConfig                                = models.ZoomConfig
 	ZoomConfigOut                             = models.ZoomConfigOut
 )
