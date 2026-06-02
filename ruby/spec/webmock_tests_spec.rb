@@ -167,6 +167,29 @@ describe "API Client" do
     )
   end
 
+  it "sends connector_id when creating an endpoint" do
+    stub_request(:post, "#{host}/api/v1/app/app_id/endpoint")
+      .with(query: hash_including({}))
+      .to_return(
+        status: 200,
+        body: EndpointOut_JSON
+      )
+
+    svx.endpoint.create(
+      "app_id",
+      Svix::EndpointIn.new(url: "https://example.com/webhook/"),
+      {"connector_id" => "con#1"}
+    )
+
+    expect(WebMock).to(
+      have_requested(
+        :post,
+        "#{host}/api/v1/app/app_id/endpoint?connector_id=con%231"
+      )
+        .with(body: "{\"url\":\"https://example.com/webhook/\"}")
+    )
+  end
+
   it "no body in response does not return anything" do
     stub_request(:delete, "#{host}/api/v1/app/app_id")
       .to_return(
