@@ -106,9 +106,20 @@ sealed class IngestSourceInConfig {
         override fun toJsonElement() = Json.encodeToJsonElement(MetaConfig.serializer(), meta)
     }
 
+    @VariantName("nango")
+    data class Nango(val nango: NangoConfig) : IngestSourceInConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(NangoConfig.serializer(), nango)
+    }
+
     @VariantName("nash")
     data class Nash(val nash: SvixConfig) : IngestSourceInConfig() {
         override fun toJsonElement() = Json.encodeToJsonElement(SvixConfig.serializer(), nash)
+    }
+
+    @VariantName("openclaw")
+    data class Openclaw(val openclaw: OpenClawConfig) : IngestSourceInConfig() {
+        override fun toJsonElement() =
+            Json.encodeToJsonElement(OpenClawConfig.serializer(), openclaw)
     }
 
     @VariantName("orum-io")
@@ -195,6 +206,12 @@ sealed class IngestSourceInConfig {
     @VariantName("zoom")
     data class Zoom(val zoom: ZoomConfig) : IngestSourceInConfig() {
         override fun toJsonElement() = Json.encodeToJsonElement(ZoomConfig.serializer(), zoom)
+    }
+
+    @VariantName("tailscale")
+    data class Tailscale(val tailscale: TailscaleConfig) : IngestSourceInConfig() {
+        override fun toJsonElement() =
+            Json.encodeToJsonElement(TailscaleConfig.serializer(), tailscale)
     }
 
     @VariantName("telnyx")
@@ -293,9 +310,17 @@ sealed class IngestSourceInConfig {
                     { config ->
                         Meta(Json.decodeFromJsonElement(MetaConfig.serializer(), config))
                     },
+                "nango" to
+                    { config ->
+                        Nango(Json.decodeFromJsonElement(NangoConfig.serializer(), config))
+                    },
                 "nash" to
                     { config ->
                         Nash(Json.decodeFromJsonElement(SvixConfig.serializer(), config))
+                    },
+                "openclaw" to
+                    { config ->
+                        Openclaw(Json.decodeFromJsonElement(OpenClawConfig.serializer(), config))
                     },
                 "orum-io" to
                     { config ->
@@ -364,6 +389,10 @@ sealed class IngestSourceInConfig {
                 "zoom" to
                     { config ->
                         Zoom(Json.decodeFromJsonElement(ZoomConfig.serializer(), config))
+                    },
+                "tailscale" to
+                    { config ->
+                        Tailscale(Json.decodeFromJsonElement(TailscaleConfig.serializer(), config))
                     },
                 "telnyx" to
                     { config ->

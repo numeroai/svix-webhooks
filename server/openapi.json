@@ -193,26 +193,6 @@
                 ],
                 "type": "string"
             },
-            "DashboardAccessOut": {
-                "properties": {
-                    "token": {
-                        "example": "appsk_kV3ts5tKPNJN4Dl25cMTfUNdmabxbX0O",
-                        "type": "string"
-                    },
-                    "url": {
-                        "example": "https://app.svix.com/login#key=eyJhcHBJZCI6ICJhcHBfMXRSdFl",
-                        "format": "uri",
-                        "maxLength": 65536,
-                        "minLength": 1,
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "token",
-                    "url"
-                ],
-                "type": "object"
-            },
             "EmptyResponse": {
                 "type": "object"
             },
@@ -611,6 +591,9 @@
                     "status": {
                         "$ref": "#/components/schemas/MessageStatus"
                     },
+                    "statusText": {
+                        "$ref": "#/components/schemas/MessageStatusText"
+                    },
                     "timestamp": {
                         "format": "date-time",
                         "type": "string"
@@ -621,6 +604,7 @@
                     "id",
                     "payload",
                     "status",
+                    "statusText",
                     "timestamp"
                 ],
                 "type": "object"
@@ -827,6 +811,15 @@
             },
             "EndpointSecretRotateIn": {
                 "properties": {
+                    "gracePeriodSeconds": {
+                        "default": 86400,
+                        "description": "How long the old secret will be valid for, in seconds.\n\nValid values are between 0 (immediate expiry) and 7 days. The default is 24 hours.",
+                        "format": "uint32",
+                        "maximum": 604800,
+                        "minimum": 0,
+                        "nullable": true,
+                        "type": "integer"
+                    },
                     "key": {
                         "default": null,
                         "description": "The endpoint's verification secret. If `null` is passed, a secret is automatically generated. Format: `base64` encoded random bytes optionally prefixed with `whsec_`. Recommended size: 24.",
@@ -840,6 +833,10 @@
             },
             "EndpointStats": {
                 "properties": {
+                    "canceled": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
                     "fail": {
                         "format": "int64",
                         "type": "integer"
@@ -858,6 +855,7 @@
                     }
                 },
                 "required": [
+                    "canceled",
                     "fail",
                     "pending",
                     "sending",
@@ -1431,34 +1429,6 @@
                 ],
                 "type": "object"
             },
-            "ListResponse_MessageAttemptEndpointOut_": {
-                "properties": {
-                    "data": {
-                        "items": {
-                            "$ref": "#/components/schemas/MessageAttemptEndpointOut"
-                        },
-                        "type": "array"
-                    },
-                    "done": {
-                        "type": "boolean"
-                    },
-                    "iterator": {
-                        "example": "iterator",
-                        "nullable": true,
-                        "type": "string"
-                    },
-                    "prevIterator": {
-                        "example": "-iterator",
-                        "nullable": true,
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "data",
-                    "done"
-                ],
-                "type": "object"
-            },
             "ListResponse_MessageAttemptOut_": {
                 "properties": {
                     "data": {
@@ -1562,70 +1532,6 @@
                     "id",
                     "responseStatusCode",
                     "timestamp"
-                ],
-                "type": "object"
-            },
-            "MessageAttemptEndpointOut": {
-                "properties": {
-                    "endpointId": {
-                        "example": "ep_1srOrx2ZWZBpBUvZwXKQmoEYga2",
-                        "type": "string"
-                    },
-                    "id": {
-                        "example": "atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2",
-                        "type": "string"
-                    },
-                    "msgId": {
-                        "example": "msg_1srOrx2ZWZBpBUvZwXKQmoEYga2",
-                        "type": "string"
-                    },
-                    "response": {
-                        "example": "{}",
-                        "type": "string"
-                    },
-                    "responseDurationMs": {
-                        "description": "Response duration in milliseconds.",
-                        "format": "int64",
-                        "type": "integer"
-                    },
-                    "responseStatusCode": {
-                        "example": 200,
-                        "format": "int16",
-                        "type": "integer"
-                    },
-                    "status": {
-                        "$ref": "#/components/schemas/MessageStatus"
-                    },
-                    "statusText": {
-                        "$ref": "#/components/schemas/MessageStatusText"
-                    },
-                    "timestamp": {
-                        "format": "date-time",
-                        "type": "string"
-                    },
-                    "triggerType": {
-                        "$ref": "#/components/schemas/MessageAttemptTriggerType"
-                    },
-                    "url": {
-                        "example": "https://example.com/webhook/",
-                        "format": "uri",
-                        "maxLength": 65536,
-                        "minLength": 1,
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "endpointId",
-                    "id",
-                    "msgId",
-                    "response",
-                    "responseDurationMs",
-                    "responseStatusCode",
-                    "status",
-                    "statusText",
-                    "timestamp",
-                    "triggerType",
-                    "url"
                 ],
                 "type": "object"
             },
@@ -1964,6 +1870,9 @@
                     "status": {
                         "$ref": "#/components/schemas/MessageStatus"
                     },
+                    "statusText": {
+                        "$ref": "#/components/schemas/MessageStatusText"
+                    },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
@@ -2004,6 +1913,7 @@
                     "description",
                     "id",
                     "status",
+                    "statusText",
                     "updatedAt",
                     "url",
                     "version"
@@ -2192,12 +2102,17 @@
                     },
                     "task": {
                         "$ref": "#/components/schemas/BackgroundTaskType"
+                    },
+                    "updatedAt": {
+                        "format": "date-time",
+                        "type": "string"
                     }
                 },
                 "required": [
                     "id",
                     "status",
-                    "task"
+                    "task",
+                    "updatedAt"
                 ],
                 "type": "object"
             },
@@ -5618,222 +5533,6 @@
                 ]
             }
         },
-        "/api/v1/app/{app_id}/msg/{msg_id}/attempt": {
-            "get": {
-                "description": "Deprecated: Please use \"List Attempts by Endpoint\" and \"List Attempts by Msg\" instead.\n\n`msg_id`: Use a message id or a message `eventId`",
-                "operationId": "v1.message-attempt.list-by-msg-deprecated",
-                "parameters": [
-                    {
-                        "description": "Limit the number of returned items",
-                        "in": "query",
-                        "name": "limit",
-                        "schema": {
-                            "description": "Limit the number of returned items",
-                            "format": "uint64",
-                            "minimum": 0,
-                            "type": "integer"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "The iterator returned from a prior invocation",
-                        "in": "query",
-                        "name": "iterator",
-                        "schema": {
-                            "description": "The iterator returned from a prior invocation",
-                            "example": "atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2",
-                            "nullable": true,
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter the attempts based on the attempted endpoint",
-                        "in": "query",
-                        "name": "endpoint_id",
-                        "schema": {
-                            "description": "Filter the attempts based on the attempted endpoint",
-                            "example": "unique-ep-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "nullable": true,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter response based on the channel",
-                        "in": "query",
-                        "name": "channel",
-                        "schema": {
-                            "description": "Filter response based on the channel",
-                            "example": "project_1337",
-                            "maxLength": 128,
-                            "nullable": true,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter response based on the delivery status",
-                        "in": "query",
-                        "name": "status",
-                        "schema": {
-                            "$ref": "#/components/schemas/MessageStatus",
-                            "description": "Filter response based on the delivery status",
-                            "nullable": true
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Only include items created before a certain date",
-                        "in": "query",
-                        "name": "before",
-                        "schema": {
-                            "description": "Only include items created before a certain date",
-                            "format": "date-time",
-                            "nullable": true,
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Only include items created after a certain date",
-                        "in": "query",
-                        "name": "after",
-                        "schema": {
-                            "description": "Only include items created after a certain date",
-                            "format": "date-time",
-                            "nullable": true,
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter response based on the event type",
-                        "in": "query",
-                        "name": "event_types",
-                        "schema": {
-                            "description": "Filter response based on the event type",
-                            "items": {
-                                "example": "user.signup",
-                                "maxLength": 256,
-                                "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                                "type": "string"
-                            },
-                            "nullable": true,
-                            "type": "array",
-                            "uniqueItems": true
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "in": "path",
-                        "name": "app_id",
-                        "required": true,
-                        "schema": {
-                            "example": "unique-app-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    },
-                    {
-                        "in": "path",
-                        "name": "msg_id",
-                        "required": true,
-                        "schema": {
-                            "example": "unique-msg-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ListResponse_MessageAttemptOut_"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "401": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Unauthorized"
-                    },
-                    "403": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Forbidden"
-                    },
-                    "404": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Not Found"
-                    },
-                    "409": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Conflict"
-                    },
-                    "422": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                        "description": "Validation Error"
-                    },
-                    "429": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Too Many Requests"
-                    }
-                },
-                "summary": "List Messageattempts",
-                "tags": [
-                    "Message Attempt"
-                ]
-            }
-        },
         "/api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}": {
             "get": {
                 "description": "`msg_id`: Use a message id or a message `eventId`",
@@ -6298,220 +5997,6 @@
                 ]
             }
         },
-        "/api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/attempt": {
-            "get": {
-                "description": "DEPRECATED: please use list_attempts with endpoint_id as a query parameter instead.\n\nList the message attempts for a particular endpoint.\n\nReturning the endpoint.\n\nThe `before` parameter lets you filter all items created before a certain date and is ignored if an iterator is passed.",
-                "operationId": "v1.message-attempt.list-by-endpoint-deprecated",
-                "parameters": [
-                    {
-                        "description": "Limit the number of returned items",
-                        "in": "query",
-                        "name": "limit",
-                        "schema": {
-                            "description": "Limit the number of returned items",
-                            "format": "uint64",
-                            "minimum": 0,
-                            "type": "integer"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "The iterator returned from a prior invocation",
-                        "in": "query",
-                        "name": "iterator",
-                        "schema": {
-                            "description": "The iterator returned from a prior invocation",
-                            "example": "atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2",
-                            "nullable": true,
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter response based on the channel",
-                        "in": "query",
-                        "name": "channel",
-                        "schema": {
-                            "description": "Filter response based on the channel",
-                            "example": "project_1337",
-                            "maxLength": 128,
-                            "nullable": true,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter response based on the delivery status",
-                        "in": "query",
-                        "name": "status",
-                        "schema": {
-                            "$ref": "#/components/schemas/MessageStatus",
-                            "description": "Filter response based on the delivery status",
-                            "nullable": true
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Only include items created before a certain date",
-                        "in": "query",
-                        "name": "before",
-                        "schema": {
-                            "description": "Only include items created before a certain date",
-                            "format": "date-time",
-                            "nullable": true,
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Only include items created after a certain date",
-                        "in": "query",
-                        "name": "after",
-                        "schema": {
-                            "description": "Only include items created after a certain date",
-                            "format": "date-time",
-                            "nullable": true,
-                            "type": "string"
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "description": "Filter response based on the event type",
-                        "in": "query",
-                        "name": "event_types",
-                        "schema": {
-                            "description": "Filter response based on the event type",
-                            "items": {
-                                "example": "user.signup",
-                                "maxLength": 256,
-                                "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                                "type": "string"
-                            },
-                            "nullable": true,
-                            "type": "array",
-                            "uniqueItems": true
-                        },
-                        "style": "form"
-                    },
-                    {
-                        "in": "path",
-                        "name": "app_id",
-                        "required": true,
-                        "schema": {
-                            "example": "unique-app-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    },
-                    {
-                        "in": "path",
-                        "name": "msg_id",
-                        "required": true,
-                        "schema": {
-                            "example": "unique-msg-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    },
-                    {
-                        "in": "path",
-                        "name": "endpoint_id",
-                        "required": true,
-                        "schema": {
-                            "example": "unique-ep-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ListResponse_MessageAttemptEndpointOut_"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "401": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Unauthorized"
-                    },
-                    "403": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Forbidden"
-                    },
-                    "404": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Not Found"
-                    },
-                    "409": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Conflict"
-                    },
-                    "422": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                        "description": "Validation Error"
-                    },
-                    "429": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Too Many Requests"
-                    }
-                },
-                "summary": "List Attempts For Endpoint",
-                "tags": [
-                    "Message Attempt"
-                ]
-            }
-        },
         "/api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/resend": {
             "post": {
                 "description": "Resend a message to the specified endpoint.",
@@ -6755,112 +6240,6 @@
                     }
                 },
                 "summary": "App Portal Access",
-                "tags": [
-                    "Authentication"
-                ]
-            }
-        },
-        "/api/v1/auth/dashboard-access/{app_id}": {
-            "post": {
-                "description": "DEPRECATED: Please use `app-portal-access` instead.\n\nUse this function to get magic links (and authentication codes) for connecting your users to the Consumer Application Portal.",
-                "operationId": "v1.authentication.dashboard-access",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "app_id",
-                        "required": true,
-                        "schema": {
-                            "example": "unique-app-identifier",
-                            "maxLength": 256,
-                            "minLength": 1,
-                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    },
-                    {
-                        "description": "The request's idempotency key",
-                        "in": "header",
-                        "name": "idempotency-key",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "style": "simple"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DashboardAccessOut"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "401": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Unauthorized"
-                    },
-                    "403": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Forbidden"
-                    },
-                    "404": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Not Found"
-                    },
-                    "409": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Conflict"
-                    },
-                    "422": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                        "description": "Validation Error"
-                    },
-                    "429": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HttpErrorOut"
-                                }
-                            }
-                        },
-                        "description": "Too Many Requests"
-                    }
-                },
-                "summary": "Dashboard Access",
                 "tags": [
                     "Authentication"
                 ]

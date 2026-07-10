@@ -46,8 +46,9 @@ func (ingestEndpoint *IngestEndpoint) List(
 		"source_id": sourceId,
 	}
 	queryMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
 		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
 		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
@@ -78,8 +79,9 @@ func (ingestEndpoint *IngestEndpoint) Create(
 		"source_id": sourceId,
 	}
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
 		if err != nil {
 			return nil, err
@@ -119,7 +121,7 @@ func (ingestEndpoint *IngestEndpoint) Get(
 	)
 }
 
-// Update an ingest endpoint.
+// Create or update an ingest endpoint.
 func (ingestEndpoint *IngestEndpoint) Update(
 	ctx context.Context,
 	sourceId string,
@@ -161,6 +163,67 @@ func (ingestEndpoint *IngestEndpoint) Delete(
 		nil,
 		nil,
 		nil,
+	)
+	return err
+}
+
+// Get an ingest endpoint's signing secret.
+//
+// This is used to verify the authenticity of the webhook.
+// For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
+func (ingestEndpoint *IngestEndpoint) GetSecret(
+	ctx context.Context,
+	sourceId string,
+	endpointId string,
+) (*models.IngestEndpointSecretOut, error) {
+	pathMap := map[string]string{
+		"source_id":   sourceId,
+		"endpoint_id": endpointId,
+	}
+	return internal.ExecuteRequest[any, models.IngestEndpointSecretOut](
+		ctx,
+		ingestEndpoint.client,
+		"GET",
+		"/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret",
+		pathMap,
+		nil,
+		nil,
+		nil,
+	)
+}
+
+// Rotates an ingest endpoint's signing secret.
+//
+// The previous secret will remain valid for the next 24 hours.
+func (ingestEndpoint *IngestEndpoint) RotateSecret(
+	ctx context.Context,
+	sourceId string,
+	endpointId string,
+	ingestEndpointSecretIn models.IngestEndpointSecretIn,
+	o *IngestEndpointRotateSecretOptions,
+) error {
+	pathMap := map[string]string{
+		"source_id":   sourceId,
+		"endpoint_id": endpointId,
+	}
+	headerMap := map[string]string{}
+	if o != nil {
+		var err error
+
+		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+		if err != nil {
+			return err
+		}
+	}
+	_, err := internal.ExecuteRequest[models.IngestEndpointSecretIn, any](
+		ctx,
+		ingestEndpoint.client,
+		"POST",
+		"/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate",
+		pathMap,
+		nil,
+		headerMap,
+		&ingestEndpointSecretIn,
 	)
 	return err
 }
@@ -207,66 +270,6 @@ func (ingestEndpoint *IngestEndpoint) UpdateHeaders(
 		nil,
 		nil,
 		&ingestEndpointHeadersIn,
-	)
-	return err
-}
-
-// Get an ingest endpoint's signing secret.
-//
-// This is used to verify the authenticity of the webhook.
-// For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
-func (ingestEndpoint *IngestEndpoint) GetSecret(
-	ctx context.Context,
-	sourceId string,
-	endpointId string,
-) (*models.IngestEndpointSecretOut, error) {
-	pathMap := map[string]string{
-		"source_id":   sourceId,
-		"endpoint_id": endpointId,
-	}
-	return internal.ExecuteRequest[any, models.IngestEndpointSecretOut](
-		ctx,
-		ingestEndpoint.client,
-		"GET",
-		"/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret",
-		pathMap,
-		nil,
-		nil,
-		nil,
-	)
-}
-
-// Rotates an ingest endpoint's signing secret.
-//
-// The previous secret will remain valid for the next 24 hours.
-func (ingestEndpoint *IngestEndpoint) RotateSecret(
-	ctx context.Context,
-	sourceId string,
-	endpointId string,
-	ingestEndpointSecretIn models.IngestEndpointSecretIn,
-	o *IngestEndpointRotateSecretOptions,
-) error {
-	pathMap := map[string]string{
-		"source_id":   sourceId,
-		"endpoint_id": endpointId,
-	}
-	headerMap := map[string]string{}
-	var err error
-	if o != nil {
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return err
-		}
-	}
-	_, err = internal.ExecuteRequest[models.IngestEndpointSecretIn, any](
-		ctx,
-		ingestEndpoint.client,
-		"POST",
-		"/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate",
-		pathMap,
-		nil,
-		headerMap,
-		&ingestEndpointSecretIn,
 	)
 	return err
 }

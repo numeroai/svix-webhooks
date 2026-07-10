@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct EnvironmentExportOptions {
@@ -35,6 +37,7 @@ pub struct EnvironmentArgs {
     pub command: EnvironmentCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum EnvironmentCommands {
     /// Download a JSON file containing all org-settings and event types.

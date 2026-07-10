@@ -54,7 +54,7 @@ class ApplicationCreateOptions(BaseOptions):
 
 class ApplicationAsync(ApiBase):
     async def list(
-        self, options: ApplicationListOptions = ApplicationListOptions()
+        self, options: ApplicationListOptions = (ApplicationListOptions())
     ) -> ListResponseApplicationOut:
         """List of all the organization's applications."""
         response = await self._request_asyncio(
@@ -69,7 +69,7 @@ class ApplicationAsync(ApiBase):
     async def create(
         self,
         application_in: ApplicationIn,
-        options: ApplicationCreateOptions = ApplicationCreateOptions(),
+        options: ApplicationCreateOptions = (ApplicationCreateOptions()),
     ) -> ApplicationOut:
         """Create a new application."""
         response = await self._request_asyncio(
@@ -111,7 +111,7 @@ class ApplicationAsync(ApiBase):
     async def update(
         self, app_id: str, application_in: ApplicationIn
     ) -> ApplicationOut:
-        """Update an application."""
+        """Create or update an application."""
         response = await self._request_asyncio(
             method="put",
             path="/api/v1/app/{app_id}",
@@ -151,7 +151,7 @@ class ApplicationAsync(ApiBase):
 
 class Application(ApiBase):
     def list(
-        self, options: ApplicationListOptions = ApplicationListOptions()
+        self, options: ApplicationListOptions = (ApplicationListOptions())
     ) -> ListResponseApplicationOut:
         """List of all the organization's applications."""
         response = self._request_sync(
@@ -166,7 +166,7 @@ class Application(ApiBase):
     def create(
         self,
         application_in: ApplicationIn,
-        options: ApplicationCreateOptions = ApplicationCreateOptions(),
+        options: ApplicationCreateOptions = (ApplicationCreateOptions()),
     ) -> ApplicationOut:
         """Create a new application."""
         response = self._request_sync(
@@ -206,7 +206,7 @@ class Application(ApiBase):
         return ApplicationOut.model_validate(response.json())
 
     def update(self, app_id: str, application_in: ApplicationIn) -> ApplicationOut:
-        """Update an application."""
+        """Create or update an application."""
         response = self._request_sync(
             method="put",
             path="/api/v1/app/{app_id}",

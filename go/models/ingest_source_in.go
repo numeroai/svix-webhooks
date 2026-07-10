@@ -17,6 +17,8 @@ import (
 //   - "github": Use GithubConfig
 //   - "hubspot": Use HubspotConfig
 //   - "meta": Use MetaConfig
+//   - "nango": Use NangoConfig
+//   - "openclaw": Use OpenClawConfig
 //   - "orum-io": Use OrumIoConfig
 //   - "panda-doc": Use PandaDocConfig
 //   - "port-io": Use PortIoConfig
@@ -26,6 +28,7 @@ import (
 //   - "slack": Use SlackConfig
 //   - "stripe": Use StripeConfig
 //   - "beehiiv","brex","clerk","guesty","incident-io","lithic","nash","pleo","psi-fi","replicate","resend","safebase","sardine","stych","svix","open-ai","render": Use SvixConfig
+//   - "tailscale": Use TailscaleConfig
 //   - "telnyx": Use TelnyxConfig
 //   - "vapi": Use VapiConfig
 //   - "veriff": Use VeriffConfig
@@ -57,7 +60,9 @@ const (
 	IngestSourceInTypeIncidentIo     IngestSourceInType = "incident-io"
 	IngestSourceInTypeLithic         IngestSourceInType = "lithic"
 	IngestSourceInTypeMeta           IngestSourceInType = "meta"
+	IngestSourceInTypeNango          IngestSourceInType = "nango"
 	IngestSourceInTypeNash           IngestSourceInType = "nash"
+	IngestSourceInTypeOpenclaw       IngestSourceInType = "openclaw"
 	IngestSourceInTypeOrumIo         IngestSourceInType = "orum-io"
 	IngestSourceInTypePandaDoc       IngestSourceInType = "panda-doc"
 	IngestSourceInTypePortIo         IngestSourceInType = "port-io"
@@ -75,6 +80,7 @@ const (
 	IngestSourceInTypeStych          IngestSourceInType = "stych"
 	IngestSourceInTypeSvix           IngestSourceInType = "svix"
 	IngestSourceInTypeZoom           IngestSourceInType = "zoom"
+	IngestSourceInTypeTailscale      IngestSourceInType = "tailscale"
 	IngestSourceInTypeTelnyx         IngestSourceInType = "telnyx"
 	IngestSourceInTypeVapi           IngestSourceInType = "vapi"
 	IngestSourceInTypeOpenAi         IngestSourceInType = "open-ai"
@@ -98,6 +104,8 @@ func (EasypostConfig) isIngestSourceInConfig()  {}
 func (GithubConfig) isIngestSourceInConfig()    {}
 func (HubspotConfig) isIngestSourceInConfig()   {}
 func (MetaConfig) isIngestSourceInConfig()      {}
+func (NangoConfig) isIngestSourceInConfig()     {}
+func (OpenClawConfig) isIngestSourceInConfig()  {}
 func (OrumIoConfig) isIngestSourceInConfig()    {}
 func (PandaDocConfig) isIngestSourceInConfig()  {}
 func (PortIoConfig) isIngestSourceInConfig()    {}
@@ -107,6 +115,7 @@ func (ShopifyConfig) isIngestSourceInConfig()   {}
 func (SlackConfig) isIngestSourceInConfig()     {}
 func (StripeConfig) isIngestSourceInConfig()    {}
 func (ZoomConfig) isIngestSourceInConfig()      {}
+func (TailscaleConfig) isIngestSourceInConfig() {}
 func (TelnyxConfig) isIngestSourceInConfig()    {}
 func (VapiConfig) isIngestSourceInConfig()      {}
 func (VeriffConfig) isIngestSourceInConfig()    {}
@@ -163,6 +172,14 @@ func (i *IngestSourceIn) UnmarshalJSON(data []byte) error {
 		var c MetaConfig
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
+	case "nango":
+		var c NangoConfig
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
+	case "openclaw":
+		var c OpenClawConfig
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
 	case "orum-io":
 		var c OrumIoConfig
 		err = json.Unmarshal(aux.Config, &c)
@@ -197,6 +214,10 @@ func (i *IngestSourceIn) UnmarshalJSON(data []byte) error {
 		i.Config = c
 	case "beehiiv", "brex", "clerk", "guesty", "incident-io", "lithic", "nash", "pleo", "psi-fi", "replicate", "resend", "safebase", "sardine", "stych", "svix", "open-ai", "render":
 		var c SvixConfig
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
+	case "tailscale":
+		var c TailscaleConfig
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
 	case "telnyx":
@@ -254,7 +275,9 @@ var IngestSourceInTypeFromString = map[string]IngestSourceInType{
 	"incident-io":     IngestSourceInTypeIncidentIo,
 	"lithic":          IngestSourceInTypeLithic,
 	"meta":            IngestSourceInTypeMeta,
+	"nango":           IngestSourceInTypeNango,
 	"nash":            IngestSourceInTypeNash,
+	"openclaw":        IngestSourceInTypeOpenclaw,
 	"orum-io":         IngestSourceInTypeOrumIo,
 	"panda-doc":       IngestSourceInTypePandaDoc,
 	"port-io":         IngestSourceInTypePortIo,
@@ -272,6 +295,7 @@ var IngestSourceInTypeFromString = map[string]IngestSourceInType{
 	"stych":           IngestSourceInTypeStych,
 	"svix":            IngestSourceInTypeSvix,
 	"zoom":            IngestSourceInTypeZoom,
+	"tailscale":       IngestSourceInTypeTailscale,
 	"telnyx":          IngestSourceInTypeTelnyx,
 	"vapi":            IngestSourceInTypeVapi,
 	"open-ai":         IngestSourceInTypeOpenAi,

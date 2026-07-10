@@ -18,6 +18,8 @@ import (
 //   - "github": Use GithubConfigOut
 //   - "hubspot": Use HubspotConfigOut
 //   - "meta": Use MetaConfigOut
+//   - "nango": Use NangoConfigOut
+//   - "openclaw": Use OpenClawConfigOut
 //   - "orum-io": Use OrumIoConfigOut
 //   - "panda-doc": Use PandaDocConfigOut
 //   - "port-io": Use PortIoConfigOut
@@ -27,6 +29,7 @@ import (
 //   - "slack": Use SlackConfigOut
 //   - "stripe": Use StripeConfigOut
 //   - "beehiiv","brex","clerk","guesty","incident-io","lithic","nash","psi-fi","pleo","replicate","resend","safebase","sardine","stych","svix","open-ai","render": Use SvixConfigOut
+//   - "tailscale": Use TailscaleConfigOut
 //   - "telnyx": Use TelnyxConfigOut
 //   - "vapi": Use VapiConfigOut
 //   - "veriff": Use VeriffConfigOut
@@ -62,7 +65,9 @@ const (
 	IngestSourceOutTypeIncidentIo     IngestSourceOutType = "incident-io"
 	IngestSourceOutTypeLithic         IngestSourceOutType = "lithic"
 	IngestSourceOutTypeMeta           IngestSourceOutType = "meta"
+	IngestSourceOutTypeNango          IngestSourceOutType = "nango"
 	IngestSourceOutTypeNash           IngestSourceOutType = "nash"
+	IngestSourceOutTypeOpenclaw       IngestSourceOutType = "openclaw"
 	IngestSourceOutTypeOrumIo         IngestSourceOutType = "orum-io"
 	IngestSourceOutTypePandaDoc       IngestSourceOutType = "panda-doc"
 	IngestSourceOutTypePortIo         IngestSourceOutType = "port-io"
@@ -80,6 +85,7 @@ const (
 	IngestSourceOutTypeStych          IngestSourceOutType = "stych"
 	IngestSourceOutTypeSvix           IngestSourceOutType = "svix"
 	IngestSourceOutTypeZoom           IngestSourceOutType = "zoom"
+	IngestSourceOutTypeTailscale      IngestSourceOutType = "tailscale"
 	IngestSourceOutTypeTelnyx         IngestSourceOutType = "telnyx"
 	IngestSourceOutTypeVapi           IngestSourceOutType = "vapi"
 	IngestSourceOutTypeOpenAi         IngestSourceOutType = "open-ai"
@@ -103,6 +109,8 @@ func (EasypostConfigOut) isIngestSourceOutConfig()  {}
 func (GithubConfigOut) isIngestSourceOutConfig()    {}
 func (HubspotConfigOut) isIngestSourceOutConfig()   {}
 func (MetaConfigOut) isIngestSourceOutConfig()      {}
+func (NangoConfigOut) isIngestSourceOutConfig()     {}
+func (OpenClawConfigOut) isIngestSourceOutConfig()  {}
 func (OrumIoConfigOut) isIngestSourceOutConfig()    {}
 func (PandaDocConfigOut) isIngestSourceOutConfig()  {}
 func (PortIoConfigOut) isIngestSourceOutConfig()    {}
@@ -112,6 +120,7 @@ func (ShopifyConfigOut) isIngestSourceOutConfig()   {}
 func (SlackConfigOut) isIngestSourceOutConfig()     {}
 func (StripeConfigOut) isIngestSourceOutConfig()    {}
 func (ZoomConfigOut) isIngestSourceOutConfig()      {}
+func (TailscaleConfigOut) isIngestSourceOutConfig() {}
 func (TelnyxConfigOut) isIngestSourceOutConfig()    {}
 func (VapiConfigOut) isIngestSourceOutConfig()      {}
 func (VeriffConfigOut) isIngestSourceOutConfig()    {}
@@ -168,6 +177,14 @@ func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 		var c MetaConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
+	case "nango":
+		var c NangoConfigOut
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
+	case "openclaw":
+		var c OpenClawConfigOut
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
 	case "orum-io":
 		var c OrumIoConfigOut
 		err = json.Unmarshal(aux.Config, &c)
@@ -202,6 +219,10 @@ func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 		i.Config = c
 	case "beehiiv", "brex", "clerk", "guesty", "incident-io", "lithic", "nash", "psi-fi", "pleo", "replicate", "resend", "safebase", "sardine", "stych", "svix", "open-ai", "render":
 		var c SvixConfigOut
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
+	case "tailscale":
+		var c TailscaleConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
 	case "telnyx":
@@ -259,7 +280,9 @@ var IngestSourceOutTypeFromString = map[string]IngestSourceOutType{
 	"incident-io":     IngestSourceOutTypeIncidentIo,
 	"lithic":          IngestSourceOutTypeLithic,
 	"meta":            IngestSourceOutTypeMeta,
+	"nango":           IngestSourceOutTypeNango,
 	"nash":            IngestSourceOutTypeNash,
+	"openclaw":        IngestSourceOutTypeOpenclaw,
 	"orum-io":         IngestSourceOutTypeOrumIo,
 	"panda-doc":       IngestSourceOutTypePandaDoc,
 	"port-io":         IngestSourceOutTypePortIo,
@@ -277,6 +300,7 @@ var IngestSourceOutTypeFromString = map[string]IngestSourceOutType{
 	"stych":           IngestSourceOutTypeStych,
 	"svix":            IngestSourceOutTypeSvix,
 	"zoom":            IngestSourceOutTypeZoom,
+	"tailscale":       IngestSourceOutTypeTailscale,
 	"telnyx":          IngestSourceOutTypeTelnyx,
 	"vapi":            IngestSourceOutTypeVapi,
 	"open-ai":         IngestSourceOutTypeOpenAi,

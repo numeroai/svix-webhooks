@@ -18,7 +18,9 @@
 } -%}
 
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 {% for _, sub in resource.subresources | items -%}
 use super::{{ sub.name | to_snake_case }}::{{ sub.name | to_upper_camel_case }}Args;
@@ -162,6 +164,7 @@ pub struct {{ resource_type_name }}Args {
     pub command: {{ resource_type_name }}Commands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum {{ resource_type_name }}Commands {
     {% for name, sub in resource.subresources | items -%}
@@ -211,7 +214,7 @@ pub enum {{ resource_type_name }}Commands {
                 {% set body_schema_all_optional = body_schema.fields | selectattr("required") | length == 0 -%}
 
                 {{ op.request_body_schema_name | to_snake_case }}:
-                {% if body_schema_all_optional %}
+                {% if body_schema.kind == "struct" and body_schema_all_optional %}
                 Option<crate::json::JsonOf<{{ op.request_body_schema_name }}>>
                 {% else %}
                 crate::json::JsonOf<{{ op.request_body_schema_name }}>
@@ -229,7 +232,13 @@ pub enum {{ resource_type_name }}Commands {
 }
 
 impl {{ resource_type_name }}Commands {
-    pub async fn exec(self, client: &Svix, color_mode: colored_json::ColorMode) -> anyhow::Result<()> {
+    pub async fn exec(
+        self,
+        client: &Svix,
+        {#- HACK: this arg generates an unused warning in health #}
+        {%- if resource.name == "health" %}_{% endif -%}
+        color_mode: colored_json::ColorMode,
+    ) -> anyhow::Result<()> {
         match self {
             {% for name, _ in resource.subresources | items -%}
                 Self::{{ name | to_upper_camel_case }}(args) => {
@@ -286,7 +295,7 @@ impl {{ resource_type_name }}Commands {
                                     = body_schema.fields | selectattr("required") | length == 0 -%}
 
                                 {{ op.request_body_schema_name | to_snake_case }}
-                                {% if body_schema_all_optional -%}
+                                {% if body_schema.kind == "struct" and body_schema_all_optional -%}
                                     .unwrap_or_default()
                                 {% endif -%}
                                     .into_inner(),

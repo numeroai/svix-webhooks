@@ -1,19 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
-
-#[derive(Args, Clone)]
-pub struct StreamingEventsCreateOptions {
-    #[arg(long)]
-    pub idempotency_key: Option<String>,
-}
-
-impl From<StreamingEventsCreateOptions> for svix::api::StreamingEventsCreateOptions {
-    fn from(value: StreamingEventsCreateOptions) -> Self {
-        let StreamingEventsCreateOptions { idempotency_key } = value;
-        Self { idempotency_key }
-    }
-}
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct StreamingEventsGetOptions {
@@ -42,6 +31,19 @@ impl From<StreamingEventsGetOptions> for svix::api::StreamingEventsGetOptions {
     }
 }
 
+#[derive(Args, Clone)]
+pub struct StreamingEventsCreateOptions {
+    #[arg(long)]
+    pub idempotency_key: Option<String>,
+}
+
+impl From<StreamingEventsCreateOptions> for svix::api::StreamingEventsCreateOptions {
+    fn from(value: StreamingEventsCreateOptions) -> Self {
+        let StreamingEventsCreateOptions { idempotency_key } = value;
+        Self { idempotency_key }
+    }
+}
+
 #[derive(Args)]
 #[command(args_conflicts_with_subcommands = true, flatten_help = true)]
 pub struct StreamingEventsArgs {
@@ -49,34 +51,9 @@ pub struct StreamingEventsArgs {
     pub command: StreamingEventsCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum StreamingEventsCommands {
-    /// Creates events on the Stream.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix streaming events create strm_abc000000000000000000 {...}\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example body:
-{
-  \"events\": [{\"eventType\":\"user.signup\",\"payload\":\"{\\\"email\\\":\\\"test@example.com\\\",\\\"username\\\":\\\"test_user\\\"}\"}],
-  \"stream\": {
-    \"metadata\": {\"key\": \"...\"},
-    \"name\": \"...\",
-    \"uid\": \"unique-identifier\"
-  }
-}\n\nExample response:
-{
-}\n")]
-    Create {
-        stream_id: String,
-        create_stream_events_in: crate::json::JsonOf<CreateStreamEventsIn>,
-        #[clap(flatten)]
-        options: StreamingEventsCreateOptions,
-    },
     /// Iterate over a stream of events.
     ///
     /// The sink must be of type `poller` to use the poller endpoint.
@@ -104,6 +81,32 @@ pub enum StreamingEventsCommands {
         #[clap(flatten)]
         options: StreamingEventsGetOptions,
     },
+    /// Creates events on the Stream.
+    #[command(help_template = concat!(
+            "{about-with-newline}\n",
+            "{usage-heading} {usage}\n\n",
+            "Example: svix streaming events create strm_abc000000000000000000 {...}\n",
+            "{after-help}",
+            "\n",
+            "{all-args}",
+        ))]
+    #[command(after_help = "Example body:
+{
+  \"events\": [{\"eventType\":\"user.signup\",\"payload\":\"{\\\"email\\\":\\\"test@example.com\\\",\\\"username\\\":\\\"test_user\\\"}\"}],
+  \"stream\": {
+    \"metadata\": {\"key\": \"...\"},
+    \"name\": \"...\",
+    \"uid\": \"unique-identifier\"
+  }
+}\n\nExample response:
+{
+}\n")]
+    Create {
+        stream_id: String,
+        create_stream_events_in: crate::json::JsonOf<CreateStreamEventsIn>,
+        #[clap(flatten)]
+        options: StreamingEventsCreateOptions,
+    },
 }
 
 impl StreamingEventsCommands {
@@ -113,6 +116,18 @@ impl StreamingEventsCommands {
         color_mode: colored_json::ColorMode,
     ) -> anyhow::Result<()> {
         match self {
+            Self::Get {
+                stream_id,
+                sink_id,
+                options,
+            } => {
+                let resp = client
+                    .streaming()
+                    .events()
+                    .get(stream_id, sink_id, Some(options.into()))
+                    .await?;
+                crate::json::print_json_output(&resp, color_mode)?;
+            }
             Self::Create {
                 stream_id,
                 create_stream_events_in,
@@ -126,18 +141,6 @@ impl StreamingEventsCommands {
                         create_stream_events_in.into_inner(),
                         Some(options.into()),
                     )
-                    .await?;
-                crate::json::print_json_output(&resp, color_mode)?;
-            }
-            Self::Get {
-                stream_id,
-                sink_id,
-                options,
-            } => {
-                let resp = client
-                    .streaming()
-                    .events()
-                    .get(stream_id, sink_id, Some(options.into()))
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }

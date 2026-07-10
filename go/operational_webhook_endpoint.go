@@ -42,8 +42,9 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) List(
 	o *OperationalWebhookEndpointListOptions,
 ) (*models.ListResponseOperationalWebhookEndpointOut, error) {
 	queryMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
 		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
 		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
@@ -70,8 +71,9 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Create(
 	o *OperationalWebhookEndpointCreateOptions,
 ) (*models.OperationalWebhookEndpointOut, error) {
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
 		if err != nil {
 			return nil, err
@@ -109,7 +111,7 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Get(
 	)
 }
 
-// Update an operational webhook endpoint.
+// Create or update an operational webhook endpoint.
 func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Update(
 	ctx context.Context,
 	endpointId string,
@@ -147,6 +149,63 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Delete(
 		nil,
 		nil,
 		nil,
+	)
+	return err
+}
+
+// Get an operational webhook endpoint's signing secret.
+//
+// This is used to verify the authenticity of the webhook.
+// For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
+func (operationalWebhookEndpoint *OperationalWebhookEndpoint) GetSecret(
+	ctx context.Context,
+	endpointId string,
+) (*models.OperationalWebhookEndpointSecretOut, error) {
+	pathMap := map[string]string{
+		"endpoint_id": endpointId,
+	}
+	return internal.ExecuteRequest[any, models.OperationalWebhookEndpointSecretOut](
+		ctx,
+		operationalWebhookEndpoint.client,
+		"GET",
+		"/api/v1/operational-webhook/endpoint/{endpoint_id}/secret",
+		pathMap,
+		nil,
+		nil,
+		nil,
+	)
+}
+
+// Rotates an operational webhook endpoint's signing secret.
+//
+// The previous secret will remain valid for the next 24 hours.
+func (operationalWebhookEndpoint *OperationalWebhookEndpoint) RotateSecret(
+	ctx context.Context,
+	endpointId string,
+	operationalWebhookEndpointSecretIn models.OperationalWebhookEndpointSecretIn,
+	o *OperationalWebhookEndpointRotateSecretOptions,
+) error {
+	pathMap := map[string]string{
+		"endpoint_id": endpointId,
+	}
+	headerMap := map[string]string{}
+	if o != nil {
+		var err error
+
+		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+		if err != nil {
+			return err
+		}
+	}
+	_, err := internal.ExecuteRequest[models.OperationalWebhookEndpointSecretIn, any](
+		ctx,
+		operationalWebhookEndpoint.client,
+		"POST",
+		"/api/v1/operational-webhook/endpoint/{endpoint_id}/secret/rotate",
+		pathMap,
+		nil,
+		headerMap,
+		&operationalWebhookEndpointSecretIn,
 	)
 	return err
 }
@@ -189,62 +248,6 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) UpdateHeaders(
 		nil,
 		nil,
 		&operationalWebhookEndpointHeadersIn,
-	)
-	return err
-}
-
-// Get an operational webhook endpoint's signing secret.
-//
-// This is used to verify the authenticity of the webhook.
-// For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) GetSecret(
-	ctx context.Context,
-	endpointId string,
-) (*models.OperationalWebhookEndpointSecretOut, error) {
-	pathMap := map[string]string{
-		"endpoint_id": endpointId,
-	}
-	return internal.ExecuteRequest[any, models.OperationalWebhookEndpointSecretOut](
-		ctx,
-		operationalWebhookEndpoint.client,
-		"GET",
-		"/api/v1/operational-webhook/endpoint/{endpoint_id}/secret",
-		pathMap,
-		nil,
-		nil,
-		nil,
-	)
-}
-
-// Rotates an operational webhook endpoint's signing secret.
-//
-// The previous secret will remain valid for the next 24 hours.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) RotateSecret(
-	ctx context.Context,
-	endpointId string,
-	operationalWebhookEndpointSecretIn models.OperationalWebhookEndpointSecretIn,
-	o *OperationalWebhookEndpointRotateSecretOptions,
-) error {
-	pathMap := map[string]string{
-		"endpoint_id": endpointId,
-	}
-	headerMap := map[string]string{}
-	var err error
-	if o != nil {
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return err
-		}
-	}
-	_, err = internal.ExecuteRequest[models.OperationalWebhookEndpointSecretIn, any](
-		ctx,
-		operationalWebhookEndpoint.client,
-		"POST",
-		"/api/v1/operational-webhook/endpoint/{endpoint_id}/secret/rotate",
-		pathMap,
-		nil,
-		headerMap,
-		&operationalWebhookEndpointSecretIn,
 	)
 	return err
 }

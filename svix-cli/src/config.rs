@@ -1,6 +1,7 @@
 use std::{
     io::Write,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::{Context as _, Result};
@@ -21,13 +22,14 @@ pub struct Config {
     debug_url: Option<String>,
 
     // Relay stuff relates to the `listen` command.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub relay_token: Option<String>,
     #[serde(alias = "relay_debug_url")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relay_debug_hostname: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relay_disable_security: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timeout_milliseconds: Option<u32>,
 }
 
 fn create_config_file(path: &Path) -> Result<File> {
@@ -74,6 +76,11 @@ impl Config {
             server_url @ Some(_) => server_url,
             None => self.debug_url.as_deref(),
         }
+    }
+
+    pub fn timeout(&self) -> Option<Duration> {
+        self.timeout_milliseconds
+            .map(|s| Duration::from_millis(s as _))
     }
 }
 

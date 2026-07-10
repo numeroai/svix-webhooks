@@ -17,6 +17,8 @@ import { type EasypostConfigOut, EasypostConfigOutSerializer } from "./easypostC
 import { type GithubConfigOut, GithubConfigOutSerializer } from "./githubConfigOut";
 import { type HubspotConfigOut, HubspotConfigOutSerializer } from "./hubspotConfigOut";
 import { type MetaConfigOut, MetaConfigOutSerializer } from "./metaConfigOut";
+import { type NangoConfigOut, NangoConfigOutSerializer } from "./nangoConfigOut";
+import { type OpenClawConfigOut, OpenClawConfigOutSerializer } from "./openClawConfigOut";
 import { type OrumIoConfigOut, OrumIoConfigOutSerializer } from "./orumIoConfigOut";
 import { type PandaDocConfigOut, PandaDocConfigOutSerializer } from "./pandaDocConfigOut";
 import { type PortIoConfigOut, PortIoConfigOutSerializer } from "./portIoConfigOut";
@@ -26,11 +28,16 @@ import { type ShopifyConfigOut, ShopifyConfigOutSerializer } from "./shopifyConf
 import { type SlackConfigOut, SlackConfigOutSerializer } from "./slackConfigOut";
 import { type StripeConfigOut, StripeConfigOutSerializer } from "./stripeConfigOut";
 import { type SvixConfigOut, SvixConfigOutSerializer } from "./svixConfigOut";
+import {
+  type TailscaleConfigOut,
+  TailscaleConfigOutSerializer,
+} from "./tailscaleConfigOut";
 import { type TelnyxConfigOut, TelnyxConfigOutSerializer } from "./telnyxConfigOut";
 import { type VapiConfigOut, VapiConfigOutSerializer } from "./vapiConfigOut";
 import { type VeriffConfigOut, VeriffConfigOutSerializer } from "./veriffConfigOut";
 import { type VgsConfigOut, VgsConfigOutSerializer } from "./vgsConfigOut";
 import { type ZoomConfigOut, ZoomConfigOutSerializer } from "./zoomConfigOut";
+
 interface _IngestSourceOutFields {
   createdAt: Date;
   /** The Source's ID. */
@@ -121,9 +128,19 @@ interface IngestSourceOutMeta {
   config: MetaConfigOut;
 }
 
+interface IngestSourceOutNango {
+  type: "nango";
+  config: NangoConfigOut;
+}
+
 interface IngestSourceOutNash {
   type: "nash";
   config: SvixConfigOut;
+}
+
+interface IngestSourceOutOpenclaw {
+  type: "openclaw";
+  config: OpenClawConfigOut;
 }
 
 interface IngestSourceOutOrumIo {
@@ -211,6 +228,11 @@ interface IngestSourceOutZoom {
   config: ZoomConfigOut;
 }
 
+interface IngestSourceOutTailscale {
+  type: "tailscale";
+  config: TailscaleConfigOut;
+}
+
 interface IngestSourceOutTelnyx {
   type: "telnyx";
   config: TelnyxConfigOut;
@@ -263,7 +285,9 @@ export type IngestSourceOut = _IngestSourceOutFields &
     | IngestSourceOutIncidentIo
     | IngestSourceOutLithic
     | IngestSourceOutMeta
+    | IngestSourceOutNango
     | IngestSourceOutNash
+    | IngestSourceOutOpenclaw
     | IngestSourceOutOrumIo
     | IngestSourceOutPandaDoc
     | IngestSourceOutPortIo
@@ -281,6 +305,7 @@ export type IngestSourceOut = _IngestSourceOutFields &
     | IngestSourceOutStych
     | IngestSourceOutSvix
     | IngestSourceOutZoom
+    | IngestSourceOutTailscale
     | IngestSourceOutTelnyx
     | IngestSourceOutVapi
     | IngestSourceOutOpenAi
@@ -326,8 +351,12 @@ export const IngestSourceOutSerializer = {
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
         case "meta":
           return MetaConfigOutSerializer._fromJsonObject(object["config"]);
+        case "nango":
+          return NangoConfigOutSerializer._fromJsonObject(object["config"]);
         case "nash":
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
+        case "openclaw":
+          return OpenClawConfigOutSerializer._fromJsonObject(object["config"]);
         case "orum-io":
           return OrumIoConfigOutSerializer._fromJsonObject(object["config"]);
         case "panda-doc":
@@ -362,6 +391,8 @@ export const IngestSourceOutSerializer = {
           return SvixConfigOutSerializer._fromJsonObject(object["config"]);
         case "zoom":
           return ZoomConfigOutSerializer._fromJsonObject(object["config"]);
+        case "tailscale":
+          return TailscaleConfigOutSerializer._fromJsonObject(object["config"]);
         case "telnyx":
           return TelnyxConfigOutSerializer._fromJsonObject(object["config"]);
         case "vapi":
@@ -443,8 +474,14 @@ export const IngestSourceOutSerializer = {
       case "meta":
         config = MetaConfigOutSerializer._toJsonObject(self.config);
         break;
+      case "nango":
+        config = NangoConfigOutSerializer._toJsonObject(self.config);
+        break;
       case "nash":
         config = SvixConfigOutSerializer._toJsonObject(self.config);
+        break;
+      case "openclaw":
+        config = OpenClawConfigOutSerializer._toJsonObject(self.config);
         break;
       case "orum-io":
         config = OrumIoConfigOutSerializer._toJsonObject(self.config);
@@ -496,6 +533,9 @@ export const IngestSourceOutSerializer = {
         break;
       case "zoom":
         config = ZoomConfigOutSerializer._toJsonObject(self.config);
+        break;
+      case "tailscale":
+        config = TailscaleConfigOutSerializer._toJsonObject(self.config);
         break;
       case "telnyx":
         config = TelnyxConfigOutSerializer._toJsonObject(self.config);

@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 use super::operational_webhook_endpoint::OperationalWebhookEndpointArgs;
 
@@ -11,6 +13,7 @@ pub struct OperationalWebhookArgs {
     pub command: OperationalWebhookCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum OperationalWebhookCommands {
     Endpoint(OperationalWebhookEndpointArgs),

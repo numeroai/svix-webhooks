@@ -65,7 +65,7 @@ class IngestEndpointAsync(ApiBase):
     async def list(
         self,
         source_id: str,
-        options: IngestEndpointListOptions = IngestEndpointListOptions(),
+        options: IngestEndpointListOptions = (IngestEndpointListOptions()),
     ) -> ListResponseIngestEndpointOut:
         """List ingest endpoints."""
         response = await self._request_asyncio(
@@ -83,7 +83,7 @@ class IngestEndpointAsync(ApiBase):
         self,
         source_id: str,
         ingest_endpoint_in: IngestEndpointIn,
-        options: IngestEndpointCreateOptions = IngestEndpointCreateOptions(),
+        options: IngestEndpointCreateOptions = (IngestEndpointCreateOptions()),
     ) -> IngestEndpointOut:
         """Create an ingest endpoint."""
         response = await self._request_asyncio(
@@ -118,7 +118,7 @@ class IngestEndpointAsync(ApiBase):
         endpoint_id: str,
         ingest_endpoint_update: IngestEndpointUpdate,
     ) -> IngestEndpointOut:
-        """Update an ingest endpoint."""
+        """Create or update an ingest endpoint."""
         response = await self._request_asyncio(
             method="put",
             path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}",
@@ -141,6 +141,49 @@ class IngestEndpointAsync(ApiBase):
                 "source_id": source_id,
                 "endpoint_id": endpoint_id,
             },
+        )
+
+    async def get_secret(
+        self, source_id: str, endpoint_id: str
+    ) -> IngestEndpointSecretOut:
+        """Get an ingest endpoint's signing secret.
+
+        This is used to verify the authenticity of the webhook.
+        For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/)."""
+        response = await self._request_asyncio(
+            method="get",
+            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret",
+            path_params={
+                "source_id": source_id,
+                "endpoint_id": endpoint_id,
+            },
+        )
+        return IngestEndpointSecretOut.model_validate(response.json())
+
+    async def rotate_secret(
+        self,
+        source_id: str,
+        endpoint_id: str,
+        ingest_endpoint_secret_in: IngestEndpointSecretIn,
+        options: IngestEndpointRotateSecretOptions = (
+            IngestEndpointRotateSecretOptions()
+        ),
+    ) -> None:
+        """Rotates an ingest endpoint's signing secret.
+
+        The previous secret will remain valid for the next 24 hours."""
+        await self._request_asyncio(
+            method="post",
+            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate",
+            path_params={
+                "source_id": source_id,
+                "endpoint_id": endpoint_id,
+            },
+            query_params=options._query_params(),
+            header_params=options._header_params(),
+            json_body=ingest_endpoint_secret_in.model_dump_json(
+                exclude_unset=True, by_alias=True
+            ),
         )
 
     async def get_headers(
@@ -172,47 +215,6 @@ class IngestEndpointAsync(ApiBase):
                 "endpoint_id": endpoint_id,
             },
             json_body=ingest_endpoint_headers_in.model_dump_json(
-                exclude_unset=True, by_alias=True
-            ),
-        )
-
-    async def get_secret(
-        self, source_id: str, endpoint_id: str
-    ) -> IngestEndpointSecretOut:
-        """Get an ingest endpoint's signing secret.
-
-        This is used to verify the authenticity of the webhook.
-        For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/)."""
-        response = await self._request_asyncio(
-            method="get",
-            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret",
-            path_params={
-                "source_id": source_id,
-                "endpoint_id": endpoint_id,
-            },
-        )
-        return IngestEndpointSecretOut.model_validate(response.json())
-
-    async def rotate_secret(
-        self,
-        source_id: str,
-        endpoint_id: str,
-        ingest_endpoint_secret_in: IngestEndpointSecretIn,
-        options: IngestEndpointRotateSecretOptions = IngestEndpointRotateSecretOptions(),
-    ) -> None:
-        """Rotates an ingest endpoint's signing secret.
-
-        The previous secret will remain valid for the next 24 hours."""
-        await self._request_asyncio(
-            method="post",
-            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate",
-            path_params={
-                "source_id": source_id,
-                "endpoint_id": endpoint_id,
-            },
-            query_params=options._query_params(),
-            header_params=options._header_params(),
-            json_body=ingest_endpoint_secret_in.model_dump_json(
                 exclude_unset=True, by_alias=True
             ),
         )
@@ -255,7 +257,7 @@ class IngestEndpoint(ApiBase):
     def list(
         self,
         source_id: str,
-        options: IngestEndpointListOptions = IngestEndpointListOptions(),
+        options: IngestEndpointListOptions = (IngestEndpointListOptions()),
     ) -> ListResponseIngestEndpointOut:
         """List ingest endpoints."""
         response = self._request_sync(
@@ -273,7 +275,7 @@ class IngestEndpoint(ApiBase):
         self,
         source_id: str,
         ingest_endpoint_in: IngestEndpointIn,
-        options: IngestEndpointCreateOptions = IngestEndpointCreateOptions(),
+        options: IngestEndpointCreateOptions = (IngestEndpointCreateOptions()),
     ) -> IngestEndpointOut:
         """Create an ingest endpoint."""
         response = self._request_sync(
@@ -308,7 +310,7 @@ class IngestEndpoint(ApiBase):
         endpoint_id: str,
         ingest_endpoint_update: IngestEndpointUpdate,
     ) -> IngestEndpointOut:
-        """Update an ingest endpoint."""
+        """Create or update an ingest endpoint."""
         response = self._request_sync(
             method="put",
             path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}",
@@ -331,6 +333,47 @@ class IngestEndpoint(ApiBase):
                 "source_id": source_id,
                 "endpoint_id": endpoint_id,
             },
+        )
+
+    def get_secret(self, source_id: str, endpoint_id: str) -> IngestEndpointSecretOut:
+        """Get an ingest endpoint's signing secret.
+
+        This is used to verify the authenticity of the webhook.
+        For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/)."""
+        response = self._request_sync(
+            method="get",
+            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret",
+            path_params={
+                "source_id": source_id,
+                "endpoint_id": endpoint_id,
+            },
+        )
+        return IngestEndpointSecretOut.model_validate(response.json())
+
+    def rotate_secret(
+        self,
+        source_id: str,
+        endpoint_id: str,
+        ingest_endpoint_secret_in: IngestEndpointSecretIn,
+        options: IngestEndpointRotateSecretOptions = (
+            IngestEndpointRotateSecretOptions()
+        ),
+    ) -> None:
+        """Rotates an ingest endpoint's signing secret.
+
+        The previous secret will remain valid for the next 24 hours."""
+        self._request_sync(
+            method="post",
+            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate",
+            path_params={
+                "source_id": source_id,
+                "endpoint_id": endpoint_id,
+            },
+            query_params=options._query_params(),
+            header_params=options._header_params(),
+            json_body=ingest_endpoint_secret_in.model_dump_json(
+                exclude_unset=True, by_alias=True
+            ),
         )
 
     def get_headers(self, source_id: str, endpoint_id: str) -> IngestEndpointHeadersOut:
@@ -360,45 +403,6 @@ class IngestEndpoint(ApiBase):
                 "endpoint_id": endpoint_id,
             },
             json_body=ingest_endpoint_headers_in.model_dump_json(
-                exclude_unset=True, by_alias=True
-            ),
-        )
-
-    def get_secret(self, source_id: str, endpoint_id: str) -> IngestEndpointSecretOut:
-        """Get an ingest endpoint's signing secret.
-
-        This is used to verify the authenticity of the webhook.
-        For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/)."""
-        response = self._request_sync(
-            method="get",
-            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret",
-            path_params={
-                "source_id": source_id,
-                "endpoint_id": endpoint_id,
-            },
-        )
-        return IngestEndpointSecretOut.model_validate(response.json())
-
-    def rotate_secret(
-        self,
-        source_id: str,
-        endpoint_id: str,
-        ingest_endpoint_secret_in: IngestEndpointSecretIn,
-        options: IngestEndpointRotateSecretOptions = IngestEndpointRotateSecretOptions(),
-    ) -> None:
-        """Rotates an ingest endpoint's signing secret.
-
-        The previous secret will remain valid for the next 24 hours."""
-        self._request_sync(
-            method="post",
-            path="/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate",
-            path_params={
-                "source_id": source_id,
-                "endpoint_id": endpoint_id,
-            },
-            query_params=options._query_params(),
-            header_params=options._header_params(),
-            json_body=ingest_endpoint_secret_in.model_dump_json(
                 exclude_unset=True, by_alias=True
             ),
         )

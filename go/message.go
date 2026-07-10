@@ -46,10 +46,6 @@ type MessageCreateOptions struct {
 	IdempotencyKey *string
 }
 
-type MessageExpungeAllContentsOptions struct {
-	IdempotencyKey *string
-}
-
 type MessagePrecheckOptions struct {
 	IdempotencyKey *string
 }
@@ -57,6 +53,10 @@ type MessagePrecheckOptions struct {
 type MessageGetOptions struct {
 	// When `true` message payloads are included in the response.
 	WithContent *bool
+}
+
+type MessageExpungeAllContentsOptions struct {
+	IdempotencyKey *string
 }
 
 // List all of the application's messages.
@@ -77,8 +77,9 @@ func (message *Message) List(
 		"app_id": appId,
 	}
 	queryMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
 		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
 		internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
@@ -123,15 +124,16 @@ func (message *Message) Create(
 	}
 	queryMap := map[string]string{}
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return internal.ExecuteRequest[models.MessageIn, models.MessageOut](
+	queryMap["with_content"] = "false"
+	response, err := internal.ExecuteRequest[models.MessageIn, models.MessageOut](
 		ctx,
 		message.client,
 		"POST",
@@ -141,51 +143,13 @@ func (message *Message) Create(
 		headerMap,
 		&messageIn,
 	)
-}
-
-// Delete all message payloads for the application.
-//
-// This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
-//
-// A completed task will return a payload like the following:
-// ```json
-//
-//	{
-//	  "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
-//	  "status": "finished",
-//	  "task": "application.purge_content",
-//	  "data": {
-//	    "messagesPurged": 150
-//	  }
-//	}
-//
-// ```
-func (message *Message) ExpungeAllContents(
-	ctx context.Context,
-	appId string,
-	o *MessageExpungeAllContentsOptions,
-) (*models.ExpungeAllContentsOut, error) {
-	pathMap := map[string]string{
-		"app_id": appId,
+	if err != nil {
+		return nil, err
 	}
-	headerMap := map[string]string{}
-	var err error
-	if o != nil {
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil || o.WithContent == nil || *o.WithContent == true {
+		response.Payload = messageIn.Payload
 	}
-	return internal.ExecuteRequest[any, models.ExpungeAllContentsOut](
-		ctx,
-		message.client,
-		"POST",
-		"/api/v1/app/{app_id}/msg/expunge-all-contents",
-		pathMap,
-		nil,
-		headerMap,
-		nil,
-	)
+	return response, nil
 }
 
 // A pre-check call for `message.create` that checks whether any active endpoints are
@@ -204,8 +168,9 @@ func (message *Message) Precheck(
 		"app_id": appId,
 	}
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
 		if err != nil {
 			return nil, err
@@ -235,8 +200,9 @@ func (message *Message) Get(
 		"msg_id": msgId,
 	}
 	queryMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
 		if err != nil {
 			return nil, err
@@ -278,4 +244,50 @@ func (message *Message) ExpungeContent(
 		nil,
 	)
 	return err
+}
+
+// Delete all message payloads for the application.
+//
+// This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
+//
+// A completed task will return a payload like the following:
+// ```json
+//
+//	{
+//	  "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
+//	  "status": "finished",
+//	  "task": "application.purge_content",
+//	  "data": {
+//	    "messagesPurged": 150
+//	  }
+//	}
+//
+// ```
+func (message *Message) ExpungeAllContents(
+	ctx context.Context,
+	appId string,
+	o *MessageExpungeAllContentsOptions,
+) (*models.ExpungeAllContentsOut, error) {
+	pathMap := map[string]string{
+		"app_id": appId,
+	}
+	headerMap := map[string]string{}
+	if o != nil {
+		var err error
+
+		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return internal.ExecuteRequest[any, models.ExpungeAllContentsOut](
+		ctx,
+		message.client,
+		"POST",
+		"/api/v1/app/{app_id}/msg/expunge-all-contents",
+		pathMap,
+		nil,
+		headerMap,
+		nil,
+	)
 }

@@ -112,18 +112,6 @@ namespace Svix
         }
     }
 
-    public class MessageAttemptGetOptions : SvixOptionsBase
-    {
-        public bool? ExpandedStatuses { get; set; }
-
-        public new Dictionary<string, string> QueryParams()
-        {
-            return SerializeParams(
-                new Dictionary<string, object?> { { "expanded_statuses", ExpandedStatuses } }
-            );
-        }
-    }
-
     public class MessageAttemptListAttemptedDestinationsOptions : SvixOptionsBase
     {
         public ulong? Limit { get; set; }
@@ -133,6 +121,18 @@ namespace Svix
         {
             return SerializeParams(
                 new Dictionary<string, object?> { { "limit", Limit }, { "iterator", Iterator } }
+            );
+        }
+    }
+
+    public class MessageAttemptGetOptions : SvixOptionsBase
+    {
+        public bool? ExpandedStatuses { get; set; }
+
+        public new Dictionary<string, string> QueryParams()
+        {
+            return SerializeParams(
+                new Dictionary<string, object?> { { "expanded_statuses", ExpandedStatuses } }
             );
         }
     }
@@ -308,8 +308,9 @@ namespace Svix
         }
 
         /// <summary>
-        /// List messages for a particular endpoint. Additionally includes metadata about the latest message attempt.
+        /// List messages for a particular endpoint.
         ///
+        /// Additionally includes metadata about the latest message attempt.
         /// The `before` parameter lets you filter all items created before a certain date and is ignored if an iterator is passed.
         ///
         /// Note that by default this endpoint is limited to retrieving 90 days' worth of data
@@ -350,8 +351,9 @@ namespace Svix
         }
 
         /// <summary>
-        /// List messages for a particular endpoint. Additionally includes metadata about the latest message attempt.
+        /// List messages for a particular endpoint.
         ///
+        /// Additionally includes metadata about the latest message attempt.
         /// The `before` parameter lets you filter all items created before a certain date and is ignored if an iterator is passed.
         ///
         /// Note that by default this endpoint is limited to retrieving 90 days' worth of data
@@ -383,6 +385,79 @@ namespace Svix
             catch (ApiException e)
             {
                 _client.Logger?.LogError(e, $"{nameof(ListAttemptedMessages)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// List endpoints attempted by a given message.
+        ///
+        /// Additionally includes metadata about the latest message attempt.
+        /// By default, endpoints are listed in ascending order by ID.
+        /// </summary>
+        public async Task<ListResponseMessageEndpointOut> ListAttemptedDestinationsAsync(
+            string appId,
+            string msgId,
+            MessageAttemptListAttemptedDestinationsOptions? options = null,
+            CancellationToken cancellationToken = default
+        )
+        {
+            try
+            {
+                var response =
+                    await _client.SvixHttpClient.SendRequestAsync<ListResponseMessageEndpointOut>(
+                        method: HttpMethod.Get,
+                        path: "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
+                        pathParams: new Dictionary<string, string>
+                        {
+                            { "app_id", appId },
+                            { "msg_id", msgId },
+                        },
+                        queryParams: options?.QueryParams(),
+                        headerParams: options?.HeaderParams(),
+                        cancellationToken: cancellationToken
+                    );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(ListAttemptedDestinationsAsync)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// List endpoints attempted by a given message.
+        ///
+        /// Additionally includes metadata about the latest message attempt.
+        /// By default, endpoints are listed in ascending order by ID.
+        /// </summary>
+        public ListResponseMessageEndpointOut ListAttemptedDestinations(
+            string appId,
+            string msgId,
+            MessageAttemptListAttemptedDestinationsOptions? options = null
+        )
+        {
+            try
+            {
+                var response = _client.SvixHttpClient.SendRequest<ListResponseMessageEndpointOut>(
+                    method: HttpMethod.Get,
+                    path: "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
+                    pathParams: new Dictionary<string, string>
+                    {
+                        { "app_id", appId },
+                        { "msg_id", msgId },
+                    },
+                    queryParams: options?.QueryParams(),
+                    headerParams: options?.HeaderParams()
+                );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(ListAttemptedDestinations)} failed");
 
                 throw;
             }
@@ -519,79 +594,6 @@ namespace Svix
             catch (ApiException e)
             {
                 _client.Logger?.LogError(e, $"{nameof(ExpungeContent)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// List endpoints attempted by a given message.
-        ///
-        /// Additionally includes metadata about the latest message attempt.
-        /// By default, endpoints are listed in ascending order by ID.
-        /// </summary>
-        public async Task<ListResponseMessageEndpointOut> ListAttemptedDestinationsAsync(
-            string appId,
-            string msgId,
-            MessageAttemptListAttemptedDestinationsOptions? options = null,
-            CancellationToken cancellationToken = default
-        )
-        {
-            try
-            {
-                var response =
-                    await _client.SvixHttpClient.SendRequestAsync<ListResponseMessageEndpointOut>(
-                        method: HttpMethod.Get,
-                        path: "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
-                        pathParams: new Dictionary<string, string>
-                        {
-                            { "app_id", appId },
-                            { "msg_id", msgId },
-                        },
-                        queryParams: options?.QueryParams(),
-                        headerParams: options?.HeaderParams(),
-                        cancellationToken: cancellationToken
-                    );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(ListAttemptedDestinationsAsync)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// List endpoints attempted by a given message.
-        ///
-        /// Additionally includes metadata about the latest message attempt.
-        /// By default, endpoints are listed in ascending order by ID.
-        /// </summary>
-        public ListResponseMessageEndpointOut ListAttemptedDestinations(
-            string appId,
-            string msgId,
-            MessageAttemptListAttemptedDestinationsOptions? options = null
-        )
-        {
-            try
-            {
-                var response = _client.SvixHttpClient.SendRequest<ListResponseMessageEndpointOut>(
-                    method: HttpMethod.Get,
-                    path: "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
-                    pathParams: new Dictionary<string, string>
-                    {
-                        { "app_id", appId },
-                        { "msg_id", msgId },
-                    },
-                    queryParams: options?.QueryParams(),
-                    headerParams: options?.HeaderParams()
-                );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(ListAttemptedDestinations)} failed");
 
                 throw;
             }

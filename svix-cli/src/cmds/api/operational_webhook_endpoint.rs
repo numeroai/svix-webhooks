@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct OperationalWebhookEndpointListOptions {
@@ -69,6 +71,7 @@ pub struct OperationalWebhookEndpointArgs {
     pub command: OperationalWebhookEndpointCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum OperationalWebhookEndpointCommands {
     /// List operational webhook endpoints.
@@ -166,7 +169,7 @@ pub enum OperationalWebhookEndpointCommands {
   \"url\": \"https://example.com/webhook/\"
 }\n")]
     Get { endpoint_id: String },
-    /// Update an operational webhook endpoint.
+    /// Create or update an operational webhook endpoint.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
@@ -213,45 +216,6 @@ pub enum OperationalWebhookEndpointCommands {
             "{all-args}",
         ))]
     Delete { endpoint_id: String },
-    /// Get the additional headers to be sent with the operational webhook.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix operational-webhook endpoint get-headers ep_abc000000000000000000000000\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example response:
-{
-  \"headers\": {
-    \"X-Example\": \"123\",
-    \"X-Foobar\": \"Bar\"
-  },
-  \"sensitive\": [\"Authorization\"]
-}\n")]
-    GetHeaders { endpoint_id: String },
-    /// Set the additional headers to be sent with the operational webhook.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix operational-webhook endpoint update-headers ep_abc000000000000000000000000 {...}\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example body:
-{
-  \"headers\": {
-    \"X-Example\": \"123\",
-    \"X-Foobar\": \"Bar\"
-  }
-}\n")]
-    UpdateHeaders {
-        endpoint_id: String,
-        operational_webhook_endpoint_headers_in:
-            crate::json::JsonOf<OperationalWebhookEndpointHeadersIn>,
-    },
     /// Get an operational webhook endpoint's signing secret.
     ///
     /// This is used to verify the authenticity of the webhook.
@@ -290,6 +254,45 @@ pub enum OperationalWebhookEndpointCommands {
             Option<crate::json::JsonOf<OperationalWebhookEndpointSecretIn>>,
         #[clap(flatten)]
         options: OperationalWebhookEndpointRotateSecretOptions,
+    },
+    /// Get the additional headers to be sent with the operational webhook.
+    #[command(help_template = concat!(
+            "{about-with-newline}\n",
+            "{usage-heading} {usage}\n\n",
+            "Example: svix operational-webhook endpoint get-headers ep_abc000000000000000000000000\n",
+            "{after-help}",
+            "\n",
+            "{all-args}",
+        ))]
+    #[command(after_help = "Example response:
+{
+  \"headers\": {
+    \"X-Example\": \"123\",
+    \"X-Foobar\": \"Bar\"
+  },
+  \"sensitive\": [\"Authorization\"]
+}\n")]
+    GetHeaders { endpoint_id: String },
+    /// Set the additional headers to be sent with the operational webhook.
+    #[command(help_template = concat!(
+            "{about-with-newline}\n",
+            "{usage-heading} {usage}\n\n",
+            "Example: svix operational-webhook endpoint update-headers ep_abc000000000000000000000000 {...}\n",
+            "{after-help}",
+            "\n",
+            "{all-args}",
+        ))]
+    #[command(after_help = "Example body:
+{
+  \"headers\": {
+    \"X-Example\": \"123\",
+    \"X-Foobar\": \"Bar\"
+  }
+}\n")]
+    UpdateHeaders {
+        endpoint_id: String,
+        operational_webhook_endpoint_headers_in:
+            crate::json::JsonOf<OperationalWebhookEndpointHeadersIn>,
     },
 }
 
@@ -351,27 +354,6 @@ impl OperationalWebhookEndpointCommands {
                     .delete(endpoint_id)
                     .await?;
             }
-            Self::GetHeaders { endpoint_id } => {
-                let resp = client
-                    .operational_webhook()
-                    .endpoint()
-                    .get_headers(endpoint_id)
-                    .await?;
-                crate::json::print_json_output(&resp, color_mode)?;
-            }
-            Self::UpdateHeaders {
-                endpoint_id,
-                operational_webhook_endpoint_headers_in,
-            } => {
-                client
-                    .operational_webhook()
-                    .endpoint()
-                    .update_headers(
-                        endpoint_id,
-                        operational_webhook_endpoint_headers_in.into_inner(),
-                    )
-                    .await?;
-            }
             Self::GetSecret { endpoint_id } => {
                 let resp = client
                     .operational_webhook()
@@ -394,6 +376,27 @@ impl OperationalWebhookEndpointCommands {
                             .unwrap_or_default()
                             .into_inner(),
                         Some(options.into()),
+                    )
+                    .await?;
+            }
+            Self::GetHeaders { endpoint_id } => {
+                let resp = client
+                    .operational_webhook()
+                    .endpoint()
+                    .get_headers(endpoint_id)
+                    .await?;
+                crate::json::print_json_output(&resp, color_mode)?;
+            }
+            Self::UpdateHeaders {
+                endpoint_id,
+                operational_webhook_endpoint_headers_in,
+            } => {
+                client
+                    .operational_webhook()
+                    .endpoint()
+                    .update_headers(
+                        endpoint_id,
+                        operational_webhook_endpoint_headers_in.into_inner(),
                     )
                     .await?;
             }

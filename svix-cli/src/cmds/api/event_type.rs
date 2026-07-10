@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct EventTypeListOptions {
@@ -87,6 +89,7 @@ pub struct EventTypeArgs {
     pub command: EventTypeCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum EventTypeCommands {
     /// Return the list of event types.
@@ -345,7 +348,7 @@ pub enum EventTypeCommands {
   \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get { event_type_name: String },
-    /// Update an event type.
+    /// Create or update an event type.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",

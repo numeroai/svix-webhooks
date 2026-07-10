@@ -583,6 +583,34 @@ pub struct EndpointSecretRotateIn {
     #[validate]
     #[serde(default)]
     key: Option<EndpointSecret>,
+    /// How long the old secret will be valid for, in seconds.
+    ///
+    /// Valid values are between 0 (immediate expiry) and 7 days.
+    /// The default is 24 hours.
+    #[serde(default)]
+    #[schemars(
+        default = "default_grace_period_seconds",
+        length(min = 0, max = 604_800)
+    )]
+    #[validate(range(
+        min = 0,
+        max = 604_800,
+        message = "Duration must be between 0 and 7 days"
+    ))]
+    pub grace_period_seconds: Option<u32>,
+}
+
+impl EndpointSecretRotateIn {
+    pub fn grace_period(&self) -> Duration {
+        Duration::seconds(
+            self.grace_period_seconds
+                .unwrap_or_else(default_grace_period_seconds) as _,
+        )
+    }
+}
+
+const fn default_grace_period_seconds() -> u32 {
+    86_400
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -743,6 +771,7 @@ pub struct EndpointStatsOut {
     pub pending: i64,
     pub sending: i64,
     pub fail: i64,
+    pub canceled: i64,
 }
 
 #[derive(Debug, FromQueryResult)]
@@ -788,6 +817,7 @@ async fn endpoint_stats(
         pending: query_out.remove(&MessageStatus::Pending).unwrap_or(0),
         fail: query_out.remove(&MessageStatus::Fail).unwrap_or(0),
         sending: query_out.remove(&MessageStatus::Sending).unwrap_or(0),
+        canceled: 0,
     }))
 }
 

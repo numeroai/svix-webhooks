@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct ApplicationListOptions {
@@ -65,6 +67,7 @@ pub struct ApplicationArgs {
     pub command: ApplicationCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum ApplicationCommands {
     /// List of all the organization's applications.
@@ -149,7 +152,7 @@ pub enum ApplicationCommands {
   \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get { id: String },
-    /// Update an application.
+    /// Create or update an application.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",

@@ -54,18 +54,6 @@ namespace Svix
         }
     }
 
-    public class MessageExpungeAllContentsOptions : SvixOptionsBase
-    {
-        public string? IdempotencyKey { get; set; }
-
-        public new Dictionary<string, string> HeaderParams()
-        {
-            return SerializeParams(
-                new Dictionary<string, object?> { { "idempotency-key", IdempotencyKey } }
-            );
-        }
-    }
-
     public class MessagePrecheckOptions : SvixOptionsBase
     {
         public string? IdempotencyKey { get; set; }
@@ -86,6 +74,18 @@ namespace Svix
         {
             return SerializeParams(
                 new Dictionary<string, object?> { { "with_content", WithContent } }
+            );
+        }
+    }
+
+    public class MessageExpungeAllContentsOptions : SvixOptionsBase
+    {
+        public string? IdempotencyKey { get; set; }
+
+        public new Dictionary<string, string> HeaderParams()
+        {
+            return SerializeParams(
+                new Dictionary<string, object?> { { "idempotency-key", IdempotencyKey } }
             );
         }
     }
@@ -247,11 +247,15 @@ namespace Svix
                     method: HttpMethod.Post,
                     path: "/api/v1/app/{app_id}/msg",
                     pathParams: new Dictionary<string, string> { { "app_id", appId } },
-                    queryParams: options?.QueryParams(),
+                    queryParams: new Dictionary<string, string> { { "with_content", "false" } },
                     headerParams: options?.HeaderParams(),
                     content: messageIn,
                     cancellationToken: cancellationToken
                 );
+                if (options?.WithContent ?? true)
+                {
+                    response.Data.Payload = messageIn.Payload;
+                }
                 return response.Data;
             }
             catch (ApiException e)
@@ -286,99 +290,19 @@ namespace Svix
                     method: HttpMethod.Post,
                     path: "/api/v1/app/{app_id}/msg",
                     pathParams: new Dictionary<string, string> { { "app_id", appId } },
-                    queryParams: options?.QueryParams(),
+                    queryParams: new Dictionary<string, string> { { "with_content", "false" } },
                     headerParams: options?.HeaderParams(),
                     content: messageIn
                 );
+                if (options?.WithContent ?? true)
+                {
+                    response.Data.Payload = messageIn.Payload;
+                }
                 return response.Data;
             }
             catch (ApiException e)
             {
                 _client.Logger?.LogError(e, $"{nameof(Create)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Delete all message payloads for the application.
-        ///
-        /// This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
-        ///
-        /// A completed task will return a payload like the following:
-        /// ```json
-        /// {
-        ///   "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
-        ///   "status": "finished",
-        ///   "task": "application.purge_content",
-        ///   "data": {
-        ///     "messagesPurged": 150
-        ///   }
-        /// }
-        /// ```
-        /// </summary>
-        public async Task<ExpungeAllContentsOut> ExpungeAllContentsAsync(
-            string appId,
-            MessageExpungeAllContentsOptions? options = null,
-            CancellationToken cancellationToken = default
-        )
-        {
-            try
-            {
-                var response = await _client.SvixHttpClient.SendRequestAsync<ExpungeAllContentsOut>(
-                    method: HttpMethod.Post,
-                    path: "/api/v1/app/{app_id}/msg/expunge-all-contents",
-                    pathParams: new Dictionary<string, string> { { "app_id", appId } },
-                    queryParams: options?.QueryParams(),
-                    headerParams: options?.HeaderParams(),
-                    cancellationToken: cancellationToken
-                );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(ExpungeAllContentsAsync)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Delete all message payloads for the application.
-        ///
-        /// This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
-        ///
-        /// A completed task will return a payload like the following:
-        /// ```json
-        /// {
-        ///   "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
-        ///   "status": "finished",
-        ///   "task": "application.purge_content",
-        ///   "data": {
-        ///     "messagesPurged": 150
-        ///   }
-        /// }
-        /// ```
-        /// </summary>
-        public ExpungeAllContentsOut ExpungeAllContents(
-            string appId,
-            MessageExpungeAllContentsOptions? options = null
-        )
-        {
-            try
-            {
-                var response = _client.SvixHttpClient.SendRequest<ExpungeAllContentsOut>(
-                    method: HttpMethod.Post,
-                    path: "/api/v1/app/{app_id}/msg/expunge-all-contents",
-                    pathParams: new Dictionary<string, string> { { "app_id", appId } },
-                    queryParams: options?.QueryParams(),
-                    headerParams: options?.HeaderParams()
-                );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(ExpungeAllContents)} failed");
 
                 throw;
             }
@@ -578,6 +502,90 @@ namespace Svix
             catch (ApiException e)
             {
                 _client.Logger?.LogError(e, $"{nameof(ExpungeContent)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Delete all message payloads for the application.
+        ///
+        /// This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
+        ///
+        /// A completed task will return a payload like the following:
+        /// ```json
+        /// {
+        ///   "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
+        ///   "status": "finished",
+        ///   "task": "application.purge_content",
+        ///   "data": {
+        ///     "messagesPurged": 150
+        ///   }
+        /// }
+        /// ```
+        /// </summary>
+        public async Task<ExpungeAllContentsOut> ExpungeAllContentsAsync(
+            string appId,
+            MessageExpungeAllContentsOptions? options = null,
+            CancellationToken cancellationToken = default
+        )
+        {
+            try
+            {
+                var response = await _client.SvixHttpClient.SendRequestAsync<ExpungeAllContentsOut>(
+                    method: HttpMethod.Post,
+                    path: "/api/v1/app/{app_id}/msg/expunge-all-contents",
+                    pathParams: new Dictionary<string, string> { { "app_id", appId } },
+                    queryParams: options?.QueryParams(),
+                    headerParams: options?.HeaderParams(),
+                    cancellationToken: cancellationToken
+                );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(ExpungeAllContentsAsync)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Delete all message payloads for the application.
+        ///
+        /// This operation is only available in the <a href="https://svix.com/pricing" target="_blank">Enterprise</a> plan.
+        ///
+        /// A completed task will return a payload like the following:
+        /// ```json
+        /// {
+        ///   "id": "qtask_33qen93MNuelBAq1T9G7eHLJRsF",
+        ///   "status": "finished",
+        ///   "task": "application.purge_content",
+        ///   "data": {
+        ///     "messagesPurged": 150
+        ///   }
+        /// }
+        /// ```
+        /// </summary>
+        public ExpungeAllContentsOut ExpungeAllContents(
+            string appId,
+            MessageExpungeAllContentsOptions? options = null
+        )
+        {
+            try
+            {
+                var response = _client.SvixHttpClient.SendRequest<ExpungeAllContentsOut>(
+                    method: HttpMethod.Post,
+                    path: "/api/v1/app/{app_id}/msg/expunge-all-contents",
+                    pathParams: new Dictionary<string, string> { { "app_id", appId } },
+                    queryParams: options?.QueryParams(),
+                    headerParams: options?.HeaderParams()
+                );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(ExpungeAllContents)} failed");
 
                 throw;
             }

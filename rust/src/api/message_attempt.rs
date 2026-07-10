@@ -41,8 +41,10 @@ pub struct MessageAttemptListByEndpointOptions {
     /// regardless of this flag.
     pub with_msg: Option<bool>,
 
-    /// When `true`, return the Canceled (4) status in attempts. If `false`,
-    /// canceled attempts are returned as Success (0)
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards
+    /// compatibility.
     pub expanded_statuses: Option<bool>,
 
     /// Filter response based on the event type
@@ -86,8 +88,10 @@ pub struct MessageAttemptListByMsgOptions {
     /// When `true` attempt content is included in the response
     pub with_content: Option<bool>,
 
-    /// When `true`, return the Canceled (4) status in attempts. If `false`,
-    /// canceled attempts are returned as Success (0)
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards
+    /// compatibility.
     pub expanded_statuses: Option<bool>,
 
     /// Filter response based on the event type
@@ -125,19 +129,14 @@ pub struct MessageAttemptListAttemptedMessagesOptions {
     /// When `true` message payloads are included in the response
     pub with_content: Option<bool>,
 
-    /// When `true`, return the Canceled (4) status in attempts. If `false`,
-    /// canceled attempts are returned as Success (0)
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards
+    /// compatibility.
     pub expanded_statuses: Option<bool>,
 
     /// Filter response based on the event type
     pub event_types: Option<Vec<String>>,
-}
-
-#[derive(Default)]
-pub struct MessageAttemptGetOptions {
-    /// When `true`, return the Canceled (4) status in attempts. If `false`,
-    /// canceled attempts are returned as Success (0)
-    pub expanded_statuses: Option<bool>,
 }
 
 #[derive(Default)]
@@ -147,6 +146,15 @@ pub struct MessageAttemptListAttemptedDestinationsOptions {
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
+}
+
+#[derive(Default)]
+pub struct MessageAttemptGetOptions {
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards
+    /// compatibility.
+    pub expanded_statuses: Option<bool>,
 }
 
 #[derive(Default)]
@@ -263,9 +271,9 @@ impl<'a> MessageAttempt<'a> {
         .await
     }
 
-    /// List messages for a particular endpoint. Additionally includes metadata
-    /// about the latest message attempt.
+    /// List messages for a particular endpoint.
     ///
+    /// Additionally includes metadata about the latest message attempt.
     /// The `before` parameter lets you filter all items created before a
     /// certain date and is ignored if an iterator is passed.
     ///
@@ -356,6 +364,31 @@ impl<'a> MessageAttempt<'a> {
         .await
     }
 
+    /// List endpoints attempted by a given message.
+    ///
+    /// Additionally includes metadata about the latest message attempt.
+    /// By default, endpoints are listed in ascending order by ID.
+    pub async fn list_attempted_destinations(
+        &self,
+        app_id: String,
+        msg_id: String,
+        options: Option<MessageAttemptListAttemptedDestinationsOptions>,
+    ) -> Result<ListResponseMessageEndpointOut> {
+        let MessageAttemptListAttemptedDestinationsOptions { limit, iterator } =
+            options.unwrap_or_default();
+
+        crate::request::Request::new(
+            http1::Method::GET,
+            "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
+        )
+        .with_path_param("app_id", app_id)
+        .with_path_param("msg_id", msg_id)
+        .with_optional_query_param("limit", limit)
+        .with_optional_query_param("iterator", iterator)
+        .execute(self.cfg)
+        .await
+    }
+
     /// `msg_id`: Use a message id or a message `eventId`
     pub async fn get(
         &self,
@@ -397,31 +430,6 @@ impl<'a> MessageAttempt<'a> {
         .with_path_param("msg_id", msg_id)
         .with_path_param("attempt_id", attempt_id)
         .returns_nothing()
-        .execute(self.cfg)
-        .await
-    }
-
-    /// List endpoints attempted by a given message.
-    ///
-    /// Additionally includes metadata about the latest message attempt.
-    /// By default, endpoints are listed in ascending order by ID.
-    pub async fn list_attempted_destinations(
-        &self,
-        app_id: String,
-        msg_id: String,
-        options: Option<MessageAttemptListAttemptedDestinationsOptions>,
-    ) -> Result<ListResponseMessageEndpointOut> {
-        let MessageAttemptListAttemptedDestinationsOptions { limit, iterator } =
-            options.unwrap_or_default();
-
-        crate::request::Request::new(
-            http1::Method::GET,
-            "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
-        )
-        .with_path_param("app_id", app_id)
-        .with_path_param("msg_id", msg_id)
-        .with_optional_query_param("limit", limit)
-        .with_optional_query_param("iterator", iterator)
         .execute(self.cfg)
         .await
     }

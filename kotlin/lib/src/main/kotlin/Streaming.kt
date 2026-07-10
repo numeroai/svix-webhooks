@@ -14,14 +14,31 @@ class Streaming(private val client: SvixHttpClient) {
 
     val stream: StreamingStream = StreamingStream(client)
 
-    /** Get the HTTP sink headers. Only valid for `http` or `otelTracing` sinks. */
+    /** Get the transformation code associated with this sink. */
+    suspend fun sinkTransformationGet(streamId: String, sinkId: String): SinkTransformationOut {
+        val url =
+            client
+                .newUrlBuilder()
+                .encodedPath("/api/v1/stream/$streamId/sink/$sinkId/transformation")
+        return client.executeRequest<Any, SinkTransformationOut>("GET", url.build())
+    }
+
+    /**
+     * Get the HTTP sink headers.
+     *
+     * Only valid for `http` or `otelTracing` sinks.
+     */
     suspend fun sinkHeadersGet(streamId: String, sinkId: String): EndpointHeadersOut {
         val url =
             client.newUrlBuilder().encodedPath("/api/v1/stream/$streamId/sink/$sinkId/headers")
         return client.executeRequest<Any, EndpointHeadersOut>("GET", url.build())
     }
 
-    /** Updates the Sink's headers. Only valid for `http` or `otelTracing` sinks. */
+    /**
+     * Updates the Sink's headers.
+     *
+     * Only valid for `http` or `otelTracing` sinks.
+     */
     suspend fun sinkHeadersPatch(
         streamId: String,
         sinkId: String,
@@ -35,14 +52,5 @@ class Streaming(private val client: SvixHttpClient) {
             url.build(),
             reqBody = httpSinkHeadersPatchIn,
         )
-    }
-
-    /** Get the transformation code associated with this sink. */
-    suspend fun sinkTransformationGet(streamId: String, sinkId: String): SinkTransformationOut {
-        val url =
-            client
-                .newUrlBuilder()
-                .encodedPath("/api/v1/stream/$streamId/sink/$sinkId/transformation")
-        return client.executeRequest<Any, SinkTransformationOut>("GET", url.build())
     }
 }

@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct ConnectorListOptions {
@@ -54,6 +56,7 @@ pub struct ConnectorArgs {
     pub command: ConnectorCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum ConnectorCommands {
     /// List all connectors for an application.
@@ -164,7 +167,7 @@ pub enum ConnectorCommands {
   \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get { id: String },
-    /// Update a connector.
+    /// Create or update a connector.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",

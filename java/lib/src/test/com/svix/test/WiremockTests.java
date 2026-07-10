@@ -339,12 +339,12 @@ public class WiremockTests {
                 WireMock.patch(urlEqualTo("/api/v1/app/ap/endpoint/endp"))
                         .willReturn(WireMock.ok().withBodyFile("EndpointOut.json")));
 
-        svx.getEndpoint().patch("ap", "endp", new EndpointPatch().rateLimit(null));
+        svx.getEndpoint().patch("ap", "endp", new EndpointPatch().throttleRate(null));
 
         wireMockRule.verify(
                 1,
                 patchRequestedFor(urlEqualTo("/api/v1/app/ap/endpoint/endp"))
-                        .withRequestBody(equalTo("{\"rateLimit\":null}")));
+                        .withRequestBody(equalTo("{\"throttleRate\":null}")));
     }
 
     @Test
@@ -369,12 +369,12 @@ public class WiremockTests {
                 WireMock.patch(urlEqualTo("/api/v1/app/ap/endpoint/endp"))
                         .willReturn(WireMock.ok().withBodyFile("EndpointOut.json")));
 
-        svx.getEndpoint().patch("ap", "endp", new EndpointPatch().rateLimit(123L));
+        svx.getEndpoint().patch("ap", "endp", new EndpointPatch().throttleRate(123L));
 
         wireMockRule.verify(
                 1,
                 patchRequestedFor(urlEqualTo("/api/v1/app/ap/endpoint/endp"))
-                        .withRequestBody(equalTo("{\"rateLimit\":123}")));
+                        .withRequestBody(equalTo("{\"throttleRate\":123}")));
     }
 
     @Test
@@ -468,7 +468,17 @@ public class WiremockTests {
                         .willReturn(WireMock.ok().withBodyFile("MessageOut.json")));
 
         String jsonPayload = "{\"key\":\"val\",\"key1\":[\"list\"]}";
-        MessageIn msg = new MessageIn().payload(jsonPayload).eventType("event.type").transformationsParams(Map.of("headers",Map.of( "header-key","header-val")));
+
+        HashMap<String, String> headers = new HashMap<>();
+        headers.put("header-key", "header-val");
+
+        HashMap<String, Object> trParam = new HashMap<>();
+        trParam.put("headers", headers);
+
+        MessageIn msg = new MessageIn()
+                .payload(jsonPayload)
+                .eventType("event.type")
+                .transformationsParams(trParam);
         svx.getMessage().create("app1", msg);
 
         // file in java/lib/src/test/resources/__files/ExpectedMsgCreateBodyWithHeaders.json
