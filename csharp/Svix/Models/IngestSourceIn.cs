@@ -121,8 +121,14 @@ namespace Svix.Models
         public static IngestSourceInConfig Meta(MetaConfig metaConfig) =>
             new(metaConfig, ConfigType.Meta);
 
+        public static IngestSourceInConfig Nango(NangoConfig nangoConfig) =>
+            new(nangoConfig, ConfigType.Nango);
+
         public static IngestSourceInConfig Nash(SvixConfig svixConfig) =>
             new(svixConfig, ConfigType.Nash);
+
+        public static IngestSourceInConfig Openclaw(OpenClawConfig openClawConfig) =>
+            new(openClawConfig, ConfigType.Openclaw);
 
         public static IngestSourceInConfig OrumIo(OrumIoConfig orumIoConfig) =>
             new(orumIoConfig, ConfigType.OrumIo);
@@ -174,6 +180,9 @@ namespace Svix.Models
 
         public static IngestSourceInConfig Zoom(ZoomConfig zoomConfig) =>
             new(zoomConfig, ConfigType.Zoom);
+
+        public static IngestSourceInConfig Tailscale(TailscaleConfig tailscaleConfig) =>
+            new(tailscaleConfig, ConfigType.Tailscale);
 
         public static IngestSourceInConfig Telnyx(TelnyxConfig telnyxConfig) =>
             new(telnyxConfig, ConfigType.Telnyx);
@@ -243,8 +252,14 @@ namespace Svix.Models
             [EnumMember(Value = "meta")]
             Meta,
 
+            [EnumMember(Value = "nango")]
+            Nango,
+
             [EnumMember(Value = "nash")]
             Nash,
+
+            [EnumMember(Value = "openclaw")]
+            Openclaw,
 
             [EnumMember(Value = "orum-io")]
             OrumIo,
@@ -297,6 +312,9 @@ namespace Svix.Models
             [EnumMember(Value = "zoom")]
             Zoom,
 
+            [EnumMember(Value = "tailscale")]
+            Tailscale,
+
             [EnumMember(Value = "telnyx")]
             Telnyx,
 
@@ -335,7 +353,9 @@ namespace Svix.Models
             Func<SvixConfig, TResult> onIncidentIo,
             Func<SvixConfig, TResult> onLithic,
             Func<MetaConfig, TResult> onMeta,
+            Func<NangoConfig, TResult> onNango,
             Func<SvixConfig, TResult> onNash,
+            Func<OpenClawConfig, TResult> onOpenclaw,
             Func<OrumIoConfig, TResult> onOrumIo,
             Func<PandaDocConfig, TResult> onPandaDoc,
             Func<PortIoConfig, TResult> onPortIo,
@@ -353,6 +373,7 @@ namespace Svix.Models
             Func<SvixConfig, TResult> onStych,
             Func<SvixConfig, TResult> onSvix,
             Func<ZoomConfig, TResult> onZoom,
+            Func<TailscaleConfig, TResult> onTailscale,
             Func<TelnyxConfig, TResult> onTelnyx,
             Func<VapiConfig, TResult> onVapi,
             Func<SvixConfig, TResult> onOpenAi,
@@ -379,7 +400,9 @@ namespace Svix.Models
                 ConfigType.IncidentIo => onIncidentIo((SvixConfig)_value),
                 ConfigType.Lithic => onLithic((SvixConfig)_value),
                 ConfigType.Meta => onMeta((MetaConfig)_value),
+                ConfigType.Nango => onNango((NangoConfig)_value),
                 ConfigType.Nash => onNash((SvixConfig)_value),
+                ConfigType.Openclaw => onOpenclaw((OpenClawConfig)_value),
                 ConfigType.OrumIo => onOrumIo((OrumIoConfig)_value),
                 ConfigType.PandaDoc => onPandaDoc((PandaDocConfig)_value),
                 ConfigType.PortIo => onPortIo((PortIoConfig)_value),
@@ -397,6 +420,7 @@ namespace Svix.Models
                 ConfigType.Stych => onStych((SvixConfig)_value),
                 ConfigType.Svix => onSvix((SvixConfig)_value),
                 ConfigType.Zoom => onZoom((ZoomConfig)_value),
+                ConfigType.Tailscale => onTailscale((TailscaleConfig)_value),
                 ConfigType.Telnyx => onTelnyx((TelnyxConfig)_value),
                 ConfigType.Vapi => onVapi((VapiConfig)_value),
                 ConfigType.OpenAi => onOpenAi((SvixConfig)_value),
@@ -425,7 +449,9 @@ namespace Svix.Models
             Action<SvixConfig> onIncidentIo,
             Action<SvixConfig> onLithic,
             Action<MetaConfig> onMeta,
+            Action<NangoConfig> onNango,
             Action<SvixConfig> onNash,
+            Action<OpenClawConfig> onOpenclaw,
             Action<OrumIoConfig> onOrumIo,
             Action<PandaDocConfig> onPandaDoc,
             Action<PortIoConfig> onPortIo,
@@ -443,6 +469,7 @@ namespace Svix.Models
             Action<SvixConfig> onStych,
             Action<SvixConfig> onSvix,
             Action<ZoomConfig> onZoom,
+            Action<TailscaleConfig> onTailscale,
             Action<TelnyxConfig> onTelnyx,
             Action<VapiConfig> onVapi,
             Action<SvixConfig> onOpenAi,
@@ -499,8 +526,14 @@ namespace Svix.Models
                 case ConfigType.Meta:
                     onMeta((MetaConfig)_value);
                     break;
+                case ConfigType.Nango:
+                    onNango((NangoConfig)_value);
+                    break;
                 case ConfigType.Nash:
                     onNash((SvixConfig)_value);
+                    break;
+                case ConfigType.Openclaw:
+                    onOpenclaw((OpenClawConfig)_value);
                     break;
                 case ConfigType.OrumIo:
                     onOrumIo((OrumIoConfig)_value);
@@ -552,6 +585,9 @@ namespace Svix.Models
                     break;
                 case ConfigType.Zoom:
                     onZoom((ZoomConfig)_value);
+                    break;
+                case ConfigType.Tailscale:
+                    onTailscale((TailscaleConfig)_value);
                     break;
                 case ConfigType.Telnyx:
                     onTelnyx((TelnyxConfig)_value);
@@ -680,7 +716,9 @@ namespace Svix.Models
                 ["incident-io"] = c => IngestSourceInConfig.IncidentIo(ToObj<SvixConfig>(c)),
                 ["lithic"] = c => IngestSourceInConfig.Lithic(ToObj<SvixConfig>(c)),
                 ["meta"] = c => IngestSourceInConfig.Meta(ToObj<MetaConfig>(c)),
+                ["nango"] = c => IngestSourceInConfig.Nango(ToObj<NangoConfig>(c)),
                 ["nash"] = c => IngestSourceInConfig.Nash(ToObj<SvixConfig>(c)),
+                ["openclaw"] = c => IngestSourceInConfig.Openclaw(ToObj<OpenClawConfig>(c)),
                 ["orum-io"] = c => IngestSourceInConfig.OrumIo(ToObj<OrumIoConfig>(c)),
                 ["panda-doc"] = c => IngestSourceInConfig.PandaDoc(ToObj<PandaDocConfig>(c)),
                 ["port-io"] = c => IngestSourceInConfig.PortIo(ToObj<PortIoConfig>(c)),
@@ -698,6 +736,7 @@ namespace Svix.Models
                 ["stych"] = c => IngestSourceInConfig.Stych(ToObj<SvixConfig>(c)),
                 ["svix"] = c => IngestSourceInConfig.Svix(ToObj<SvixConfig>(c)),
                 ["zoom"] = c => IngestSourceInConfig.Zoom(ToObj<ZoomConfig>(c)),
+                ["tailscale"] = c => IngestSourceInConfig.Tailscale(ToObj<TailscaleConfig>(c)),
                 ["telnyx"] = c => IngestSourceInConfig.Telnyx(ToObj<TelnyxConfig>(c)),
                 ["vapi"] = c => IngestSourceInConfig.Vapi(ToObj<VapiConfig>(c)),
                 ["open-ai"] = c => IngestSourceInConfig.OpenAi(ToObj<SvixConfig>(c)),

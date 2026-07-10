@@ -11,6 +11,8 @@ require_relative "./easypost_config_out"
 require_relative "./github_config_out"
 require_relative "./hubspot_config_out"
 require_relative "./meta_config_out"
+require_relative "./nango_config_out"
+require_relative "./open_claw_config_out"
 require_relative "./orum_io_config_out"
 require_relative "./panda_doc_config_out"
 require_relative "./port_io_config_out"
@@ -20,6 +22,7 @@ require_relative "./shopify_config_out"
 require_relative "./slack_config_out"
 require_relative "./stripe_config_out"
 require_relative "./svix_config_out"
+require_relative "./tailscale_config_out"
 require_relative "./telnyx_config_out"
 require_relative "./vapi_config_out"
 require_relative "./veriff_config_out"
@@ -86,7 +89,13 @@ module Svix
     class Meta < MetaConfigOut
     end
 
+    class Nango < NangoConfigOut
+    end
+
     class Nash < SvixConfigOut
+    end
+
+    class Openclaw < OpenClawConfigOut
     end
 
     class OrumIo < OrumIoConfigOut
@@ -138,6 +147,9 @@ module Svix
     end
 
     class Zoom < ZoomConfigOut
+    end
+
+    class Tailscale < TailscaleConfigOut
     end
 
     class Telnyx < TelnyxConfigOut
@@ -192,7 +204,9 @@ module Svix
       IngestSourceOutConfig::IncidentIo => "incident-io",
       IngestSourceOutConfig::Lithic => "lithic",
       IngestSourceOutConfig::Meta => "meta",
+      IngestSourceOutConfig::Nango => "nango",
       IngestSourceOutConfig::Nash => "nash",
+      IngestSourceOutConfig::Openclaw => "openclaw",
       IngestSourceOutConfig::OrumIo => "orum-io",
       IngestSourceOutConfig::PandaDoc => "panda-doc",
       IngestSourceOutConfig::PortIo => "port-io",
@@ -210,6 +224,7 @@ module Svix
       IngestSourceOutConfig::Stych => "stych",
       IngestSourceOutConfig::Svix => "svix",
       IngestSourceOutConfig::Zoom => "zoom",
+      IngestSourceOutConfig::Tailscale => "tailscale",
       IngestSourceOutConfig::Telnyx => "telnyx",
       IngestSourceOutConfig::Vapi => "vapi",
       IngestSourceOutConfig::OpenAi => "open-ai",

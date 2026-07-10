@@ -110,6 +110,7 @@ pub struct EndpointMessageOut {
     #[serde(flatten)]
     pub msg: MessageOut,
     pub status: MessageStatus,
+    pub status_text: MessageStatusText,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_attempt: Option<DateTimeWithTimeZone>,
 }
@@ -135,6 +136,7 @@ impl EndpointMessageOut {
         EndpointMessageOut {
             msg: MessageOut::from_msg_and_payload(msg, msg_content, with_content),
             status,
+            status_text: status.into(),
             next_attempt: attempt.next_attempt,
         }
     }
@@ -151,6 +153,7 @@ impl<'de> Deserialize<'de> for EndpointMessageOut {
         Ok(Self {
             msg: serde_json::from_str(raw_value.get()).unwrap(),
             status: serde_json::from_str(rest.get("status").unwrap().get()).unwrap(),
+            status_text: serde_json::from_str(rest.get("statusText").unwrap().get()).unwrap(),
             next_attempt: rest
                 .get("next_attempt")
                 .map(|x| serde_json::from_str(x.get()).unwrap()),
@@ -696,6 +699,7 @@ pub struct MessageEndpointOut {
     endpoint: super::endpoint::EndpointOutCommon,
     pub id: EndpointId,
     status: MessageStatus,
+    status_text: MessageStatusText,
     next_attempt: Option<DateTime<Utc>>,
 }
 
@@ -779,6 +783,7 @@ async fn list_attempted_destinations(
             Some(MessageEndpointOut {
                 id: msg_attempt.endp_id,
                 status: msg_attempt.status,
+                status_text: msg_attempt.status.into(),
                 next_attempt: msg_attempt.next_attempt.map(Into::into),
                 endpoint: endp.into(),
             })
@@ -817,14 +822,13 @@ impl From<MessageAttemptOut> for MessageAttemptEndpointOut {
     }
 }
 
-/// DEPRECATED: please use list_attempts with endpoint_id as a query parameter instead.
+/// Deprecated: please use list_attempts with endpoint_id as a query parameter instead.
 ///
 /// List the message attempts for a particular endpoint.
 ///
 /// Returning the endpoint.
 ///
 /// The `before` parameter lets you filter all items created before a certain date and is ignored if an iterator is passed.
-#[aide_annotate(op_id = "v1.message-attempt.list-by-endpoint-deprecated")]
 async fn list_attempts_for_endpoint(
     state: State<AppState>,
     pagination: ValidatedQuery<PaginationDescending<ReversibleIterator<MessageAttemptId>>>,
@@ -891,7 +895,6 @@ pub struct AttemptListFetchQueryParams {
 /// Deprecated: Please use "List Attempts by Endpoint" and "List Attempts by Msg" instead.
 ///
 /// `msg_id`: Use a message id or a message `eventId`
-#[aide_annotate(op_id = "v1.message-attempt.list-by-msg-deprecated")]
 async fn list_messageattempts(
     State(AppState { ref db, .. }): State<AppState>,
     ValidatedQuery(pagination): ValidatedQuery<
@@ -1056,11 +1059,10 @@ async fn expunge_attempt_content(
 pub fn router() -> ApiRouter<AppState> {
     let tag = openapi_tag("Message Attempt");
     ApiRouter::new()
-        // NOTE: [`list_messageattempts`] is deprecated
-        .api_route_with(
+        // use route / axum::routing to skip OpenAPI inclusion for the deprecated route
+        .route(
             "/app/:app_id/msg/:msg_id/attempt",
-            get_with(list_messageattempts, list_messageattempts_operation),
-            &tag,
+            axum::routing::get(list_messageattempts),
         )
         .api_route_with(
             "/app/:app_id/msg/:msg_id/attempt/:attempt_id",
@@ -1085,14 +1087,10 @@ pub fn router() -> ApiRouter<AppState> {
             post_with(resend_webhook, resend_webhook_operation),
             &tag,
         )
-        // NOTE: [`list_attempts_for_endpoint`] is deprecated
-        .api_route_with(
+        // use route / axum::routing to skip OpenAPI inclusion for the deprecated route
+        .route(
             "/app/:app_id/msg/:msg_id/endpoint/:endpoint_id/attempt",
-            get_with(
-                list_attempts_for_endpoint,
-                list_attempts_for_endpoint_operation,
-            ),
-            &tag,
+            axum::routing::get(list_attempts_for_endpoint),
         )
         .api_route_with(
             "/app/:app_id/endpoint/:endpoint_id/msg",

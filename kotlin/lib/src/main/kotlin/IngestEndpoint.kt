@@ -67,7 +67,7 @@ class IngestEndpoint(private val client: SvixHttpClient) {
         return client.executeRequest<Any, IngestEndpointOut>("GET", url.build())
     }
 
-    /** Update an ingest endpoint. */
+    /** Create or update an ingest endpoint. */
     suspend fun update(
         sourceId: String,
         endpointId: String,
@@ -92,33 +92,6 @@ class IngestEndpoint(private val client: SvixHttpClient) {
                 .newUrlBuilder()
                 .encodedPath("/ingest/api/v1/source/$sourceId/endpoint/$endpointId")
         client.executeRequest<Any, Boolean>("DELETE", url.build())
-    }
-
-    /** Get the additional headers to be sent with the ingest. */
-    suspend fun getHeaders(sourceId: String, endpointId: String): IngestEndpointHeadersOut {
-        val url =
-            client
-                .newUrlBuilder()
-                .encodedPath("/ingest/api/v1/source/$sourceId/endpoint/$endpointId/headers")
-        return client.executeRequest<Any, IngestEndpointHeadersOut>("GET", url.build())
-    }
-
-    /** Set the additional headers to be sent to the endpoint. */
-    suspend fun updateHeaders(
-        sourceId: String,
-        endpointId: String,
-        ingestEndpointHeadersIn: IngestEndpointHeadersIn,
-    ) {
-        val url =
-            client
-                .newUrlBuilder()
-                .encodedPath("/ingest/api/v1/source/$sourceId/endpoint/$endpointId/headers")
-
-        client.executeRequest<IngestEndpointHeadersIn, Boolean>(
-            "PUT",
-            url.build(),
-            reqBody = ingestEndpointHeadersIn,
-        )
     }
 
     /**
@@ -158,6 +131,33 @@ class IngestEndpoint(private val client: SvixHttpClient) {
             url.build(),
             headers = headers.build(),
             reqBody = ingestEndpointSecretIn,
+        )
+    }
+
+    /** Get the additional headers to be sent with the ingest. */
+    suspend fun getHeaders(sourceId: String, endpointId: String): IngestEndpointHeadersOut {
+        val url =
+            client
+                .newUrlBuilder()
+                .encodedPath("/ingest/api/v1/source/$sourceId/endpoint/$endpointId/headers")
+        return client.executeRequest<Any, IngestEndpointHeadersOut>("GET", url.build())
+    }
+
+    /** Set the additional headers to be sent to the endpoint. */
+    suspend fun updateHeaders(
+        sourceId: String,
+        endpointId: String,
+        ingestEndpointHeadersIn: IngestEndpointHeadersIn,
+    ) {
+        val url =
+            client
+                .newUrlBuilder()
+                .encodedPath("/ingest/api/v1/source/$sourceId/endpoint/$endpointId/headers")
+
+        client.executeRequest<IngestEndpointHeadersIn, Boolean>(
+            "PUT",
+            url.build(),
+            reqBody = ingestEndpointHeadersIn,
         )
     }
 

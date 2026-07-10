@@ -247,6 +247,21 @@ public abstract class IngestSourceOutConfig {
     @AllArgsConstructor
     @ToString
     @EqualsAndHashCode(callSuper = false)
+    @VariantName("nango")
+    public static class Nango extends IngestSourceOutConfig {
+        private final NangoConfigOut nango;
+
+        @Override
+        public JsonNode toJsonNode() {
+            return Utils.getObjectMapper().valueToTree(nango);
+        }
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
     @VariantName("nash")
     public static class Nash extends IngestSourceOutConfig {
         private final SvixConfigOut nash;
@@ -254,6 +269,21 @@ public abstract class IngestSourceOutConfig {
         @Override
         public JsonNode toJsonNode() {
             return Utils.getObjectMapper().valueToTree(nash);
+        }
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
+    @VariantName("openclaw")
+    public static class Openclaw extends IngestSourceOutConfig {
+        private final OpenClawConfigOut openclaw;
+
+        @Override
+        public JsonNode toJsonNode() {
+            return Utils.getObjectMapper().valueToTree(openclaw);
         }
     }
 
@@ -517,6 +547,21 @@ public abstract class IngestSourceOutConfig {
     @AllArgsConstructor
     @ToString
     @EqualsAndHashCode(callSuper = false)
+    @VariantName("tailscale")
+    public static class Tailscale extends IngestSourceOutConfig {
+        private final TailscaleConfigOut tailscale;
+
+        @Override
+        public JsonNode toJsonNode() {
+            return Utils.getObjectMapper().valueToTree(tailscale);
+        }
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode(callSuper = false)
     @VariantName("telnyx")
     public static class Telnyx extends IngestSourceOutConfig {
         private final TelnyxConfigOut telnyx;
@@ -641,7 +686,9 @@ public abstract class IngestSourceOutConfig {
         TY_M.put("incident-io", c -> new IncidentIo(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("lithic", c -> new Lithic(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("meta", c -> new Meta(m.convertValue(c, MetaConfigOut.class)));
+        TY_M.put("nango", c -> new Nango(m.convertValue(c, NangoConfigOut.class)));
         TY_M.put("nash", c -> new Nash(m.convertValue(c, SvixConfigOut.class)));
+        TY_M.put("openclaw", c -> new Openclaw(m.convertValue(c, OpenClawConfigOut.class)));
         TY_M.put("orum-io", c -> new OrumIo(m.convertValue(c, OrumIoConfigOut.class)));
         TY_M.put("panda-doc", c -> new PandaDoc(m.convertValue(c, PandaDocConfigOut.class)));
         TY_M.put("port-io", c -> new PortIo(m.convertValue(c, PortIoConfigOut.class)));
@@ -659,6 +706,7 @@ public abstract class IngestSourceOutConfig {
         TY_M.put("stych", c -> new Stych(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("svix", c -> new Svix(m.convertValue(c, SvixConfigOut.class)));
         TY_M.put("zoom", c -> new Zoom(m.convertValue(c, ZoomConfigOut.class)));
+        TY_M.put("tailscale", c -> new Tailscale(m.convertValue(c, TailscaleConfigOut.class)));
         TY_M.put("telnyx", c -> new Telnyx(m.convertValue(c, TelnyxConfigOut.class)));
         TY_M.put("vapi", c -> new Vapi(m.convertValue(c, VapiConfigOut.class)));
         TY_M.put("open-ai", c -> new OpenAi(m.convertValue(c, SvixConfigOut.class)));

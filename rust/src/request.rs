@@ -8,7 +8,7 @@ use http_body_util::{BodyExt as _, Full};
 use hyper::body::Bytes;
 use itertools::Itertools as _;
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
-use rand::Rng;
+use rand::random;
 use serde::de::DeserializeOwned;
 
 use crate::{error::Error, models, Configuration};
@@ -125,7 +125,7 @@ impl Request {
         let mut request = self.build_request(conf)?;
         request
             .headers_mut()
-            .insert("svix-req-id", rand::rng().random::<u32>().into());
+            .insert("svix-req-id", random::<u32>().into());
 
         let mut retry_count = 0;
 
@@ -134,7 +134,7 @@ impl Request {
 
             let status = response.status();
             if !status.is_success() {
-                Err(Error::from_response(status, response.into_body()).await)
+                Err(Error::from_response(status, response.into_body(), conf.timeout).await)
             } else if no_return_type {
                 Ok(None)
             } else {
@@ -149,11 +149,15 @@ impl Request {
         };
 
         loop {
+            let start = std::time::Instant::now();
             let request_fut = execute_request(request.clone());
             let res = if let Some(duration) = conf.timeout {
                 tokio::time::timeout(duration, request_fut)
                     .await
-                    .map_err(Error::generic)?
+                    .map_err(|_| Error::Timeout {
+                        elapsed: Some(start.elapsed()),
+                        timeout: Some(duration),
+                    })?
             } else {
                 request_fut.await
             };
@@ -274,6 +278,7 @@ impl_query_param_value!(models::BackgroundTaskType);
 impl_query_param_value!(models::ConnectorProduct);
 impl_query_param_value!(models::MessageStatus);
 impl_query_param_value!(models::Ordering);
+impl_query_param_value!(models::StartingPosition);
 impl_query_param_value!(models::StatusCodeClass);
 
 impl QueryParamValue for Vec<String> {

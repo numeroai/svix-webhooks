@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct StreamingStreamListOptions {
@@ -50,6 +52,7 @@ pub struct StreamingStreamArgs {
     pub command: StreamingStreamCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum StreamingStreamCommands {
     /// List of all the organization's streams.
@@ -126,7 +129,7 @@ pub enum StreamingStreamCommands {
   \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get { stream_id: String },
-    /// Update a stream.
+    /// Create or update a stream.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",

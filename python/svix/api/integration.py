@@ -60,7 +60,7 @@ class IntegrationRotateKeyOptions(BaseOptions):
 
 class IntegrationAsync(ApiBase):
     async def list(
-        self, app_id: str, options: IntegrationListOptions = IntegrationListOptions()
+        self, app_id: str, options: IntegrationListOptions = (IntegrationListOptions())
     ) -> ListResponseIntegrationOut:
         """List the application's integrations."""
         response = await self._request_asyncio(
@@ -78,7 +78,7 @@ class IntegrationAsync(ApiBase):
         self,
         app_id: str,
         integration_in: IntegrationIn,
-        options: IntegrationCreateOptions = IntegrationCreateOptions(),
+        options: IntegrationCreateOptions = (IntegrationCreateOptions()),
     ) -> IntegrationOut:
         """Create an integration."""
         response = await self._request_asyncio(
@@ -133,24 +133,11 @@ class IntegrationAsync(ApiBase):
             },
         )
 
-    @deprecated
-    async def get_key(self, app_id: str, integ_id: str) -> IntegrationKeyOut:
-        """Get an integration's key."""
-        response = await self._request_asyncio(
-            method="get",
-            path="/api/v1/app/{app_id}/integration/{integ_id}/key",
-            path_params={
-                "app_id": app_id,
-                "integ_id": integ_id,
-            },
-        )
-        return IntegrationKeyOut.model_validate(response.json())
-
     async def rotate_key(
         self,
         app_id: str,
         integ_id: str,
-        options: IntegrationRotateKeyOptions = IntegrationRotateKeyOptions(),
+        options: IntegrationRotateKeyOptions = (IntegrationRotateKeyOptions()),
     ) -> IntegrationKeyOut:
         """Rotate the integration's key. The previous key will be immediately revoked."""
         response = await self._request_asyncio(
@@ -165,10 +152,23 @@ class IntegrationAsync(ApiBase):
         )
         return IntegrationKeyOut.model_validate(response.json())
 
+    @deprecated
+    async def get_key(self, app_id: str, integ_id: str) -> IntegrationKeyOut:
+        """Get an integration's key."""
+        response = await self._request_asyncio(
+            method="get",
+            path="/api/v1/app/{app_id}/integration/{integ_id}/key",
+            path_params={
+                "app_id": app_id,
+                "integ_id": integ_id,
+            },
+        )
+        return IntegrationKeyOut.model_validate(response.json())
+
 
 class Integration(ApiBase):
     def list(
-        self, app_id: str, options: IntegrationListOptions = IntegrationListOptions()
+        self, app_id: str, options: IntegrationListOptions = (IntegrationListOptions())
     ) -> ListResponseIntegrationOut:
         """List the application's integrations."""
         response = self._request_sync(
@@ -186,7 +186,7 @@ class Integration(ApiBase):
         self,
         app_id: str,
         integration_in: IntegrationIn,
-        options: IntegrationCreateOptions = IntegrationCreateOptions(),
+        options: IntegrationCreateOptions = (IntegrationCreateOptions()),
     ) -> IntegrationOut:
         """Create an integration."""
         response = self._request_sync(
@@ -241,24 +241,11 @@ class Integration(ApiBase):
             },
         )
 
-    @deprecated
-    def get_key(self, app_id: str, integ_id: str) -> IntegrationKeyOut:
-        """Get an integration's key."""
-        response = self._request_sync(
-            method="get",
-            path="/api/v1/app/{app_id}/integration/{integ_id}/key",
-            path_params={
-                "app_id": app_id,
-                "integ_id": integ_id,
-            },
-        )
-        return IntegrationKeyOut.model_validate(response.json())
-
     def rotate_key(
         self,
         app_id: str,
         integ_id: str,
-        options: IntegrationRotateKeyOptions = IntegrationRotateKeyOptions(),
+        options: IntegrationRotateKeyOptions = (IntegrationRotateKeyOptions()),
     ) -> IntegrationKeyOut:
         """Rotate the integration's key. The previous key will be immediately revoked."""
         response = self._request_sync(
@@ -270,5 +257,18 @@ class Integration(ApiBase):
             },
             query_params=options._query_params(),
             header_params=options._header_params(),
+        )
+        return IntegrationKeyOut.model_validate(response.json())
+
+    @deprecated
+    def get_key(self, app_id: str, integ_id: str) -> IntegrationKeyOut:
+        """Get an integration's key."""
+        response = self._request_sync(
+            method="get",
+            path="/api/v1/app/{app_id}/integration/{integ_id}/key",
+            path_params={
+                "app_id": app_id,
+                "integ_id": integ_id,
+            },
         )
         return IntegrationKeyOut.model_validate(response.json())

@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct MessageAttemptListByEndpointOptions {
@@ -36,7 +38,9 @@ pub struct MessageAttemptListByEndpointOptions {
     /// Note that message payloads are never included in the response, regardless of this flag.
     #[arg(long)]
     pub with_msg: Option<bool>,
-    /// When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are returned as Success (0)
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
     #[arg(long)]
     pub expanded_statuses: Option<bool>,
     /// Filter response based on the event type
@@ -109,7 +113,9 @@ pub struct MessageAttemptListByMsgOptions {
     /// When `true` attempt content is included in the response
     #[arg(long)]
     pub with_content: Option<bool>,
-    /// When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are returned as Success (0)
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
     #[arg(long)]
     pub expanded_statuses: Option<bool>,
     /// Filter response based on the event type
@@ -176,7 +182,9 @@ pub struct MessageAttemptListAttemptedMessagesOptions {
     /// When `true` message payloads are included in the response
     #[arg(long)]
     pub with_content: Option<bool>,
-    /// When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are returned as Success (0)
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
     #[arg(long)]
     pub expanded_statuses: Option<bool>,
     /// Filter response based on the event type
@@ -216,20 +224,6 @@ impl From<MessageAttemptListAttemptedMessagesOptions>
 }
 
 #[derive(Args, Clone)]
-pub struct MessageAttemptGetOptions {
-    /// When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are returned as Success (0)
-    #[arg(long)]
-    pub expanded_statuses: Option<bool>,
-}
-
-impl From<MessageAttemptGetOptions> for svix::api::MessageAttemptGetOptions {
-    fn from(value: MessageAttemptGetOptions) -> Self {
-        let MessageAttemptGetOptions { expanded_statuses } = value;
-        Self { expanded_statuses }
-    }
-}
-
-#[derive(Args, Clone)]
 pub struct MessageAttemptListAttemptedDestinationsOptions {
     /// Limit the number of returned items
     #[arg(long)]
@@ -245,6 +239,22 @@ impl From<MessageAttemptListAttemptedDestinationsOptions>
     fn from(value: MessageAttemptListAttemptedDestinationsOptions) -> Self {
         let MessageAttemptListAttemptedDestinationsOptions { limit, iterator } = value;
         Self { limit, iterator }
+    }
+}
+
+#[derive(Args, Clone)]
+pub struct MessageAttemptGetOptions {
+    /// When `true`, return the Canceled (4) status in attempts.
+    ///
+    /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
+    #[arg(long)]
+    pub expanded_statuses: Option<bool>,
+}
+
+impl From<MessageAttemptGetOptions> for svix::api::MessageAttemptGetOptions {
+    fn from(value: MessageAttemptGetOptions) -> Self {
+        let MessageAttemptGetOptions { expanded_statuses } = value;
+        Self { expanded_statuses }
     }
 }
 
@@ -268,6 +278,7 @@ pub struct MessageAttemptArgs {
     pub command: MessageAttemptCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum MessageAttemptCommands {
     /// List attempts by endpoint id
@@ -376,8 +387,9 @@ pub enum MessageAttemptCommands {
         #[clap(flatten)]
         options: MessageAttemptListByMsgOptions,
     },
-    /// List messages for a particular endpoint. Additionally includes metadata about the latest message attempt.
+    /// List messages for a particular endpoint.
     ///
+    /// Additionally includes metadata about the latest message attempt.
     /// The `before` parameter lets you filter all items created before a certain date and is ignored if an iterator is passed.
     ///
     /// Note that by default this endpoint is limited to retrieving 90 days' worth of data
@@ -420,6 +432,47 @@ pub enum MessageAttemptCommands {
         endpoint_id: String,
         #[clap(flatten)]
         options: MessageAttemptListAttemptedMessagesOptions,
+    },
+    /// List endpoints attempted by a given message.
+    ///
+    /// Additionally includes metadata about the latest message attempt.
+    /// By default, endpoints are listed in ascending order by ID.
+    #[command(help_template = concat!(
+            "{about-with-newline}\n",
+            "{usage-heading} {usage}\n\n",
+            "Example: svix message-attempt list-attempted-destinations app_abc000000000000000000000000 msg_abc000000000000000000000000\n",
+            "{after-help}",
+            "\n",
+            "{all-args}",
+        ))]
+    #[command(after_help = "Example response:
+{
+  \"data\": [{
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"createdAt\": \"2030-01-01T00:00:00Z\",
+    \"description\": \"...\",
+    \"disabled\": false,
+    \"filterTypes\": [\"user.signup\",\"user.deleted\"],
+    \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"nextAttempt\": \"2030-01-01T00:00:00Z\",
+    \"rateLimit\": 123,
+    \"status\": 0,
+    \"statusText\": \"success\",
+    \"throttleRate\": 123,
+    \"uid\": \"unique-identifier\",
+    \"updatedAt\": \"2030-01-01T00:00:00Z\",
+    \"url\": \"https://example.com/webhook/\",
+    \"version\": 1
+  }],
+  \"done\": true,
+  \"iterator\": \"iterator\",
+  \"prevIterator\": \"-iterator\"
+}\n")]
+    ListAttemptedDestinations {
+        app_id: String,
+        msg_id: String,
+        #[clap(flatten)]
+        options: MessageAttemptListAttemptedDestinationsOptions,
     },
     /// `msg_id`: Use a message id or a message `eventId`
     #[command(help_template = concat!(
@@ -482,47 +535,6 @@ pub enum MessageAttemptCommands {
         msg_id: String,
         attempt_id: String,
     },
-    /// List endpoints attempted by a given message.
-    ///
-    /// Additionally includes metadata about the latest message attempt.
-    /// By default, endpoints are listed in ascending order by ID.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix message-attempt list-attempted-destinations app_abc000000000000000000000000 msg_abc000000000000000000000000\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example response:
-{
-  \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"createdAt\": \"2030-01-01T00:00:00Z\",
-    \"description\": \"...\",
-    \"disabled\": false,
-    \"filterTypes\": [\"user.signup\",\"user.deleted\"],
-    \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-    \"nextAttempt\": \"2030-01-01T00:00:00Z\",
-    \"rateLimit\": 123,
-    \"status\": 0,
-    \"statusText\": \"success\",
-    \"throttleRate\": 123,
-    \"uid\": \"unique-identifier\",
-    \"updatedAt\": \"2030-01-01T00:00:00Z\",
-    \"url\": \"https://example.com/webhook/\",
-    \"version\": 1
-  }],
-  \"done\": true,
-  \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
-}\n")]
-    ListAttemptedDestinations {
-        app_id: String,
-        msg_id: String,
-        #[clap(flatten)]
-        options: MessageAttemptListAttemptedDestinationsOptions,
-    },
     /// Resend a message to the specified endpoint.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
@@ -584,6 +596,17 @@ impl MessageAttemptCommands {
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
+            Self::ListAttemptedDestinations {
+                app_id,
+                msg_id,
+                options,
+            } => {
+                let resp = client
+                    .message_attempt()
+                    .list_attempted_destinations(app_id, msg_id, Some(options.into()))
+                    .await?;
+                crate::json::print_json_output(&resp, color_mode)?;
+            }
             Self::Get {
                 app_id,
                 msg_id,
@@ -605,17 +628,6 @@ impl MessageAttemptCommands {
                     .message_attempt()
                     .expunge_content(app_id, msg_id, attempt_id)
                     .await?;
-            }
-            Self::ListAttemptedDestinations {
-                app_id,
-                msg_id,
-                options,
-            } => {
-                let resp = client
-                    .message_attempt()
-                    .list_attempted_destinations(app_id, msg_id, Some(options.into()))
-                    .await?;
-                crate::json::print_json_output(&resp, color_mode)?;
             }
             Self::Resend {
                 app_id,

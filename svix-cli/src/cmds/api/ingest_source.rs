@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct IngestSourceListOptions {
@@ -63,6 +65,7 @@ pub struct IngestSourceArgs {
     pub command: IngestSourceCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum IngestSourceCommands {
     /// List of all the organization's Ingest Sources.
@@ -134,7 +137,7 @@ pub enum IngestSourceCommands {
   \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get { source_id: String },
-    /// Update an Ingest Source.
+    /// Create or update an Ingest Source.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",

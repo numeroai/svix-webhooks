@@ -79,7 +79,7 @@ class EventTypeDeleteOptions(BaseOptions):
 
 class EventTypeAsync(ApiBase):
     async def list(
-        self, options: EventTypeListOptions = EventTypeListOptions()
+        self, options: EventTypeListOptions = (EventTypeListOptions())
     ) -> ListResponseEventTypeOut:
         """Return the list of event types."""
         response = await self._request_asyncio(
@@ -94,7 +94,7 @@ class EventTypeAsync(ApiBase):
     async def create(
         self,
         event_type_in: EventTypeIn,
-        options: EventTypeCreateOptions = EventTypeCreateOptions(),
+        options: EventTypeCreateOptions = (EventTypeCreateOptions()),
     ) -> EventTypeOut:
         """Create new or unarchive existing event type.
 
@@ -114,7 +114,7 @@ class EventTypeAsync(ApiBase):
     async def import_openapi(
         self,
         event_type_import_open_api_in: EventTypeImportOpenApiIn,
-        options: EventTypeImportOpenapiOptions = EventTypeImportOpenapiOptions(),
+        options: EventTypeImportOpenapiOptions = (EventTypeImportOpenapiOptions()),
     ) -> EventTypeImportOpenApiOut:
         """Given an OpenAPI spec, create new or update existing event types.
 
@@ -147,7 +147,7 @@ class EventTypeAsync(ApiBase):
     async def update(
         self, event_type_name: str, event_type_update: EventTypeUpdate
     ) -> EventTypeOut:
-        """Update an event type."""
+        """Create or update an event type."""
         response = await self._request_asyncio(
             method="put",
             path="/api/v1/event-type/{event_type_name}",
@@ -163,7 +163,7 @@ class EventTypeAsync(ApiBase):
     async def delete(
         self,
         event_type_name: str,
-        options: EventTypeDeleteOptions = EventTypeDeleteOptions(),
+        options: EventTypeDeleteOptions = (EventTypeDeleteOptions()),
     ) -> None:
         """Archive an event type.
 
@@ -200,7 +200,7 @@ class EventTypeAsync(ApiBase):
 
 class EventType(ApiBase):
     def list(
-        self, options: EventTypeListOptions = EventTypeListOptions()
+        self, options: EventTypeListOptions = (EventTypeListOptions())
     ) -> ListResponseEventTypeOut:
         """Return the list of event types."""
         response = self._request_sync(
@@ -215,7 +215,7 @@ class EventType(ApiBase):
     def create(
         self,
         event_type_in: EventTypeIn,
-        options: EventTypeCreateOptions = EventTypeCreateOptions(),
+        options: EventTypeCreateOptions = (EventTypeCreateOptions()),
     ) -> EventTypeOut:
         """Create new or unarchive existing event type.
 
@@ -235,7 +235,7 @@ class EventType(ApiBase):
     def import_openapi(
         self,
         event_type_import_open_api_in: EventTypeImportOpenApiIn,
-        options: EventTypeImportOpenapiOptions = EventTypeImportOpenapiOptions(),
+        options: EventTypeImportOpenapiOptions = (EventTypeImportOpenapiOptions()),
     ) -> EventTypeImportOpenApiOut:
         """Given an OpenAPI spec, create new or update existing event types.
 
@@ -268,7 +268,7 @@ class EventType(ApiBase):
     def update(
         self, event_type_name: str, event_type_update: EventTypeUpdate
     ) -> EventTypeOut:
-        """Update an event type."""
+        """Create or update an event type."""
         response = self._request_sync(
             method="put",
             path="/api/v1/event-type/{event_type_name}",
@@ -284,7 +284,7 @@ class EventType(ApiBase):
     def delete(
         self,
         event_type_name: str,
-        options: EventTypeDeleteOptions = EventTypeDeleteOptions(),
+        options: EventTypeDeleteOptions = (EventTypeDeleteOptions()),
     ) -> None:
         """Archive an event type.
 

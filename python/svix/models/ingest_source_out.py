@@ -15,6 +15,8 @@ from .easypost_config_out import EasypostConfigOut
 from .github_config_out import GithubConfigOut
 from .hubspot_config_out import HubspotConfigOut
 from .meta_config_out import MetaConfigOut
+from .nango_config_out import NangoConfigOut
+from .open_claw_config_out import OpenClawConfigOut
 from .orum_io_config_out import OrumIoConfigOut
 from .panda_doc_config_out import PandaDocConfigOut
 from .port_io_config_out import PortIoConfigOut
@@ -24,6 +26,7 @@ from .shopify_config_out import ShopifyConfigOut
 from .slack_config_out import SlackConfigOut
 from .stripe_config_out import StripeConfigOut
 from .svix_config_out import SvixConfigOut
+from .tailscale_config_out import TailscaleConfigOut
 from .telnyx_config_out import TelnyxConfigOut
 from .vapi_config_out import VapiConfigOut
 from .veriff_config_out import VeriffConfigOut
@@ -64,7 +67,9 @@ class IngestSourceOut(BaseModel):
         t.Literal["incident-io"],
         t.Literal["lithic"],
         t.Literal["meta"],
+        t.Literal["nango"],
         t.Literal["nash"],
+        t.Literal["openclaw"],
         t.Literal["orum-io"],
         t.Literal["panda-doc"],
         t.Literal["port-io"],
@@ -82,6 +87,7 @@ class IngestSourceOut(BaseModel):
         t.Literal["stych"],
         t.Literal["svix"],
         t.Literal["zoom"],
+        t.Literal["tailscale"],
         t.Literal["telnyx"],
         t.Literal["vapi"],
         t.Literal["open-ai"],
@@ -101,6 +107,8 @@ class IngestSourceOut(BaseModel):
         GithubConfigOut,
         HubspotConfigOut,
         MetaConfigOut,
+        NangoConfigOut,
+        OpenClawConfigOut,
         OrumIoConfigOut,
         PandaDocConfigOut,
         PortIoConfigOut,
@@ -110,6 +118,7 @@ class IngestSourceOut(BaseModel):
         SlackConfigOut,
         StripeConfigOut,
         ZoomConfigOut,
+        TailscaleConfigOut,
         TelnyxConfigOut,
         VapiConfigOut,
         VeriffConfigOut,
@@ -122,6 +131,8 @@ class IngestSourceOut(BaseModel):
     def validate_model(
         cls, data: t.Any, handler: ModelWrapValidatorHandler[Self]
     ) -> Self:
+        if isinstance(data, cls):
+            return handler(data)
         if "config" not in data:
             data["config"] = {}
         output = handler(data)
@@ -155,8 +166,12 @@ class IngestSourceOut(BaseModel):
             output.config = SvixConfigOut.model_validate(data.get("config", {}))
         elif output.type == "meta":
             output.config = MetaConfigOut.model_validate(data.get("config", {}))
+        elif output.type == "nango":
+            output.config = NangoConfigOut.model_validate(data.get("config", {}))
         elif output.type == "nash":
             output.config = SvixConfigOut.model_validate(data.get("config", {}))
+        elif output.type == "openclaw":
+            output.config = OpenClawConfigOut.model_validate(data.get("config", {}))
         elif output.type == "orum-io":
             output.config = OrumIoConfigOut.model_validate(data.get("config", {}))
         elif output.type == "panda-doc":
@@ -191,6 +206,8 @@ class IngestSourceOut(BaseModel):
             output.config = SvixConfigOut.model_validate(data.get("config", {}))
         elif output.type == "zoom":
             output.config = ZoomConfigOut.model_validate(data.get("config", {}))
+        elif output.type == "tailscale":
+            output.config = TailscaleConfigOut.model_validate(data.get("config", {}))
         elif output.type == "telnyx":
             output.config = TelnyxConfigOut.model_validate(data.get("config", {}))
         elif output.type == "vapi":

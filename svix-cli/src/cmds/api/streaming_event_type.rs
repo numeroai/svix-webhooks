@@ -1,6 +1,8 @@
 // this file is @generated
 use clap::{Args, Subcommand};
-use svix::api::*;
+use svix::api::Svix;
+#[allow(unused_imports)]
+use svix::models::*;
 
 #[derive(Args, Clone)]
 pub struct StreamingEventTypeListOptions {
@@ -69,6 +71,7 @@ pub struct StreamingEventTypeArgs {
     pub command: StreamingEventTypeCommands,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum StreamingEventTypeCommands {
     /// List of all the organization's event types for streaming.
@@ -150,7 +153,7 @@ pub enum StreamingEventTypeCommands {
   \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get { name: String },
-    /// Update or create a event type for Streams.
+    /// Create or update or create a event type for Streams.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
@@ -208,8 +211,7 @@ pub enum StreamingEventTypeCommands {
   \"archived\": true,
   \"deprecated\": true,
   \"description\": \"...\",
-  \"featureFlags\": [\"cool-new-feature\"],
-  \"name\": \"user.signup\"
+  \"featureFlags\": [\"cool-new-feature\"]
 }\n\nExample response:
 {
   \"archived\": true,

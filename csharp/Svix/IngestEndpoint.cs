@@ -231,7 +231,7 @@ namespace Svix
         }
 
         /// <summary>
-        /// Update an ingest endpoint.
+        /// Create or update an ingest endpoint.
         /// </summary>
         public async Task<IngestEndpointOut> UpdateAsync(
             string sourceId,
@@ -267,7 +267,7 @@ namespace Svix
         }
 
         /// <summary>
-        /// Update an ingest endpoint.
+        /// Create or update an ingest endpoint.
         /// </summary>
         public IngestEndpointOut Update(
             string sourceId,
@@ -352,134 +352,6 @@ namespace Svix
             catch (ApiException e)
             {
                 _client.Logger?.LogError(e, $"{nameof(Delete)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get the additional headers to be sent with the ingest.
-        /// </summary>
-        public async Task<IngestEndpointHeadersOut> GetHeadersAsync(
-            string sourceId,
-            string endpointId,
-            CancellationToken cancellationToken = default
-        )
-        {
-            try
-            {
-                var response =
-                    await _client.SvixHttpClient.SendRequestAsync<IngestEndpointHeadersOut>(
-                        method: HttpMethod.Get,
-                        path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
-                        pathParams: new Dictionary<string, string>
-                        {
-                            { "source_id", sourceId },
-                            { "endpoint_id", endpointId },
-                        },
-                        cancellationToken: cancellationToken
-                    );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(GetHeadersAsync)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get the additional headers to be sent with the ingest.
-        /// </summary>
-        public IngestEndpointHeadersOut GetHeaders(string sourceId, string endpointId)
-        {
-            try
-            {
-                var response = _client.SvixHttpClient.SendRequest<IngestEndpointHeadersOut>(
-                    method: HttpMethod.Get,
-                    path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
-                    pathParams: new Dictionary<string, string>
-                    {
-                        { "source_id", sourceId },
-                        { "endpoint_id", endpointId },
-                    }
-                );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(GetHeaders)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Set the additional headers to be sent to the endpoint.
-        /// </summary>
-        public async Task<bool> UpdateHeadersAsync(
-            string sourceId,
-            string endpointId,
-            IngestEndpointHeadersIn ingestEndpointHeadersIn,
-            CancellationToken cancellationToken = default
-        )
-        {
-            ingestEndpointHeadersIn =
-                ingestEndpointHeadersIn
-                ?? throw new ArgumentNullException(nameof(ingestEndpointHeadersIn));
-            try
-            {
-                var response = await _client.SvixHttpClient.SendRequestAsync<bool>(
-                    method: HttpMethod.Put,
-                    path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
-                    pathParams: new Dictionary<string, string>
-                    {
-                        { "source_id", sourceId },
-                        { "endpoint_id", endpointId },
-                    },
-                    content: ingestEndpointHeadersIn,
-                    cancellationToken: cancellationToken
-                );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(UpdateHeadersAsync)} failed");
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Set the additional headers to be sent to the endpoint.
-        /// </summary>
-        public bool UpdateHeaders(
-            string sourceId,
-            string endpointId,
-            IngestEndpointHeadersIn ingestEndpointHeadersIn
-        )
-        {
-            ingestEndpointHeadersIn =
-                ingestEndpointHeadersIn
-                ?? throw new ArgumentNullException(nameof(ingestEndpointHeadersIn));
-            try
-            {
-                var response = _client.SvixHttpClient.SendRequest<bool>(
-                    method: HttpMethod.Put,
-                    path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
-                    pathParams: new Dictionary<string, string>
-                    {
-                        { "source_id", sourceId },
-                        { "endpoint_id", endpointId },
-                    },
-                    content: ingestEndpointHeadersIn
-                );
-                return response.Data;
-            }
-            catch (ApiException e)
-            {
-                _client.Logger?.LogError(e, $"{nameof(UpdateHeaders)} failed");
 
                 throw;
             }
@@ -624,6 +496,134 @@ namespace Svix
             catch (ApiException e)
             {
                 _client.Logger?.LogError(e, $"{nameof(RotateSecret)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the additional headers to be sent with the ingest.
+        /// </summary>
+        public async Task<IngestEndpointHeadersOut> GetHeadersAsync(
+            string sourceId,
+            string endpointId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            try
+            {
+                var response =
+                    await _client.SvixHttpClient.SendRequestAsync<IngestEndpointHeadersOut>(
+                        method: HttpMethod.Get,
+                        path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
+                        pathParams: new Dictionary<string, string>
+                        {
+                            { "source_id", sourceId },
+                            { "endpoint_id", endpointId },
+                        },
+                        cancellationToken: cancellationToken
+                    );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(GetHeadersAsync)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the additional headers to be sent with the ingest.
+        /// </summary>
+        public IngestEndpointHeadersOut GetHeaders(string sourceId, string endpointId)
+        {
+            try
+            {
+                var response = _client.SvixHttpClient.SendRequest<IngestEndpointHeadersOut>(
+                    method: HttpMethod.Get,
+                    path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
+                    pathParams: new Dictionary<string, string>
+                    {
+                        { "source_id", sourceId },
+                        { "endpoint_id", endpointId },
+                    }
+                );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(GetHeaders)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Set the additional headers to be sent to the endpoint.
+        /// </summary>
+        public async Task<bool> UpdateHeadersAsync(
+            string sourceId,
+            string endpointId,
+            IngestEndpointHeadersIn ingestEndpointHeadersIn,
+            CancellationToken cancellationToken = default
+        )
+        {
+            ingestEndpointHeadersIn =
+                ingestEndpointHeadersIn
+                ?? throw new ArgumentNullException(nameof(ingestEndpointHeadersIn));
+            try
+            {
+                var response = await _client.SvixHttpClient.SendRequestAsync<bool>(
+                    method: HttpMethod.Put,
+                    path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
+                    pathParams: new Dictionary<string, string>
+                    {
+                        { "source_id", sourceId },
+                        { "endpoint_id", endpointId },
+                    },
+                    content: ingestEndpointHeadersIn,
+                    cancellationToken: cancellationToken
+                );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(UpdateHeadersAsync)} failed");
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Set the additional headers to be sent to the endpoint.
+        /// </summary>
+        public bool UpdateHeaders(
+            string sourceId,
+            string endpointId,
+            IngestEndpointHeadersIn ingestEndpointHeadersIn
+        )
+        {
+            ingestEndpointHeadersIn =
+                ingestEndpointHeadersIn
+                ?? throw new ArgumentNullException(nameof(ingestEndpointHeadersIn));
+            try
+            {
+                var response = _client.SvixHttpClient.SendRequest<bool>(
+                    method: HttpMethod.Put,
+                    path: "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers",
+                    pathParams: new Dictionary<string, string>
+                    {
+                        { "source_id", sourceId },
+                        { "endpoint_id", endpointId },
+                    },
+                    content: ingestEndpointHeadersIn
+                );
+                return response.Data;
+            }
+            catch (ApiException e)
+            {
+                _client.Logger?.LogError(e, $"{nameof(UpdateHeaders)} failed");
 
                 throw;
             }

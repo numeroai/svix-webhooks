@@ -40,8 +40,9 @@ data class MessageAttemptListByEndpointOptions(
      */
     val withMsg: Boolean? = null,
     /**
-     * When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are
-     * returned as Success (0)
+     * When `true`, return the Canceled (4) status in attempts.
+     *
+     * If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
      */
     val expandedStatuses: Boolean? = null,
     /** Filter response based on the event type */
@@ -73,8 +74,9 @@ data class MessageAttemptListByMsgOptions(
     /** When `true` attempt content is included in the response */
     val withContent: Boolean? = null,
     /**
-     * When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are
-     * returned as Success (0)
+     * When `true`, return the Canceled (4) status in attempts.
+     *
+     * If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
      */
     val expandedStatuses: Boolean? = null,
     /** Filter response based on the event type */
@@ -102,20 +104,13 @@ data class MessageAttemptListAttemptedMessagesOptions(
     /** When `true` message payloads are included in the response */
     val withContent: Boolean? = null,
     /**
-     * When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are
-     * returned as Success (0)
+     * When `true`, return the Canceled (4) status in attempts.
+     *
+     * If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
      */
     val expandedStatuses: Boolean? = null,
     /** Filter response based on the event type */
     val eventTypes: Set<String>? = null,
-)
-
-data class MessageAttemptGetOptions(
-    /**
-     * When `true`, return the Canceled (4) status in attempts. If `false`, canceled attempts are
-     * returned as Success (0)
-     */
-    val expandedStatuses: Boolean? = null
 )
 
 data class MessageAttemptListAttemptedDestinationsOptions(
@@ -123,6 +118,15 @@ data class MessageAttemptListAttemptedDestinationsOptions(
     val limit: ULong? = null,
     /** The iterator returned from a prior invocation */
     val iterator: String? = null,
+)
+
+data class MessageAttemptGetOptions(
+    /**
+     * When `true`, return the Canceled (4) status in attempts.
+     *
+     * If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
+     */
+    val expandedStatuses: Boolean? = null
 )
 
 data class MessageAttemptResendOptions(val idempotencyKey: String? = null)
@@ -200,11 +204,10 @@ class MessageAttempt(private val client: SvixHttpClient) {
     }
 
     /**
-     * List messages for a particular endpoint. Additionally includes metadata about the latest
-     * message attempt.
+     * List messages for a particular endpoint.
      *
-     * The `before` parameter lets you filter all items created before a certain date and is ignored
-     * if an iterator is passed.
+     * Additionally includes metadata about the latest message attempt. The `before` parameter lets
+     * you filter all items created before a certain date and is ignored if an iterator is passed.
      *
      * Note that by default this endpoint is limited to retrieving 90 days' worth of data relative
      * to now or, if an iterator is provided, 90 days before/after the time indicated by the
@@ -233,6 +236,24 @@ class MessageAttempt(private val client: SvixHttpClient) {
         )
         options.eventTypes?.let { url.addQueryParameter("event_types", serializeQueryParam(it)) }
         return client.executeRequest<Any, ListResponseEndpointMessageOut>("GET", url.build())
+    }
+
+    /**
+     * List endpoints attempted by a given message.
+     *
+     * Additionally includes metadata about the latest message attempt. By default, endpoints are
+     * listed in ascending order by ID.
+     */
+    suspend fun listAttemptedDestinations(
+        appId: String,
+        msgId: String,
+        options: MessageAttemptListAttemptedDestinationsOptions =
+            MessageAttemptListAttemptedDestinationsOptions(),
+    ): ListResponseMessageEndpointOut {
+        val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/msg/$msgId/endpoint")
+        options.limit?.let { url.addQueryParameter("limit", serializeQueryParam(it)) }
+        options.iterator?.let { url.addQueryParameter("iterator", it) }
+        return client.executeRequest<Any, ListResponseMessageEndpointOut>("GET", url.build())
     }
 
     /** `msg_id`: Use a message id or a message `eventId` */
@@ -264,24 +285,6 @@ class MessageAttempt(private val client: SvixHttpClient) {
                 .newUrlBuilder()
                 .encodedPath("/api/v1/app/$appId/msg/$msgId/attempt/$attemptId/content")
         client.executeRequest<Any, Boolean>("DELETE", url.build())
-    }
-
-    /**
-     * List endpoints attempted by a given message.
-     *
-     * Additionally includes metadata about the latest message attempt. By default, endpoints are
-     * listed in ascending order by ID.
-     */
-    suspend fun listAttemptedDestinations(
-        appId: String,
-        msgId: String,
-        options: MessageAttemptListAttemptedDestinationsOptions =
-            MessageAttemptListAttemptedDestinationsOptions(),
-    ): ListResponseMessageEndpointOut {
-        val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/msg/$msgId/endpoint")
-        options.limit?.let { url.addQueryParameter("limit", serializeQueryParam(it)) }
-        options.iterator?.let { url.addQueryParameter("iterator", it) }
-        return client.executeRequest<Any, ListResponseMessageEndpointOut>("GET", url.build())
     }
 
     /** Resend a message to the specified endpoint. */

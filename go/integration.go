@@ -46,8 +46,9 @@ func (integration *Integration) List(
 		"app_id": appId,
 	}
 	queryMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
 		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
 		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
@@ -78,8 +79,9 @@ func (integration *Integration) Create(
 		"app_id": appId,
 	}
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
 		if err != nil {
 			return nil, err
@@ -165,6 +167,38 @@ func (integration *Integration) Delete(
 	return err
 }
 
+// Rotate the integration's key. The previous key will be immediately revoked.
+func (integration *Integration) RotateKey(
+	ctx context.Context,
+	appId string,
+	integId string,
+	o *IntegrationRotateKeyOptions,
+) (*models.IntegrationKeyOut, error) {
+	pathMap := map[string]string{
+		"app_id":   appId,
+		"integ_id": integId,
+	}
+	headerMap := map[string]string{}
+	if o != nil {
+		var err error
+
+		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return internal.ExecuteRequest[any, models.IntegrationKeyOut](
+		ctx,
+		integration.client,
+		"POST",
+		"/api/v1/app/{app_id}/integration/{integ_id}/key/rotate",
+		pathMap,
+		nil,
+		headerMap,
+		nil,
+	)
+}
+
 // Get an integration's key.
 //
 // Deprecated: GetKey is deprecated.
@@ -185,37 +219,6 @@ func (integration *Integration) GetKey(
 		pathMap,
 		nil,
 		nil,
-		nil,
-	)
-}
-
-// Rotate the integration's key. The previous key will be immediately revoked.
-func (integration *Integration) RotateKey(
-	ctx context.Context,
-	appId string,
-	integId string,
-	o *IntegrationRotateKeyOptions,
-) (*models.IntegrationKeyOut, error) {
-	pathMap := map[string]string{
-		"app_id":   appId,
-		"integ_id": integId,
-	}
-	headerMap := map[string]string{}
-	var err error
-	if o != nil {
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return internal.ExecuteRequest[any, models.IntegrationKeyOut](
-		ctx,
-		integration.client,
-		"POST",
-		"/api/v1/app/{app_id}/integration/{integ_id}/key/rotate",
-		pathMap,
-		nil,
-		headerMap,
 		nil,
 	)
 }

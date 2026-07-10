@@ -46,8 +46,9 @@ func (streamingSink *StreamingSink) List(
 		"stream_id": streamId,
 	}
 	queryMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
 		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
 		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
@@ -78,8 +79,9 @@ func (streamingSink *StreamingSink) Create(
 		"stream_id": streamId,
 	}
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
 		if err != nil {
 			return nil, err
@@ -119,7 +121,7 @@ func (streamingSink *StreamingSink) Get(
 	)
 }
 
-// Update a sink.
+// Create or update a sink.
 func (streamingSink *StreamingSink) Update(
 	ctx context.Context,
 	streamId string,
@@ -188,6 +190,29 @@ func (streamingSink *StreamingSink) Patch(
 	)
 }
 
+// Set or unset the transformation code associated with this sink.
+func (streamingSink *StreamingSink) TransformationPartialUpdate(
+	ctx context.Context,
+	streamId string,
+	sinkId string,
+	sinkTransformIn models.SinkTransformIn,
+) (*models.EmptyResponse, error) {
+	pathMap := map[string]string{
+		"stream_id": streamId,
+		"sink_id":   sinkId,
+	}
+	return internal.ExecuteRequest[models.SinkTransformIn, models.EmptyResponse](
+		ctx,
+		streamingSink.client,
+		"PATCH",
+		"/api/v1/stream/{stream_id}/sink/{sink_id}/transformation",
+		pathMap,
+		nil,
+		nil,
+		&sinkTransformIn,
+	)
+}
+
 // Get the sink's signing secret (only supported for http sinks)
 //
 // This is used to verify the authenticity of the delivery.
@@ -227,8 +252,9 @@ func (streamingSink *StreamingSink) RotateSecret(
 		"sink_id":   sinkId,
 	}
 	headerMap := map[string]string{}
-	var err error
 	if o != nil {
+		var err error
+
 		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
 		if err != nil {
 			return nil, err
@@ -243,28 +269,5 @@ func (streamingSink *StreamingSink) RotateSecret(
 		nil,
 		headerMap,
 		&endpointSecretRotateIn,
-	)
-}
-
-// Set or unset the transformation code associated with this sink.
-func (streamingSink *StreamingSink) TransformationPartialUpdate(
-	ctx context.Context,
-	streamId string,
-	sinkId string,
-	sinkTransformIn models.SinkTransformIn,
-) (*models.EmptyResponse, error) {
-	pathMap := map[string]string{
-		"stream_id": streamId,
-		"sink_id":   sinkId,
-	}
-	return internal.ExecuteRequest[models.SinkTransformIn, models.EmptyResponse](
-		ctx,
-		streamingSink.client,
-		"PATCH",
-		"/api/v1/stream/{stream_id}/sink/{sink_id}/transformation",
-		pathMap,
-		nil,
-		nil,
-		&sinkTransformIn,
 	)
 }
