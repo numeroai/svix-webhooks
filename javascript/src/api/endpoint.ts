@@ -2,6 +2,10 @@
 
 import { type BulkReplayIn, BulkReplayInSerializer } from "../models/bulkReplayIn";
 import {
+  type EndpointAttemptStats,
+  EndpointAttemptStatsSerializer,
+} from "../models/endpointAttemptStats";
+import {
   type EndpointHeadersIn,
   EndpointHeadersInSerializer,
 } from "../models/endpointHeadersIn";
@@ -30,14 +34,9 @@ import {
   EndpointTransformationInSerializer,
 } from "../models/endpointTransformationIn";
 import {
-  type EndpointTransformationOut,
-  EndpointTransformationOutSerializer,
-} from "../models/endpointTransformationOut";
-import {
-  type EndpointTransformationPatch,
-  EndpointTransformationPatchSerializer,
-} from "../models/endpointTransformationPatch";
-import { type EndpointUpdate, EndpointUpdateSerializer } from "../models/endpointUpdate";
+  type EndpointUpsertIn,
+  EndpointUpsertInSerializer,
+} from "../models/endpointUpsertIn";
 import { type EventExampleIn, EventExampleInSerializer } from "../models/eventExampleIn";
 import {
   type ListResponseEndpointOut,
@@ -49,6 +48,7 @@ import { type RecoverIn, RecoverInSerializer } from "../models/recoverIn";
 import { type RecoverOut, RecoverOutSerializer } from "../models/recoverOut";
 import { type ReplayIn, ReplayInSerializer } from "../models/replayIn";
 import { type ReplayOut, ReplayOutSerializer } from "../models/replayOut";
+import { EndpointTransformation } from "./endpointTransformation";
 import { HttpMethod, SvixRequest, type SvixRequestContext } from "../request";
 
 export interface EndpointListOptions {
@@ -83,6 +83,13 @@ export interface EndpointGetStatsOptions {
   until?: Date | null;
 }
 
+export interface EndpointGetAttemptStatsOptions {
+  /** Filter the range to data starting from this date. */
+  since?: Date | null;
+  /** Filter the range to data ending by this date. */
+  until?: Date | null;
+}
+
 export interface EndpointRecoverOptions {
   idempotencyKey?: string;
 }
@@ -93,6 +100,10 @@ export interface EndpointSendExampleOptions {
 
 export class Endpoint {
   public constructor(private readonly requestCtx: SvixRequestContext) {}
+
+  public get transformation() {
+    return new EndpointTransformation(this.requestCtx);
+  }
 
   /** List the application's endpoints. */
   public async list(
@@ -147,10 +158,10 @@ export class Endpoint {
   }
 
   /** Create or update an endpoint. */
-  public async update(
+  public async upsert(
     appId: string,
     endpointId: string,
-    endpointUpdate: EndpointUpdate
+    endpointUpsertIn: EndpointUpsertIn
   ): Promise<EndpointOut> {
     const request = new SvixRequest(
       HttpMethod.PUT,
@@ -159,7 +170,7 @@ export class Endpoint {
 
     request.setPathParam("app_id", appId);
     request.setPathParam("endpoint_id", endpointId);
-    request.setBody(EndpointUpdateSerializer._toJsonObject(endpointUpdate));
+    request.setBody(EndpointUpsertInSerializer._toJsonObject(endpointUpsertIn));
 
     return await request.send(this.requestCtx, EndpointOutSerializer._fromJsonObject);
   }
@@ -219,14 +230,14 @@ export class Endpoint {
   /**
    * Rotates the endpoint's signing secret.
    *
-   * The previous secret will remain valid for the next 24 hours.
+   * The previous secret will remain valid for the specified grace period (default 24 hours).
    */
   public async rotateSecret(
     appId: string,
     endpointId: string,
     endpointSecretRotateIn: EndpointSecretRotateIn = {},
     options?: EndpointRotateSecretOptions
-  ): Promise<void> {
+  ): Promise<EndpointSecretOut> {
     const request = new SvixRequest(
       HttpMethod.POST,
       "/api/v1/app/{app_id}/endpoint/{endpoint_id}/secret/rotate"
@@ -239,7 +250,10 @@ export class Endpoint {
       EndpointSecretRotateInSerializer._toJsonObject(endpointSecretRotateIn)
     );
 
-    return await request.sendNoResponseBody(this.requestCtx);
+    return await request.send(
+      this.requestCtx,
+      EndpointSecretOutSerializer._fromJsonObject
+    );
   }
 
   /** Get the additional headers to be sent with the webhook. */
@@ -262,7 +276,7 @@ export class Endpoint {
   }
 
   /** Set the additional headers to be sent with the webhook. */
-  public async updateHeaders(
+  public async setHeaders(
     appId: string,
     endpointId: string,
     endpointHeadersIn: EndpointHeadersIn
@@ -277,14 +291,6 @@ export class Endpoint {
     request.setBody(EndpointHeadersInSerializer._toJsonObject(endpointHeadersIn));
 
     return await request.sendNoResponseBody(this.requestCtx);
-  }
-
-  public headersUpdate(
-    appId: string,
-    endpointId: string,
-    endpointHeadersIn: EndpointHeadersIn
-  ): Promise<void> {
-    return this.updateHeaders(appId, endpointId, endpointHeadersIn);
   }
 
   /** Partially set the additional headers to be sent with the webhook. */
@@ -302,53 +308,6 @@ export class Endpoint {
     request.setPathParam("endpoint_id", endpointId);
     request.setBody(
       EndpointHeadersPatchInSerializer._toJsonObject(endpointHeadersPatchIn)
-    );
-
-    return await request.sendNoResponseBody(this.requestCtx);
-  }
-
-  public headersPatch(
-    appId: string,
-    endpointId: string,
-    endpointHeadersPatchIn: EndpointHeadersPatchIn
-  ): Promise<void> {
-    return this.patchHeaders(appId, endpointId, endpointHeadersPatchIn);
-  }
-
-  /** Get the transformation code associated with this endpoint. */
-  public async transformationGet(
-    appId: string,
-    endpointId: string
-  ): Promise<EndpointTransformationOut> {
-    const request = new SvixRequest(
-      HttpMethod.GET,
-      "/api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation"
-    );
-
-    request.setPathParam("app_id", appId);
-    request.setPathParam("endpoint_id", endpointId);
-
-    return await request.send(
-      this.requestCtx,
-      EndpointTransformationOutSerializer._fromJsonObject
-    );
-  }
-
-  /** Set or unset the transformation code associated with this endpoint. */
-  public async patchTransformation(
-    appId: string,
-    endpointId: string,
-    endpointTransformationPatch: EndpointTransformationPatch
-  ): Promise<void> {
-    const request = new SvixRequest(
-      HttpMethod.PATCH,
-      "/api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation"
-    );
-
-    request.setPathParam("app_id", appId);
-    request.setPathParam("endpoint_id", endpointId);
-    request.setBody(
-      EndpointTransformationPatchSerializer._toJsonObject(endpointTransformationPatch)
     );
 
     return await request.sendNoResponseBody(this.requestCtx);
@@ -447,6 +406,34 @@ export class Endpoint {
     });
 
     return await request.send(this.requestCtx, EndpointStatsSerializer._fromJsonObject);
+  }
+
+  /**
+   * Get basic statistics about attempted deliveries for the endpoint.
+   *
+   * Time windows are always rounded to hour granularity
+   */
+  public async getAttemptStats(
+    appId: string,
+    endpointId: string,
+    options?: EndpointGetAttemptStatsOptions
+  ): Promise<EndpointAttemptStats> {
+    const request = new SvixRequest(
+      HttpMethod.GET,
+      "/api/v1/app/{app_id}/endpoint/{endpoint_id}/attempt-stats"
+    );
+
+    request.setPathParam("app_id", appId);
+    request.setPathParam("endpoint_id", endpointId);
+    request.setQueryParams({
+      since: options?.since,
+      until: options?.until,
+    });
+
+    return await request.send(
+      this.requestCtx,
+      EndpointAttemptStatsSerializer._fromJsonObject
+    );
   }
 
   /**

@@ -4,18 +4,16 @@ package svix
 import (
 	"context"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type Application struct {
 	client *internal.SvixHttpClient
 }
 
-func newApplication(client *internal.SvixHttpClient) *Application {
-	return &Application{
-		client: client,
-	}
+func newApplication(client *internal.SvixHttpClient) Application {
+	return Application{client}
 }
 
 type ApplicationListOptions struct {
@@ -39,23 +37,24 @@ type ApplicationCreateOptions struct {
 }
 
 // List of all the organization's applications.
-func (application *Application) List(
+func (application Application) List(
 	ctx context.Context,
 	o *ApplicationListOptions,
 ) (*models.ListResponseApplicationOut, error) {
+	var err error
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("exclude_apps_with_no_endpoints", o.ExcludeAppsWithNoEndpoints, queryMap, &err)
-		internal.SerializeParamToMap("exclude_apps_with_disabled_endpoints", o.ExcludeAppsWithDisabledEndpoints, queryMap, &err)
-		internal.SerializeParamToMap("exclude_apps_with_svix_play_endpoints", o.ExcludeAppsWithSvixPlayEndpoints, queryMap, &err)
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := ApplicationListOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("exclude_apps_with_no_endpoints", o.ExcludeAppsWithNoEndpoints, queryMap, &err)
+	internal.SerializeParamToMap("exclude_apps_with_disabled_endpoints", o.ExcludeAppsWithDisabledEndpoints, queryMap, &err)
+	internal.SerializeParamToMap("exclude_apps_with_svix_play_endpoints", o.ExcludeAppsWithSvixPlayEndpoints, queryMap, &err)
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("order", o.Order, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseApplicationOut](
 		ctx,
@@ -70,22 +69,23 @@ func (application *Application) List(
 }
 
 // Create a new application.
-func (application *Application) Create(
+func (application Application) Create(
 	ctx context.Context,
 	applicationIn models.ApplicationIn,
 	o *ApplicationCreateOptions,
 ) (*models.ApplicationOut, error) {
+	var err error
 	queryMap := map[string]string{
 		"get_if_exists": "false",
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := ApplicationCreateOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.ApplicationIn, models.ApplicationOut](
 		ctx,
@@ -100,24 +100,24 @@ func (application *Application) Create(
 }
 
 // Get or create a new application.
-func (application *Application) GetOrCreate(
+func (application Application) GetOrCreate(
 	ctx context.Context,
 	applicationIn models.ApplicationIn,
 	o *ApplicationCreateOptions,
 ) (*models.ApplicationOut, error) {
+	var err error
 	queryMap := map[string]string{
 		"get_if_exists": "true",
 	}
 	headerMap := map[string]string{}
-
-	var err error
-	if o != nil {
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := ApplicationCreateOptions{}
+		o = &opts
 	}
-
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
+	}
 	return internal.ExecuteRequest[models.ApplicationIn, models.ApplicationOut](
 		ctx,
 		application.client,
@@ -131,7 +131,7 @@ func (application *Application) GetOrCreate(
 }
 
 // Get an application.
-func (application *Application) Get(
+func (application Application) Get(
 	ctx context.Context,
 	appId string,
 ) (*models.ApplicationOut, error) {
@@ -151,7 +151,7 @@ func (application *Application) Get(
 }
 
 // Create or update an application.
-func (application *Application) Update(
+func (application Application) Upsert(
 	ctx context.Context,
 	appId string,
 	applicationIn models.ApplicationIn,
@@ -172,14 +172,15 @@ func (application *Application) Update(
 }
 
 // Delete an application.
-func (application *Application) Delete(
+func (application Application) Delete(
 	ctx context.Context,
 	appId string,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
-	_, err := internal.ExecuteRequest[any, any](
+	_, err = internal.ExecuteRequest[any, any](
 		ctx,
 		application.client,
 		"DELETE",
@@ -193,7 +194,7 @@ func (application *Application) Delete(
 }
 
 // Partially update an application.
-func (application *Application) Patch(
+func (application Application) Patch(
 	ctx context.Context,
 	appId string,
 	applicationPatch models.ApplicationPatch,

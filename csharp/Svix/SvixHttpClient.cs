@@ -14,7 +14,7 @@ namespace Svix
     )
     {
         private readonly List<int> retryScheduleMilliseconds = retryScheduleMilliseconds;
-        private readonly string serverUrl = serverUrl;
+        private readonly string serverUrl = serverUrl.TrimEnd('/');
         private readonly HttpClient _httpClient = new();
         private readonly string _token = token;
         private readonly JsonSerializerSettings patchJsonOptions = new();
@@ -22,6 +22,18 @@ namespace Svix
         {
             NullValueHandling = NullValueHandling.Ignore,
         };
+
+        public SvixHttpClient(
+            string token,
+            List<int> retryScheduleMilliseconds,
+            string userAgent,
+            string serverUrl,
+            int timeoutMilliseconds
+        )
+            : this(token, retryScheduleMilliseconds, userAgent, serverUrl)
+        {
+            _httpClient.Timeout = TimeSpan.FromMilliseconds(timeoutMilliseconds);
+        }
 
         public ApiResponse<T> SendRequest<T>(
             HttpMethod method,
@@ -85,7 +97,7 @@ namespace Svix
                 {
                     break;
                 }
-                Thread.Sleep(retryScheduleMilliseconds[index]);
+                await Task.Delay(retryScheduleMilliseconds[index], cancellationToken);
                 HttpRequestMessage retryRequest = BuildRequest(
                     method,
                     path,

@@ -10,6 +10,7 @@ require_relative "./docusign_config_out"
 require_relative "./easypost_config_out"
 require_relative "./github_config_out"
 require_relative "./hubspot_config_out"
+require_relative "./merge_config_out"
 require_relative "./meta_config_out"
 require_relative "./nango_config_out"
 require_relative "./open_claw_config_out"
@@ -42,8 +43,8 @@ module Svix
       end
       # Serializes the object to a json string
       # @return String
-      def to_json
-        JSON.dump(serialize)
+      def to_json(*args)
+        serialize.to_json(*args)
       end
     end
 
@@ -84,6 +85,9 @@ module Svix
     end
 
     class Lithic < SvixConfigOut
+    end
+
+    class Merge < MergeConfigOut
     end
 
     class Meta < MetaConfigOut
@@ -175,18 +179,18 @@ module Svix
   end
 
   class IngestSourceOut
-    attr_accessor :created_at
     # The Source's ID.
     attr_accessor :id
-    attr_accessor :ingest_url
-    attr_accessor :metadata
-    attr_accessor :name
     # The Source's UID.
     attr_accessor :uid
+    attr_accessor :name
+    attr_accessor :ingest_url
+    attr_accessor :created_at
     attr_accessor :updated_at
+    attr_accessor :metadata
     attr_accessor :config
 
-    ALL_FIELD ||= ["created_at", "id", "ingest_url", "metadata", "name", "uid", "updated_at", "config"].freeze
+    ALL_FIELD ||= ["id", "uid", "name", "ingest_url", "created_at", "updated_at", "metadata", "config"].freeze
     private_constant :ALL_FIELD
     TYPE_TO_NAME = {
       IngestSourceOutConfig::GenericWebhook => "generic-webhook",
@@ -203,6 +207,7 @@ module Svix
       IngestSourceOutConfig::Hubspot => "hubspot",
       IngestSourceOutConfig::IncidentIo => "incident-io",
       IngestSourceOutConfig::Lithic => "lithic",
+      IngestSourceOutConfig::Merge => "merge",
       IngestSourceOutConfig::Meta => "meta",
       IngestSourceOutConfig::Nango => "nango",
       IngestSourceOutConfig::Nash => "nash",
@@ -250,7 +255,7 @@ module Svix
           fail(ArgumentError, "The field #{k} is not part of Svix::IngestSourceOut")
         end
 
-        if k == "config"
+        if k.to_s == "config"
           unless TYPE_TO_NAME.key?(v.class)
             fail(ArgumentError, "The field #{k} can't be a `#{v.class}` expected one of #{TYPE_TO_NAME.keys}")
           end
@@ -270,34 +275,30 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["created_at"] = DateTime.rfc3339(attributes["createdAt"]).to_time
       attrs["id"] = attributes["id"]
-      attrs["ingest_url"] = attributes["ingestUrl"]
-      attrs["metadata"] = attributes["metadata"]
-      attrs["name"] = attributes["name"]
       attrs["uid"] = attributes["uid"]
+      attrs["name"] = attributes["name"]
+      attrs["ingest_url"] = attributes["ingestUrl"]
+      attrs["created_at"] = DateTime.rfc3339(attributes["createdAt"]).to_time
       attrs["updated_at"] = DateTime.rfc3339(attributes["updatedAt"]).to_time
+      attrs["metadata"] = attributes["metadata"]
       unless NAME_TO_TYPE.key?(attributes["type"])
         fail(ArgumentError, "Invalid type `#{attributes["type"]}` expected on of #{NAME_TO_TYPE.keys}")
       end
 
-      unless attributes.key?("config")
-        fail(ArgumentError, "Missing required field config")
-      end
-
-      attrs["config"] = NAME_TO_TYPE[attributes["type"]].deserialize(attributes["config"])
+      attrs["config"] = NAME_TO_TYPE[attributes["type"]].deserialize(attributes["config"] || {})
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["createdAt"] = Svix::serialize_primitive(@created_at) if @created_at
-      out["id"] = Svix::serialize_primitive(@id) if @id
-      out["ingestUrl"] = Svix::serialize_primitive(@ingest_url) if @ingest_url
-      out["metadata"] = Svix::serialize_primitive(@metadata) if @metadata
-      out["name"] = Svix::serialize_primitive(@name) if @name
-      out["uid"] = Svix::serialize_primitive(@uid) if @uid
-      out["updatedAt"] = Svix::serialize_primitive(@updated_at) if @updated_at
+      out["id"] = Svix::serialize_primitive(@id) unless @id.nil?
+      out["uid"] = Svix::serialize_primitive(@uid) unless @uid.nil?
+      out["name"] = Svix::serialize_primitive(@name) unless @name.nil?
+      out["ingestUrl"] = Svix::serialize_primitive(@ingest_url) unless @ingest_url.nil?
+      out["createdAt"] = Svix::serialize_primitive(@created_at) unless @created_at.nil?
+      out["updatedAt"] = Svix::serialize_primitive(@updated_at) unless @updated_at.nil?
+      out["metadata"] = Svix::serialize_primitive(@metadata) unless @metadata.nil?
       out["type"] = @__enum_discriminator
       out["config"] = @config.serialize
       out
@@ -305,8 +306,8 @@ module Svix
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
 
   end

@@ -4,18 +4,16 @@ package svix
 import (
 	"context"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type OperationalWebhookEndpoint struct {
 	client *internal.SvixHttpClient
 }
 
-func newOperationalWebhookEndpoint(client *internal.SvixHttpClient) *OperationalWebhookEndpoint {
-	return &OperationalWebhookEndpoint{
-		client: client,
-	}
+func newOperationalWebhookEndpoint(client *internal.SvixHttpClient) OperationalWebhookEndpoint {
+	return OperationalWebhookEndpoint{client}
 }
 
 type OperationalWebhookEndpointListOptions struct {
@@ -37,20 +35,21 @@ type OperationalWebhookEndpointRotateSecretOptions struct {
 }
 
 // List operational webhook endpoints.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) List(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) List(
 	ctx context.Context,
 	o *OperationalWebhookEndpointListOptions,
 ) (*models.ListResponseOperationalWebhookEndpointOut, error) {
+	var err error
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := OperationalWebhookEndpointListOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("order", o.Order, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseOperationalWebhookEndpointOut](
 		ctx,
@@ -65,19 +64,20 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) List(
 }
 
 // Create an operational webhook endpoint.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Create(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) Create(
 	ctx context.Context,
 	operationalWebhookEndpointIn models.OperationalWebhookEndpointIn,
 	o *OperationalWebhookEndpointCreateOptions,
 ) (*models.OperationalWebhookEndpointOut, error) {
+	var err error
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := OperationalWebhookEndpointCreateOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.OperationalWebhookEndpointIn, models.OperationalWebhookEndpointOut](
 		ctx,
@@ -92,7 +92,7 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Create(
 }
 
 // Get an operational webhook endpoint.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Get(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) Get(
 	ctx context.Context,
 	endpointId string,
 ) (*models.OperationalWebhookEndpointOut, error) {
@@ -112,15 +112,15 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Get(
 }
 
 // Create or update an operational webhook endpoint.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Update(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) Upsert(
 	ctx context.Context,
 	endpointId string,
-	operationalWebhookEndpointUpdate models.OperationalWebhookEndpointUpdate,
+	operationalWebhookEndpointUpsertIn models.OperationalWebhookEndpointUpsertIn,
 ) (*models.OperationalWebhookEndpointOut, error) {
 	pathMap := map[string]string{
 		"endpoint_id": endpointId,
 	}
-	return internal.ExecuteRequest[models.OperationalWebhookEndpointUpdate, models.OperationalWebhookEndpointOut](
+	return internal.ExecuteRequest[models.OperationalWebhookEndpointUpsertIn, models.OperationalWebhookEndpointOut](
 		ctx,
 		operationalWebhookEndpoint.client,
 		"PUT",
@@ -128,19 +128,20 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Update(
 		pathMap,
 		nil,
 		nil,
-		&operationalWebhookEndpointUpdate,
+		&operationalWebhookEndpointUpsertIn,
 	)
 }
 
 // Delete an operational webhook endpoint.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Delete(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) Delete(
 	ctx context.Context,
 	endpointId string,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[any, any](
+	_, err = internal.ExecuteRequest[any, any](
 		ctx,
 		operationalWebhookEndpoint.client,
 		"DELETE",
@@ -157,7 +158,7 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) Delete(
 //
 // This is used to verify the authenticity of the webhook.
 // For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) GetSecret(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) GetSecret(
 	ctx context.Context,
 	endpointId string,
 ) (*models.OperationalWebhookEndpointSecretOut, error) {
@@ -178,26 +179,27 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) GetSecret(
 
 // Rotates an operational webhook endpoint's signing secret.
 //
-// The previous secret will remain valid for the next 24 hours.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) RotateSecret(
+// The previous secret will remain valid for the specified grace period (default 24 hours).
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) RotateSecret(
 	ctx context.Context,
 	endpointId string,
 	operationalWebhookEndpointSecretIn models.OperationalWebhookEndpointSecretIn,
 	o *OperationalWebhookEndpointRotateSecretOptions,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return err
-		}
+	if o == nil {
+		opts := OperationalWebhookEndpointRotateSecretOptions{}
+		o = &opts
 	}
-	_, err := internal.ExecuteRequest[models.OperationalWebhookEndpointSecretIn, any](
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return err
+	}
+	_, err = internal.ExecuteRequest[models.OperationalWebhookEndpointSecretIn, any](
 		ctx,
 		operationalWebhookEndpoint.client,
 		"POST",
@@ -211,7 +213,7 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) RotateSecret(
 }
 
 // Get the additional headers to be sent with the operational webhook.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) GetHeaders(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) GetHeaders(
 	ctx context.Context,
 	endpointId string,
 ) (*models.OperationalWebhookEndpointHeadersOut, error) {
@@ -231,15 +233,16 @@ func (operationalWebhookEndpoint *OperationalWebhookEndpoint) GetHeaders(
 }
 
 // Set the additional headers to be sent with the operational webhook.
-func (operationalWebhookEndpoint *OperationalWebhookEndpoint) UpdateHeaders(
+func (operationalWebhookEndpoint OperationalWebhookEndpoint) SetHeaders(
 	ctx context.Context,
 	endpointId string,
 	operationalWebhookEndpointHeadersIn models.OperationalWebhookEndpointHeadersIn,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[models.OperationalWebhookEndpointHeadersIn, any](
+	_, err = internal.ExecuteRequest[models.OperationalWebhookEndpointHeadersIn, any](
 		ctx,
 		operationalWebhookEndpoint.client,
 		"PUT",

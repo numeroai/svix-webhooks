@@ -5,8 +5,10 @@ require "net/http"
 
 module Svix
   class StreamingSink
+    attr_accessor :transformation
     def initialize(client)
       @client = client
+      @transformation = StreamingSinkTransformation.new(client)
     end
 
     def list(stream_id, options = {})
@@ -44,7 +46,7 @@ module Svix
       StreamSinkOut.deserialize(res)
     end
 
-    def update(stream_id, sink_id, stream_sink_in)
+    def upsert(stream_id, sink_id, stream_sink_in)
       res = @client.execute_request(
         "PUT",
         "/api/v1/stream/#{stream_id}/sink/#{sink_id}",
@@ -69,15 +71,6 @@ module Svix
       StreamSinkOut.deserialize(res)
     end
 
-    def transformation_partial_update(stream_id, sink_id, sink_transform_in)
-      res = @client.execute_request(
-        "PATCH",
-        "/api/v1/stream/#{stream_id}/sink/#{sink_id}/transformation",
-        body: sink_transform_in
-      )
-      EmptyResponse.deserialize(res)
-    end
-
     def get_secret(stream_id, sink_id)
       res = @client.execute_request(
         "GET",
@@ -96,7 +89,7 @@ module Svix
         },
         body: endpoint_secret_rotate_in
       )
-      EmptyResponse.deserialize(res)
+      SinkSecretRotateOut.deserialize(res)
     end
 
   end

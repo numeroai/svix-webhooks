@@ -11,7 +11,7 @@ from ..models import (
     ListResponseMessageEndpointOut,
     MessageAttemptOut,
 )
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
 
 
 @dataclass
@@ -33,7 +33,10 @@ class MessageAttemptListByEndpointOptions(BaseOptions):
     after: t.Optional[datetime] = None
     """Only include items created after a certain date"""
     with_content: t.Optional[bool] = None
-    """When `true` attempt content is included in the response"""
+    """When `true` attempt content is included in the response.
+
+Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+without specifying this parameter."""
     with_msg: t.Optional[bool] = None
     """When `true`, the message information is included in the response
 
@@ -56,7 +59,7 @@ If `false`, canceled attempts are returned as Success (0) for backwards compatib
                 "tag": self.tag,
                 "before": self.before,
                 "after": self.after,
-                "with_content": self.with_content,
+                "with_content": self.with_content or False,
                 "with_msg": self.with_msg,
                 "expanded_statuses": self.expanded_statuses
                 if self.expanded_statuses is not None
@@ -87,7 +90,10 @@ class MessageAttemptListByMsgOptions(BaseOptions):
     after: t.Optional[datetime] = None
     """Only include items created after a certain date"""
     with_content: t.Optional[bool] = None
-    """When `true` attempt content is included in the response"""
+    """When `true` attempt content is included in the response.
+
+Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+without specifying this parameter."""
     expanded_statuses: t.Optional[bool] = None
     """When `true`, return the Canceled (4) status in attempts.
 
@@ -107,7 +113,7 @@ If `false`, canceled attempts are returned as Success (0) for backwards compatib
                 "endpoint_id": self.endpoint_id,
                 "before": self.before,
                 "after": self.after,
-                "with_content": self.with_content,
+                "with_content": self.with_content or False,
                 "expanded_statuses": self.expanded_statuses
                 if self.expanded_statuses is not None
                 else True,
@@ -133,7 +139,10 @@ class MessageAttemptListAttemptedMessagesOptions(BaseOptions):
     after: t.Optional[datetime] = None
     """Only include items created after a certain date"""
     with_content: t.Optional[bool] = None
-    """When `true` message payloads are included in the response"""
+    """When `true` message payloads are included in the response.
+
+Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+without specifying this parameter."""
     expanded_statuses: t.Optional[bool] = None
     """When `true`, return the Canceled (4) status in attempts.
 
@@ -151,7 +160,7 @@ If `false`, canceled attempts are returned as Success (0) for backwards compatib
                 "status": self.status,
                 "before": self.before,
                 "after": self.after,
-                "with_content": self.with_content,
+                "with_content": self.with_content or False,
                 "expanded_statuses": self.expanded_statuses
                 if self.expanded_statuses is not None
                 else True,
@@ -205,7 +214,7 @@ class MessageAttemptResendOptions(BaseOptions):
         )
 
 
-class MessageAttemptAsync(ApiBase):
+class MessageAttemptAsync(ApiBaseAsync):
     async def list_by_endpoint(
         self,
         app_id: str,
@@ -368,7 +377,7 @@ class MessageAttemptAsync(ApiBase):
         return EmptyResponse.model_validate(response.json())
 
 
-class MessageAttempt(ApiBase):
+class MessageAttempt(ApiBaseSync):
     def list_by_endpoint(
         self,
         app_id: str,

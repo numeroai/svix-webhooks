@@ -4,7 +4,7 @@ use crate::{error::Result, models::*, Configuration};
 #[derive(Default)]
 pub struct MessageAttemptListByEndpointOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -23,16 +23,15 @@ pub struct MessageAttemptListByEndpointOptions {
     pub tag: Option<String>,
 
     /// Only include items created before a certain date
-    ///
-    /// RFC3339 date string.
-    pub before: Option<String>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Only include items created after a certain date
-    ///
-    /// RFC3339 date string.
-    pub after: Option<String>,
+    pub after: Option<chrono::DateTime<chrono::Utc>>,
 
-    /// When `true` attempt content is included in the response
+    /// When `true` attempt content is included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when
+    /// manually making a request without specifying this parameter.
     pub with_content: Option<bool>,
 
     /// When `true`, the message information is included in the response
@@ -48,13 +47,13 @@ pub struct MessageAttemptListByEndpointOptions {
     pub expanded_statuses: Option<bool>,
 
     /// Filter response based on the event type
-    pub event_types: Option<Vec<String>>,
+    pub event_types: Option<std::collections::BTreeSet<String>>,
 }
 
 #[derive(Default)]
 pub struct MessageAttemptListByMsgOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -76,16 +75,15 @@ pub struct MessageAttemptListByMsgOptions {
     pub endpoint_id: Option<String>,
 
     /// Only include items created before a certain date
-    ///
-    /// RFC3339 date string.
-    pub before: Option<String>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Only include items created after a certain date
-    ///
-    /// RFC3339 date string.
-    pub after: Option<String>,
+    pub after: Option<chrono::DateTime<chrono::Utc>>,
 
-    /// When `true` attempt content is included in the response
+    /// When `true` attempt content is included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when
+    /// manually making a request without specifying this parameter.
     pub with_content: Option<bool>,
 
     /// When `true`, return the Canceled (4) status in attempts.
@@ -95,13 +93,13 @@ pub struct MessageAttemptListByMsgOptions {
     pub expanded_statuses: Option<bool>,
 
     /// Filter response based on the event type
-    pub event_types: Option<Vec<String>>,
+    pub event_types: Option<std::collections::BTreeSet<String>>,
 }
 
 #[derive(Default)]
 pub struct MessageAttemptListAttemptedMessagesOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -117,16 +115,15 @@ pub struct MessageAttemptListAttemptedMessagesOptions {
     pub status: Option<MessageStatus>,
 
     /// Only include items created before a certain date
-    ///
-    /// RFC3339 date string.
-    pub before: Option<String>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Only include items created after a certain date
-    ///
-    /// RFC3339 date string.
-    pub after: Option<String>,
+    pub after: Option<chrono::DateTime<chrono::Utc>>,
 
-    /// When `true` message payloads are included in the response
+    /// When `true` message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when
+    /// manually making a request without specifying this parameter.
     pub with_content: Option<bool>,
 
     /// When `true`, return the Canceled (4) status in attempts.
@@ -136,13 +133,13 @@ pub struct MessageAttemptListAttemptedMessagesOptions {
     pub expanded_statuses: Option<bool>,
 
     /// Filter response based on the event type
-    pub event_types: Option<Vec<String>>,
+    pub event_types: Option<std::collections::BTreeSet<String>>,
 }
 
 #[derive(Default)]
 pub struct MessageAttemptListAttemptedDestinationsOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -200,7 +197,7 @@ impl<'a> MessageAttempt<'a> {
         } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/attempt/endpoint/{endpoint_id}",
         )
         .with_path_param("app_id", app_id)
@@ -250,7 +247,7 @@ impl<'a> MessageAttempt<'a> {
         } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/attempt/msg/{msg_id}",
         )
         .with_path_param("app_id", app_id)
@@ -302,7 +299,7 @@ impl<'a> MessageAttempt<'a> {
         } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/endpoint/{endpoint_id}/msg",
         )
         .with_path_param("app_id", app_id)
@@ -321,49 +318,6 @@ impl<'a> MessageAttempt<'a> {
         .await
     }
 
-    #[deprecated = "Use `list_by_msg` instead, setting the `endpoint_id` in `options`."]
-    pub async fn list_attempts_for_endpoint(
-        &self,
-        app_id: String,
-        msg_id: String,
-        endpoint_id: String,
-        options: Option<MessageAttemptListByMsgOptions>,
-    ) -> Result<ListResponseMessageAttemptEndpointOut> {
-        let MessageAttemptListByMsgOptions {
-            iterator,
-            limit,
-            event_types,
-            before,
-            after,
-            channel,
-            tag,
-            status,
-            expanded_statuses,
-            status_code_class: _,
-            endpoint_id: _,
-            with_content: _,
-        } = options.unwrap_or_default();
-
-        crate::request::Request::new(
-            http1::Method::GET,
-            "/api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/attempt",
-        )
-        .with_optional_query_param("limit", limit)
-        .with_optional_query_param("iterator", iterator)
-        .with_optional_query_param("channel", channel)
-        .with_optional_query_param("tag", tag)
-        .with_optional_query_param("status", status)
-        .with_optional_query_param("expanded_statuses", expanded_statuses)
-        .with_optional_query_param("before", before)
-        .with_optional_query_param("after", after)
-        .with_optional_query_param("event_types", event_types)
-        .with_path_param("app_id", app_id.to_string())
-        .with_path_param("msg_id", msg_id.to_string())
-        .with_path_param("endpoint_id", endpoint_id.to_string())
-        .execute(self.cfg)
-        .await
-    }
-
     /// List endpoints attempted by a given message.
     ///
     /// Additionally includes metadata about the latest message attempt.
@@ -378,7 +332,7 @@ impl<'a> MessageAttempt<'a> {
             options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/msg/{msg_id}/endpoint",
         )
         .with_path_param("app_id", app_id)
@@ -400,7 +354,7 @@ impl<'a> MessageAttempt<'a> {
         let MessageAttemptGetOptions { expanded_statuses } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}",
         )
         .with_path_param("app_id", app_id)
@@ -423,7 +377,7 @@ impl<'a> MessageAttempt<'a> {
         attempt_id: String,
     ) -> Result<()> {
         crate::request::Request::new(
-            http1::Method::DELETE,
+            http::Method::DELETE,
             "/api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}/content",
         )
         .with_path_param("app_id", app_id)
@@ -445,7 +399,7 @@ impl<'a> MessageAttempt<'a> {
         let MessageAttemptResendOptions { idempotency_key } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/resend",
         )
         .with_path_param("app_id", app_id)

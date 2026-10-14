@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Svix\Request;
 
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Svix\Exception\ApiException;
@@ -23,6 +24,9 @@ class SvixHttpClient
         private \GuzzleHttp\Client $guzzleClient,
         private SvixOptions $opts
     ) {
+        // Strip trailing slashes so that `https://api.svix.com/` does not
+        // produce request URLs such as `https://api.svix.com//api/v1/app`.
+        $this->baseUrl = rtrim($baseUrl, '/');
     }
 
     public function newReq(
@@ -113,7 +117,14 @@ class SvixHttpClient
 
                 return $this->filterResponseForErrors($result);
             } catch (RequestException $e) {
-                $response = $e->getResponse();
+                $response = null;
+                if ($e instanceof ResponseException) {
+                    $response = $e->getResponse();
+                } elseif (method_exists($e, 'getResponse')) {
+                    // BC-layer for guzzle 7
+                    $response = $e->getResponse();
+                }
+
                 if ($this->opts->debug) {
                     logHttpRequestResponse($request, $response);
                 }

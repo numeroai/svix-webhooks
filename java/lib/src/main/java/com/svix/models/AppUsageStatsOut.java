@@ -23,8 +23,8 @@ public class AppUsageStatsOut {
     @JsonProperty private String id;
     @JsonProperty private BackgroundTaskStatus status;
     @JsonProperty private BackgroundTaskType task;
-    @JsonProperty private Set<String> unresolvedAppIds;
     @JsonProperty private OffsetDateTime updatedAt;
+    @JsonProperty private Set<String> unresolvedAppIds;
 
     public AppUsageStatsOut() {}
 
@@ -85,6 +85,25 @@ public class AppUsageStatsOut {
         this.task = task;
     }
 
+    public AppUsageStatsOut updatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+        return this;
+    }
+
+    /**
+     * Get updatedAt
+     *
+     * @return updatedAt
+     */
+    @javax.annotation.Nonnull
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public AppUsageStatsOut unresolvedAppIds(Set<String> unresolvedAppIds) {
         this.unresolvedAppIds = unresolvedAppIds;
         return this;
@@ -113,25 +132,6 @@ public class AppUsageStatsOut {
 
     public void setUnresolvedAppIds(Set<String> unresolvedAppIds) {
         this.unresolvedAppIds = unresolvedAppIds;
-    }
-
-    public AppUsageStatsOut updatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-        return this;
-    }
-
-    /**
-     * Get updatedAt
-     *
-     * @return updatedAt
-     */
-    @javax.annotation.Nonnull
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 
     /**

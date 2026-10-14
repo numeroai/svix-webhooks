@@ -2,13 +2,15 @@
 package com.svix.kotlin
 
 import com.svix.kotlin.models.ApplicationIn
+import com.svix.kotlin.models.BulkExpungeContentsIn
+import com.svix.kotlin.models.BulkExpungeContentsOut
 import com.svix.kotlin.models.ExpungeAllContentsOut
 import com.svix.kotlin.models.ListResponseMessageOut
 import com.svix.kotlin.models.MessageIn
 import com.svix.kotlin.models.MessageOut
 import com.svix.kotlin.models.MessagePrecheckIn
 import com.svix.kotlin.models.MessagePrecheckOut
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -26,7 +28,12 @@ data class MessageListOptions(
     val before: Instant? = null,
     /** Only include items created after a certain date. */
     val after: Instant? = null,
-    /** When `true` message payloads are included in the response. */
+    /**
+     * When `true` message payloads are included in the response.
+     *
+     * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+     * without specifying this parameter.
+     */
     val withContent: Boolean? = null,
     /** Filter messages matching the provided tag. */
     val tag: String? = null,
@@ -35,7 +42,12 @@ data class MessageListOptions(
 )
 
 data class MessageCreateOptions(
-    /** When `true`, message payloads are included in the response. */
+    /**
+     * When `true`, message payloads are included in the response.
+     *
+     * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+     * without specifying this parameter.
+     */
     val withContent: Boolean? = null,
     val idempotencyKey: String? = null,
 )
@@ -43,9 +55,16 @@ data class MessageCreateOptions(
 data class MessagePrecheckOptions(val idempotencyKey: String? = null)
 
 data class MessageGetOptions(
-    /** When `true` message payloads are included in the response. */
+    /**
+     * When `true` message payloads are included in the response.
+     *
+     * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+     * without specifying this parameter.
+     */
     val withContent: Boolean? = null
 )
+
+data class MessageBulkExpungeContentOptions(val idempotencyKey: String? = null)
 
 data class MessageExpungeAllContentsOptions(val idempotencyKey: String? = null)
 
@@ -74,7 +93,11 @@ class Message(private val client: SvixHttpClient) {
         options.channel?.let { url.addQueryParameter("channel", it) }
         options.before?.let { url.addQueryParameter("before", serializeQueryParam(it)) }
         options.after?.let { url.addQueryParameter("after", serializeQueryParam(it)) }
-        options.withContent?.let { url.addQueryParameter("with_content", serializeQueryParam(it)) }
+
+        url.addQueryParameter(
+            "with_content",
+            options.withContent?.let { serializeQueryParam(it) } ?: "false",
+        )
         options.tag?.let { url.addQueryParameter("tag", it) }
         options.eventTypes?.let { url.addQueryParameter("event_types", serializeQueryParam(it)) }
         return client.executeRequest<Any, ListResponseMessageOut>("GET", url.build())
@@ -103,7 +126,11 @@ class Message(private val client: SvixHttpClient) {
         options: MessageCreateOptions = MessageCreateOptions(),
     ): MessageOut {
         val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/msg")
-        options.withContent?.let { url.addQueryParameter("with_content", serializeQueryParam(it)) }
+
+        url.addQueryParameter(
+            "with_content",
+            options.withContent?.let { serializeQueryParam(it) } ?: "false",
+        )
         val headers = Headers.Builder()
         options.idempotencyKey?.let { headers.add("idempotency-key", it) }
         var msgInInternal =
@@ -170,7 +197,11 @@ class Message(private val client: SvixHttpClient) {
         options: MessageGetOptions = MessageGetOptions(),
     ): MessageOut {
         val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/msg/$msgId")
-        options.withContent?.let { url.addQueryParameter("with_content", serializeQueryParam(it)) }
+
+        url.addQueryParameter(
+            "with_content",
+            options.withContent?.let { serializeQueryParam(it) } ?: "false",
+        )
         return client.executeRequest<Any, MessageOut>("GET", url.build())
     }
 
@@ -178,11 +209,34 @@ class Message(private val client: SvixHttpClient) {
      * Delete the given message's payload.
      *
      * Useful in cases when a message was accidentally sent with sensitive content. The message
-     * can't be replayed or resent once its payload has been deleted or expired.
+     * can't be replayed or resent once its payload has been deleted (or has expired).
      */
     suspend fun expungeContent(appId: String, msgId: String) {
         val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/msg/$msgId/content")
         client.executeRequest<Any, Boolean>("DELETE", url.build())
+    }
+
+    /**
+     * Delete the payloads from the given messages under the current application
+     *
+     * Useful in cases when a message was accidentally sent with sensitive content. A message can't
+     * be replayed or resent once its payload has been deleted (or has expired).
+     */
+    suspend fun bulkExpungeContent(
+        appId: String,
+        bulkExpungeContentsIn: BulkExpungeContentsIn,
+        options: MessageBulkExpungeContentOptions = MessageBulkExpungeContentOptions(),
+    ): BulkExpungeContentsOut {
+        val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/msg/bulk-expunge")
+        val headers = Headers.Builder()
+        options.idempotencyKey?.let { headers.add("idempotency-key", it) }
+
+        return client.executeRequest<BulkExpungeContentsIn, BulkExpungeContentsOut>(
+            "POST",
+            url.build(),
+            headers = headers.build(),
+            reqBody = bulkExpungeContentsIn,
+        )
     }
 
     /**

@@ -1,7 +1,7 @@
 // This file is @generated
 package com.svix.kotlin.models
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -14,15 +14,15 @@ import kotlinx.serialization.json.buildJsonObject
 
 @Serializable(with = IngestSourceOutSerializer::class)
 data class IngestSourceOut(
-    val createdAt: Instant,
     /** The Source's ID. */
     val id: String,
-    val ingestUrl: String? = null,
-    val metadata: Map<String, String>,
-    val name: String,
     /** The Source's UID. */
     val uid: String? = null,
+    val name: String,
+    val ingestUrl: String? = null,
+    val createdAt: Instant,
     val updatedAt: Instant,
+    val metadata: Map<String, String>,
     val config: IngestSourceOutConfig,
 )
 
@@ -108,6 +108,11 @@ sealed class IngestSourceOutConfig {
     @VariantName("lithic")
     data class Lithic(val lithic: SvixConfigOut) : IngestSourceOutConfig() {
         override fun toJsonElement() = Json.encodeToJsonElement(SvixConfigOut.serializer(), lithic)
+    }
+
+    @VariantName("merge")
+    data class Merge(val merge: MergeConfigOut) : IngestSourceOutConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(MergeConfigOut.serializer(), merge)
     }
 
     @VariantName("meta")
@@ -329,6 +334,10 @@ sealed class IngestSourceOutConfig {
                     { config ->
                         Lithic(Json.decodeFromJsonElement(SvixConfigOut.serializer(), config))
                     },
+                "merge" to
+                    { config ->
+                        Merge(Json.decodeFromJsonElement(MergeConfigOut.serializer(), config))
+                    },
                 "meta" to
                     { config ->
                         Meta(Json.decodeFromJsonElement(MetaConfigOut.serializer(), config))
@@ -461,17 +470,17 @@ sealed class IngestSourceOutConfig {
 class IngestSourceOutSerializer : KSerializer<IngestSourceOut> {
     @Serializable
     private data class IngestSourceOutSurrogate(
-        val createdAt: Instant,
         /** The Source's ID. */
         val id: String,
-        val ingestUrl: String? = null,
-        val metadata: Map<String, String>,
-        val name: String,
         /** The Source's UID. */
         val uid: String? = null,
+        val name: String,
+        val ingestUrl: String? = null,
+        val createdAt: Instant,
         val updatedAt: Instant,
+        val metadata: Map<String, String>,
         val type: String,
-        val config: JsonElement,
+        val config: JsonElement = buildJsonObject {},
     )
 
     override val descriptor: SerialDescriptor = IngestSourceOutSurrogate.serializer().descriptor
@@ -479,13 +488,13 @@ class IngestSourceOutSerializer : KSerializer<IngestSourceOut> {
     override fun serialize(encoder: Encoder, value: IngestSourceOut) {
         val surrogate =
             IngestSourceOutSurrogate(
-                createdAt = value.createdAt,
                 id = value.id,
-                ingestUrl = value.ingestUrl,
-                metadata = value.metadata,
-                name = value.name,
                 uid = value.uid,
+                name = value.name,
+                ingestUrl = value.ingestUrl,
+                createdAt = value.createdAt,
                 updatedAt = value.updatedAt,
+                metadata = value.metadata,
                 type = value.config.variantName,
                 config = value.config.toJsonElement(),
             )
@@ -495,13 +504,13 @@ class IngestSourceOutSerializer : KSerializer<IngestSourceOut> {
     override fun deserialize(decoder: Decoder): IngestSourceOut {
         val surrogate = decoder.decodeSerializableValue(IngestSourceOutSurrogate.serializer())
         return IngestSourceOut(
-            createdAt = surrogate.createdAt,
             id = surrogate.id,
-            ingestUrl = surrogate.ingestUrl,
-            metadata = surrogate.metadata,
-            name = surrogate.name,
             uid = surrogate.uid,
+            name = surrogate.name,
+            ingestUrl = surrogate.ingestUrl,
+            createdAt = surrogate.createdAt,
             updatedAt = surrogate.updatedAt,
+            metadata = surrogate.metadata,
             config = IngestSourceOutConfig.fromTypeAndConfig(surrogate.type, surrogate.config),
         )
     }

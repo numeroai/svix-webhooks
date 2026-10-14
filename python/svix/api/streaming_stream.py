@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from .. import models
 from ..models import ListResponseStreamOut, StreamIn, StreamOut, StreamPatch
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
 
 
 @dataclass
@@ -38,7 +38,7 @@ class StreamingStreamCreateOptions(BaseOptions):
         )
 
 
-class StreamingStreamAsync(ApiBase):
+class StreamingStreamAsync(ApiBaseAsync):
     async def list(
         self, options: StreamingStreamListOptions = (StreamingStreamListOptions())
     ) -> ListResponseStreamOut:
@@ -79,7 +79,7 @@ class StreamingStreamAsync(ApiBase):
         )
         return StreamOut.model_validate(response.json())
 
-    async def update(self, stream_id: str, stream_in: StreamIn) -> StreamOut:
+    async def upsert(self, stream_id: str, stream_in: StreamIn) -> StreamOut:
         """Create or update a stream."""
         response = await self._request_asyncio(
             method="put",
@@ -114,7 +114,7 @@ class StreamingStreamAsync(ApiBase):
         return StreamOut.model_validate(response.json())
 
 
-class StreamingStream(ApiBase):
+class StreamingStream(ApiBaseSync):
     def list(
         self, options: StreamingStreamListOptions = (StreamingStreamListOptions())
     ) -> ListResponseStreamOut:
@@ -155,7 +155,7 @@ class StreamingStream(ApiBase):
         )
         return StreamOut.model_validate(response.json())
 
-    def update(self, stream_id: str, stream_in: StreamIn) -> StreamOut:
+    def upsert(self, stream_id: str, stream_in: StreamIn) -> StreamOut:
         """Create or update a stream."""
         response = self._request_sync(
             method="put",

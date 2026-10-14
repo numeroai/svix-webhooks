@@ -5,21 +5,21 @@ require "json"
 module Svix
   # The MessageOut equivalent of polling endpoint
   class PollingEndpointMessageOut
-    # List of free-form identifiers that endpoints can filter by
-    attr_accessor :channels
-    attr_accessor :deliver_at
+    attr_accessor :headers
     # Optional unique identifier for the message
     attr_accessor :event_id
     # The event type's name
     attr_accessor :event_type
-    attr_accessor :headers
+    attr_accessor :payload
+    # List of free-form identifiers that endpoints can filter by
+    attr_accessor :channels
     # The Message's ID.
     attr_accessor :id
-    attr_accessor :payload
-    attr_accessor :tags
     attr_accessor :timestamp
+    attr_accessor :tags
+    attr_accessor :deliver_at
 
-    ALL_FIELD ||= ["channels", "deliver_at", "event_id", "event_type", "headers", "id", "payload", "tags", "timestamp"].freeze
+    ALL_FIELD ||= ["headers", "event_id", "event_type", "payload", "channels", "id", "timestamp", "tags", "deliver_at"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -43,36 +43,36 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["channels"] = attributes["channels"]
-      attrs["deliver_at"] = DateTime.rfc3339(attributes["deliverAt"]).to_time if attributes["deliverAt"]
+      attrs["headers"] = attributes["headers"]
       attrs["event_id"] = attributes["eventId"]
       attrs["event_type"] = attributes["eventType"]
-      attrs["headers"] = attributes["headers"]
-      attrs["id"] = attributes["id"]
       attrs["payload"] = attributes["payload"]
-      attrs["tags"] = attributes["tags"]
+      attrs["channels"] = attributes["channels"]
+      attrs["id"] = attributes["id"]
       attrs["timestamp"] = DateTime.rfc3339(attributes["timestamp"]).to_time
+      attrs["tags"] = attributes["tags"]
+      attrs["deliver_at"] = DateTime.rfc3339(attributes["deliverAt"]).to_time if attributes["deliverAt"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["channels"] = Svix::serialize_primitive(@channels) if @channels
-      out["deliverAt"] = Svix::serialize_primitive(@deliver_at) if @deliver_at
-      out["eventId"] = Svix::serialize_primitive(@event_id) if @event_id
-      out["eventType"] = Svix::serialize_primitive(@event_type) if @event_type
-      out["headers"] = Svix::serialize_primitive(@headers) if @headers
-      out["id"] = Svix::serialize_primitive(@id) if @id
-      out["payload"] = Svix::serialize_primitive(@payload) if @payload
-      out["tags"] = Svix::serialize_primitive(@tags) if @tags
-      out["timestamp"] = Svix::serialize_primitive(@timestamp) if @timestamp
+      out["headers"] = Svix::serialize_primitive(@headers) unless @headers.nil?
+      out["eventId"] = Svix::serialize_primitive(@event_id) unless @event_id.nil?
+      out["eventType"] = Svix::serialize_primitive(@event_type) unless @event_type.nil?
+      out["payload"] = Svix::serialize_primitive(@payload) unless @payload.nil?
+      out["channels"] = Svix::serialize_primitive(@channels) unless @channels.nil?
+      out["id"] = Svix::serialize_primitive(@id) unless @id.nil?
+      out["timestamp"] = Svix::serialize_primitive(@timestamp) unless @timestamp.nil?
+      out["tags"] = Svix::serialize_primitive(@tags) unless @tags.nil?
+      out["deliverAt"] = Svix::serialize_primitive(@deliver_at) unless @deliver_at.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

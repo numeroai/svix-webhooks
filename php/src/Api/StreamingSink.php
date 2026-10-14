@@ -6,11 +6,10 @@ declare(strict_types=1);
 namespace Svix\Api;
 
 use Svix\Exception\ApiException;
-use Svix\Models\EmptyResponse;
 use Svix\Models\EndpointSecretRotateIn;
 use Svix\Models\ListResponseStreamSinkOut;
 use Svix\Models\SinkSecretOut;
-use Svix\Models\SinkTransformIn;
+use Svix\Models\SinkSecretRotateOut;
 use Svix\Models\StreamSinkIn;
 use Svix\Models\StreamSinkOut;
 use Svix\Models\StreamSinkPatch;
@@ -18,9 +17,12 @@ use Svix\Request\SvixHttpClient;
 
 class StreamingSink
 {
+    public StreamingSinkTransformation $transformation;
+
     public function __construct(
         private readonly SvixHttpClient $client,
     ) {
+        $this->transformation = new StreamingSinkTransformation($client);
     }
 
     /**
@@ -30,12 +32,12 @@ class StreamingSink
      */
     public function list(
         string $streamId,
-        ?StreamingSinkListOptions $options = null,
+        StreamingSinkListOptions $options = new StreamingSinkListOptions(),
     ): ListResponseStreamSinkOut {
         $request = $this->client->newReq('GET', "/api/v1/stream/{$streamId}/sink");
-        $request->setQueryParam('limit', $options?->limit);
-        $request->setQueryParam('iterator', $options?->iterator);
-        $request->setQueryParam('order', $options?->order);
+        $request->setQueryParam('limit', $options->limit);
+        $request->setQueryParam('iterator', $options->iterator);
+        $request->setQueryParam('order', $options->order);
         $res = $this->client->send($request);
 
         return ListResponseStreamSinkOut::fromJson($res);
@@ -49,10 +51,10 @@ class StreamingSink
     public function create(
         string $streamId,
         StreamSinkIn $streamSinkIn,
-        ?StreamingSinkCreateOptions $options = null,
+        StreamingSinkCreateOptions $options = new StreamingSinkCreateOptions(),
     ): StreamSinkOut {
         $request = $this->client->newReq('POST', "/api/v1/stream/{$streamId}/sink");
-        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
+        $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
         $request->setBody(json_encode($streamSinkIn));
         $res = $this->client->send($request);
 
@@ -79,7 +81,7 @@ class StreamingSink
      *
      * @throws ApiException
      */
-    public function update(
+    public function upsert(
         string $streamId,
         string $sinkId,
         StreamSinkIn $streamSinkIn,
@@ -122,23 +124,6 @@ class StreamingSink
     }
 
     /**
-     * Set or unset the transformation code associated with this sink.
-     *
-     * @throws ApiException
-     */
-    public function transformationPartialUpdate(
-        string $streamId,
-        string $sinkId,
-        SinkTransformIn $sinkTransformIn,
-    ): EmptyResponse {
-        $request = $this->client->newReq('PATCH', "/api/v1/stream/{$streamId}/sink/{$sinkId}/transformation");
-        $request->setBody(json_encode($sinkTransformIn));
-        $res = $this->client->send($request);
-
-        return EmptyResponse::fromJson($res);
-    }
-
-    /**
      * Get the sink's signing secret (only supported for http sinks).
      *
      * This is used to verify the authenticity of the delivery.
@@ -160,19 +145,23 @@ class StreamingSink
     /**
      * Rotates the signing secret (only supported for http sinks).
      *
+     * This is used to verify the authenticity of the delivery.
+     *
+     * For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
+     *
      * @throws ApiException
      */
     public function rotateSecret(
         string $streamId,
         string $sinkId,
         EndpointSecretRotateIn $endpointSecretRotateIn,
-        ?StreamingSinkRotateSecretOptions $options = null,
-    ): EmptyResponse {
+        StreamingSinkRotateSecretOptions $options = new StreamingSinkRotateSecretOptions(),
+    ): SinkSecretRotateOut {
         $request = $this->client->newReq('POST', "/api/v1/stream/{$streamId}/sink/{$sinkId}/secret/rotate");
-        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
+        $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
         $request->setBody(json_encode($endpointSecretRotateIn));
         $res = $this->client->send($request);
 
-        return EmptyResponse::fromJson($res);
+        return SinkSecretRotateOut::fromJson($res);
     }
 }

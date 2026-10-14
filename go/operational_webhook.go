@@ -2,15 +2,17 @@
 package svix
 
 import (
-	"github.com/svix/svix-webhooks/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/internal"
 )
 
 type OperationalWebhook struct {
-	Endpoint *OperationalWebhookEndpoint
+	client *internal.SvixHttpClient
 }
 
-func newOperationalWebhook(client *internal.SvixHttpClient) *OperationalWebhook {
-	return &OperationalWebhook{
-		Endpoint: newOperationalWebhookEndpoint(client),
-	}
+func newOperationalWebhook(client *internal.SvixHttpClient) OperationalWebhook {
+	return OperationalWebhook{client}
+}
+
+func (operationalWebhook OperationalWebhook) Endpoint() OperationalWebhookEndpoint {
+	return newOperationalWebhookEndpoint(operationalWebhook.client)
 }

@@ -60,14 +60,18 @@ namespace Svix
             CancellationToken cancellationToken = default
         )
         {
+            if (options == null)
+            {
+                options = new OperationalWebhookEndpointListOptions();
+            }
             try
             {
                 var response =
                     await _client.SvixHttpClient.SendRequestAsync<ListResponseOperationalWebhookEndpointOut>(
                         method: HttpMethod.Get,
                         path: "/api/v1/operational-webhook/endpoint",
-                        queryParams: options?.QueryParams(),
-                        headerParams: options?.HeaderParams(),
+                        queryParams: options.QueryParams(),
+                        headerParams: options.HeaderParams(),
                         cancellationToken: cancellationToken
                     );
                 return response.Data;
@@ -87,14 +91,18 @@ namespace Svix
             OperationalWebhookEndpointListOptions? options = null
         )
         {
+            if (options == null)
+            {
+                options = new OperationalWebhookEndpointListOptions();
+            }
             try
             {
                 var response =
                     _client.SvixHttpClient.SendRequest<ListResponseOperationalWebhookEndpointOut>(
                         method: HttpMethod.Get,
                         path: "/api/v1/operational-webhook/endpoint",
-                        queryParams: options?.QueryParams(),
-                        headerParams: options?.HeaderParams()
+                        queryParams: options.QueryParams(),
+                        headerParams: options.HeaderParams()
                     );
                 return response.Data;
             }
@@ -115,6 +123,10 @@ namespace Svix
             CancellationToken cancellationToken = default
         )
         {
+            if (options == null)
+            {
+                options = new OperationalWebhookEndpointCreateOptions();
+            }
             operationalWebhookEndpointIn =
                 operationalWebhookEndpointIn
                 ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointIn));
@@ -124,8 +136,8 @@ namespace Svix
                     await _client.SvixHttpClient.SendRequestAsync<OperationalWebhookEndpointOut>(
                         method: HttpMethod.Post,
                         path: "/api/v1/operational-webhook/endpoint",
-                        queryParams: options?.QueryParams(),
-                        headerParams: options?.HeaderParams(),
+                        queryParams: options.QueryParams(),
+                        headerParams: options.HeaderParams(),
                         content: operationalWebhookEndpointIn,
                         cancellationToken: cancellationToken
                     );
@@ -147,6 +159,10 @@ namespace Svix
             OperationalWebhookEndpointCreateOptions? options = null
         )
         {
+            if (options == null)
+            {
+                options = new OperationalWebhookEndpointCreateOptions();
+            }
             operationalWebhookEndpointIn =
                 operationalWebhookEndpointIn
                 ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointIn));
@@ -155,8 +171,8 @@ namespace Svix
                 var response = _client.SvixHttpClient.SendRequest<OperationalWebhookEndpointOut>(
                     method: HttpMethod.Post,
                     path: "/api/v1/operational-webhook/endpoint",
-                    queryParams: options?.QueryParams(),
-                    headerParams: options?.HeaderParams(),
+                    queryParams: options.QueryParams(),
+                    headerParams: options.HeaderParams(),
                     content: operationalWebhookEndpointIn
                 );
                 return response.Data;
@@ -224,15 +240,15 @@ namespace Svix
         /// <summary>
         /// Create or update an operational webhook endpoint.
         /// </summary>
-        public async Task<OperationalWebhookEndpointOut> UpdateAsync(
+        public async Task<OperationalWebhookEndpointOut> UpsertAsync(
             string endpointId,
-            OperationalWebhookEndpointUpdate operationalWebhookEndpointUpdate,
+            OperationalWebhookEndpointUpsertIn operationalWebhookEndpointUpsertIn,
             CancellationToken cancellationToken = default
         )
         {
-            operationalWebhookEndpointUpdate =
-                operationalWebhookEndpointUpdate
-                ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointUpdate));
+            operationalWebhookEndpointUpsertIn =
+                operationalWebhookEndpointUpsertIn
+                ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointUpsertIn));
             try
             {
                 var response =
@@ -243,14 +259,14 @@ namespace Svix
                         {
                             { "endpoint_id", endpointId },
                         },
-                        content: operationalWebhookEndpointUpdate,
+                        content: operationalWebhookEndpointUpsertIn,
                         cancellationToken: cancellationToken
                     );
                 return response.Data;
             }
             catch (ApiException e)
             {
-                _client.Logger?.LogError(e, $"{nameof(UpdateAsync)} failed");
+                _client.Logger?.LogError(e, $"{nameof(UpsertAsync)} failed");
 
                 throw;
             }
@@ -259,27 +275,27 @@ namespace Svix
         /// <summary>
         /// Create or update an operational webhook endpoint.
         /// </summary>
-        public OperationalWebhookEndpointOut Update(
+        public OperationalWebhookEndpointOut Upsert(
             string endpointId,
-            OperationalWebhookEndpointUpdate operationalWebhookEndpointUpdate
+            OperationalWebhookEndpointUpsertIn operationalWebhookEndpointUpsertIn
         )
         {
-            operationalWebhookEndpointUpdate =
-                operationalWebhookEndpointUpdate
-                ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointUpdate));
+            operationalWebhookEndpointUpsertIn =
+                operationalWebhookEndpointUpsertIn
+                ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointUpsertIn));
             try
             {
                 var response = _client.SvixHttpClient.SendRequest<OperationalWebhookEndpointOut>(
                     method: HttpMethod.Put,
                     path: "/api/v1/operational-webhook/endpoint/{endpoint_id}",
                     pathParams: new Dictionary<string, string> { { "endpoint_id", endpointId } },
-                    content: operationalWebhookEndpointUpdate
+                    content: operationalWebhookEndpointUpsertIn
                 );
                 return response.Data;
             }
             catch (ApiException e)
             {
-                _client.Logger?.LogError(e, $"{nameof(Update)} failed");
+                _client.Logger?.LogError(e, $"{nameof(Upsert)} failed");
 
                 throw;
             }
@@ -395,7 +411,7 @@ namespace Svix
         /// <summary>
         /// Rotates an operational webhook endpoint's signing secret.
         ///
-        /// The previous secret will remain valid for the next 24 hours.
+        /// The previous secret will remain valid for the specified grace period (default 24 hours).
         /// </summary>
         public async Task<bool> RotateSecretAsync(
             string endpointId,
@@ -404,6 +420,10 @@ namespace Svix
             CancellationToken cancellationToken = default
         )
         {
+            if (options == null)
+            {
+                options = new OperationalWebhookEndpointRotateSecretOptions();
+            }
             operationalWebhookEndpointSecretIn =
                 operationalWebhookEndpointSecretIn
                 ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointSecretIn));
@@ -413,8 +433,8 @@ namespace Svix
                     method: HttpMethod.Post,
                     path: "/api/v1/operational-webhook/endpoint/{endpoint_id}/secret/rotate",
                     pathParams: new Dictionary<string, string> { { "endpoint_id", endpointId } },
-                    queryParams: options?.QueryParams(),
-                    headerParams: options?.HeaderParams(),
+                    queryParams: options.QueryParams(),
+                    headerParams: options.HeaderParams(),
                     content: operationalWebhookEndpointSecretIn,
                     cancellationToken: cancellationToken
                 );
@@ -431,7 +451,7 @@ namespace Svix
         /// <summary>
         /// Rotates an operational webhook endpoint's signing secret.
         ///
-        /// The previous secret will remain valid for the next 24 hours.
+        /// The previous secret will remain valid for the specified grace period (default 24 hours).
         /// </summary>
         public bool RotateSecret(
             string endpointId,
@@ -439,6 +459,10 @@ namespace Svix
             OperationalWebhookEndpointRotateSecretOptions? options = null
         )
         {
+            if (options == null)
+            {
+                options = new OperationalWebhookEndpointRotateSecretOptions();
+            }
             operationalWebhookEndpointSecretIn =
                 operationalWebhookEndpointSecretIn
                 ?? throw new ArgumentNullException(nameof(operationalWebhookEndpointSecretIn));
@@ -448,8 +472,8 @@ namespace Svix
                     method: HttpMethod.Post,
                     path: "/api/v1/operational-webhook/endpoint/{endpoint_id}/secret/rotate",
                     pathParams: new Dictionary<string, string> { { "endpoint_id", endpointId } },
-                    queryParams: options?.QueryParams(),
-                    headerParams: options?.HeaderParams(),
+                    queryParams: options.QueryParams(),
+                    headerParams: options.HeaderParams(),
                     content: operationalWebhookEndpointSecretIn
                 );
                 return response.Data;
@@ -518,7 +542,7 @@ namespace Svix
         /// <summary>
         /// Set the additional headers to be sent with the operational webhook.
         /// </summary>
-        public async Task<bool> UpdateHeadersAsync(
+        public async Task<bool> SetHeadersAsync(
             string endpointId,
             OperationalWebhookEndpointHeadersIn operationalWebhookEndpointHeadersIn,
             CancellationToken cancellationToken = default
@@ -540,7 +564,7 @@ namespace Svix
             }
             catch (ApiException e)
             {
-                _client.Logger?.LogError(e, $"{nameof(UpdateHeadersAsync)} failed");
+                _client.Logger?.LogError(e, $"{nameof(SetHeadersAsync)} failed");
 
                 throw;
             }
@@ -549,7 +573,7 @@ namespace Svix
         /// <summary>
         /// Set the additional headers to be sent with the operational webhook.
         /// </summary>
-        public bool UpdateHeaders(
+        public bool SetHeaders(
             string endpointId,
             OperationalWebhookEndpointHeadersIn operationalWebhookEndpointHeadersIn
         )
@@ -569,7 +593,7 @@ namespace Svix
             }
             catch (ApiException e)
             {
-                _client.Logger?.LogError(e, $"{nameof(UpdateHeaders)} failed");
+                _client.Logger?.LogError(e, $"{nameof(SetHeaders)} failed");
 
                 throw;
             }

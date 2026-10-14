@@ -46,7 +46,39 @@ describe Svix::Webhook do
 
   describe ".new_using_raw_bytes" do
     it "rejects empty webhook secrets" do
-      expect { Svix::Webhook.new("") }.to raise_error(Svix::EmptyWebhookSecretError)
+      expect { Svix::Webhook.new_using_raw_bytes([]) }.to raise_error(Svix::EmptyWebhookSecretError)
+    end
+
+    it "uses the bytes as the key without base64-decoding them" do
+      raw_key = Base64.decode64(DEFAULT_SECRET).bytes
+      testPayload = TestPayload.new
+
+      wh = Svix::Webhook.new_using_raw_bytes(raw_key)
+
+      wh.verify(testPayload.payload, testPayload.headers)
+    end
+
+    it "is the same as new(raw_secret:)" do
+      raw_key = Base64.decode64(DEFAULT_SECRET)
+      testPayload = TestPayload.new
+
+      wh = Svix::Webhook.new(raw_secret: raw_key)
+
+      wh.verify(testPayload.payload, testPayload.headers)
+    end
+
+    it "requires exactly one of secret and raw_secret" do
+      expect { Svix::Webhook.new }.to raise_error(ArgumentError)
+      expect { Svix::Webhook.new(DEFAULT_SECRET, raw_secret: "key") }.to raise_error(ArgumentError)
+    end
+
+    it "signs the same as the equivalent base64 secret" do
+      raw_key = Array.new(32) { |i| (i * 37 + 200) % 256 }
+      from_raw = Svix::Webhook.new_using_raw_bytes(raw_key)
+      from_b64 = Svix::Webhook.new("whsec_" + Base64.strict_encode64(raw_key.pack("C*")))
+
+      expect(from_raw.sign(DEFAULT_MSG_ID, 1649367553, DEFAULT_PAYLOAD))
+        .to eq(from_b64.sign(DEFAULT_MSG_ID, 1649367553, DEFAULT_PAYLOAD))
     end
   end
 
@@ -86,15 +118,14 @@ describe Svix::Webhook do
     expect { wh.verify(testPayload.payload, testPayload.headers) }.to(raise_error(Svix::WebhookVerificationError))
   end
 
-  it "valid signature is valid and returns valid json" do
+  it "valid signature is valid" do
     testPayload = TestPayload.new
     wh = Svix::Webhook.new(testPayload.secret)
 
-    json = wh.verify(testPayload.payload, testPayload.headers)
-    expect(json[:test]).to(eq(2432232314))
+    wh.verify(testPayload.payload, testPayload.headers)
   end
 
-  it "valid unbranded signature is valid and returns valid json" do
+  it "valid unbranded signature is valid" do
     testPayload = TestPayload.new
     unbrandedHeaders = {
       "webhook-id" => testPayload.headers["svix-id"],
@@ -105,8 +136,7 @@ describe Svix::Webhook do
 
     wh = Svix::Webhook.new(testPayload.secret)
 
-    json = wh.verify(testPayload.payload, testPayload.headers)
-    expect(json[:test]).to(eq(2432232314))
+    wh.verify(testPayload.payload, testPayload.headers)
   end
 
   it "old timestamp raises error" do
@@ -146,20 +176,17 @@ describe Svix::Webhook do
 
     wh = Svix::Webhook.new(testPayload.secret)
 
-    json = wh.verify(testPayload.payload, testPayload.headers)
-    expect(json[:test]).to(eq(2432232314))
+    wh.verify(testPayload.payload, testPayload.headers)
   end
 
   it "signature verification works with and without prefix" do
     testPayload = TestPayload.new
 
     wh = Svix::Webhook.new(testPayload.secret)
-    json = wh.verify(testPayload.payload, testPayload.headers)
-    expect(json[:test]).to(eq(2432232314))
+    wh.verify(testPayload.payload, testPayload.headers)
 
     wh = Svix::Webhook.new("whsec_" + testPayload.secret)
-    json = wh.verify(testPayload.payload, testPayload.headers)
-    expect(json[:test]).to(eq(2432232314))
+    wh.verify(testPayload.payload, testPayload.headers)
   end
 
   it "sign function works" do
@@ -174,12 +201,92 @@ describe Svix::Webhook do
     expect(signature).to(eq(expected))
   end
 
-  it "returns empty json when payload is empty" do
+  it "custom tolerance accepts an old timestamp the default would reject" do
+    testPayload = TestPayload.new(timestamp: Time.now.to_i - (2 * TOLERANCE))
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 3 * TOLERANCE)
+
+    wh.verify(testPayload.payload, testPayload.headers)
+  end
+
+  it "custom tolerance rejects an old timestamp the default would accept" do
+    testPayload = TestPayload.new(timestamp: Time.now.to_i - 120)
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 60)
+
+    expect { wh.verify(testPayload.payload, testPayload.headers) }.to(raise_error(Svix::WebhookVerificationError))
+  end
+
+  it "custom tolerance accepts a future timestamp the default would reject" do
+    testPayload = TestPayload.new(timestamp: Time.now.to_i + (2 * TOLERANCE))
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 3 * TOLERANCE)
+
+    wh.verify(testPayload.payload, testPayload.headers)
+  end
+
+  it "custom tolerance rejects a future timestamp the default would accept" do
+    testPayload = TestPayload.new(timestamp: Time.now.to_i + 120)
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 60)
+
+    expect { wh.verify(testPayload.payload, testPayload.headers) }.to(raise_error(Svix::WebhookVerificationError))
+  end
+
+  it "invalid signature still raises with a custom tolerance" do
+    testPayload = TestPayload.new
+    testPayload.headers["svix-signature"] = "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLawdd"
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 3 * TOLERANCE)
+
+    expect { wh.verify(testPayload.payload, testPayload.headers) }.to(raise_error(Svix::WebhookVerificationError))
+  end
+
+  it "tampered timestamp still raises with a custom tolerance" do
+    # The signature covers the timestamp, so a value changed after signing
+    # must fail even when it is inside the tolerance window.
+    testPayload = TestPayload.new
+    testPayload.headers["svix-timestamp"] = testPayload.timestamp - 600
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 3 * TOLERANCE)
+
+    expect { wh.verify(testPayload.payload, testPayload.headers) }
+      .to(raise_error(Svix::WebhookVerificationError, /No matching signature found/))
+  end
+
+  it "a tolerance spanning the epoch still rejects a non-positive timestamp" do
+    # Like the Rust SDK, timestamps before 1970 are not honored even when the
+    # tolerance window would allow them.
+    testPayload = TestPayload.new(timestamp: -1234)
+
+    wh = Svix::Webhook.new(testPayload.secret, tolerance: 10**10)
+
+    expect { wh.verify(testPayload.payload, testPayload.headers) }
+      .to(raise_error(Svix::WebhookVerificationError, /Invalid Signature Headers/))
+  end
+
+  it "negative tolerance raises error" do
+    expect { Svix::Webhook.new(DEFAULT_SECRET, tolerance: -1) }.to(raise_error(ArgumentError))
+  end
+
+  it "non-integer tolerance raises error" do
+    expect { Svix::Webhook.new(DEFAULT_SECRET, tolerance: Float::NAN) }.to(raise_error(ArgumentError))
+    expect { Svix::Webhook.new(DEFAULT_SECRET, tolerance: nil) }.to(raise_error(ArgumentError))
+  end
+
+  it "new_using_raw_bytes accepts a custom tolerance" do
+    testPayload = TestPayload.new(timestamp: Time.now.to_i - (2 * TOLERANCE))
+
+    wh = Svix::Webhook.new_using_raw_bytes(Base64.decode64(testPayload.secret).bytes, tolerance: 3 * TOLERANCE)
+
+    wh.verify(testPayload.payload, testPayload.headers)
+  end
+
+  it "can validate an empty payload" do
     testPayload = TestPayload.new(payload: '')
 
     wh = Svix::Webhook.new(testPayload.secret)
 
-    json = wh.verify(testPayload.payload, testPayload.headers)
-    expect(json).to(eq(nil))
+    wh.verify(testPayload.payload, testPayload.headers)
   end
 end

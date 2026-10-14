@@ -1,8 +1,10 @@
 // this file is @generated
 import { Application } from "./api/application";
 import { Authentication } from "./api/authentication";
+import { AutoconfigSubscription } from "./api/autoconfigSubscription";
 import { BackgroundTask } from "./api/backgroundTask";
 import { Connector } from "./api/connector";
+import { Destination } from "./api/destination";
 import { Endpoint } from "./api/endpoint";
 import { Environment } from "./api/environment";
 import { EventType } from "./api/eventType";
@@ -14,8 +16,7 @@ import { MessageAttempt } from "./api/messageAttempt";
 import { OperationalWebhook } from "./api/operationalWebhook";
 import { Statistics } from "./api/statistics";
 import { Streaming } from "./api/streaming";
-import { OperationalWebhookEndpoint } from "./api/operationalWebhookEndpoint";
-import type { SvixRequestContext } from "./request";
+import { createSvixRequestContext, type SvixRequestContext } from "./request";
 
 export { type PostOptions, ApiException } from "./util";
 export { HTTPValidationError, HttpErrorOut, ValidationError } from "./HttpErrors";
@@ -30,7 +31,6 @@ export type { EventTypeListOptions } from "./api/eventType";
 export type { IntegrationListOptions } from "./api/integration";
 export { type MessageListOptions, messageInRaw } from "./api/message";
 export type { MessageAttemptListByEndpointOptions } from "./api/messageAttempt";
-export type { OperationalWebhookEndpointListOptions } from "./api/operationalWebhookEndpoint";
 
 export type SvixOptions = {
   debug?: boolean;
@@ -56,47 +56,11 @@ export type SvixOptions = {
   }
 >;
 
-const REGIONS = [
-  { region: "us", url: "https://api.us.svix.com" },
-  { region: "eu", url: "https://api.eu.svix.com" },
-  { region: "in", url: "https://api.in.svix.com" },
-  { region: "ca", url: "https://api.ca.svix.com" },
-  { region: "au", url: "https://api.au.svix.com" },
-];
-
 export class Svix {
   protected readonly requestCtx: SvixRequestContext;
 
   public constructor(token: string, options: SvixOptions = {}) {
-    const regionalUrl = REGIONS.find((x) => x.region === token.split(".")[1])?.url;
-    const baseUrl: string = options.serverUrl ?? regionalUrl ?? "https://api.svix.com";
-
-    if (options.retryScheduleInMs) {
-      this.requestCtx = {
-        baseUrl,
-        token,
-        timeout: options.requestTimeout,
-        retryScheduleInMs: options.retryScheduleInMs,
-        fetch: options.fetch,
-      };
-      return;
-    }
-    if (options.numRetries) {
-      this.requestCtx = {
-        baseUrl,
-        token,
-        timeout: options.requestTimeout,
-        numRetries: options.numRetries,
-        fetch: options.fetch,
-      };
-      return;
-    }
-    this.requestCtx = {
-      baseUrl,
-      token,
-      timeout: options.requestTimeout,
-      fetch: options.fetch,
-    };
+    this.requestCtx = createSvixRequestContext(token, options);
   }
 
   public get application() {
@@ -107,12 +71,20 @@ export class Svix {
     return new Authentication(this.requestCtx);
   }
 
+  public get autoconfigSubscription() {
+    return new AutoconfigSubscription(this.requestCtx);
+  }
+
   public get backgroundTask() {
     return new BackgroundTask(this.requestCtx);
   }
 
   public get connector() {
     return new Connector(this.requestCtx);
+  }
+
+  public get destination() {
+    return new Destination(this.requestCtx);
   }
 
   public get endpoint() {
@@ -157,10 +129,6 @@ export class Svix {
 
   public get streaming() {
     return new Streaming(this.requestCtx);
-  }
-
-  public get operationalWebhookEndpoint() {
-    return new OperationalWebhookEndpoint(this.requestCtx);
   }
 }
 

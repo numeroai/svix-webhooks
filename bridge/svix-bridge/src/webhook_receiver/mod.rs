@@ -1,4 +1,9 @@
-use std::{convert::Infallible, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    convert::Infallible,
+    net::SocketAddr,
+    sync::{Arc, LazyLock},
+    time::Duration,
+};
 
 use axum::{
     Router,
@@ -30,17 +35,16 @@ mod verification;
 fn router() -> Router<InternalState> {
     Router::new()
         .route(
-            "/webhook/:integration_id",
+            "/webhook/{integration_id}",
             post(route).put(route).get(route).patch(route),
         )
         .route(
-            "/webhook/:integration_id/",
+            "/webhook/{integration_id}/",
             post(route).put(route).get(route).patch(route),
         )
         .route("/health", get(health_handler))
 }
-static START_TIME: once_cell::sync::Lazy<std::time::Instant> =
-    once_cell::sync::Lazy::new(std::time::Instant::now);
+static START_TIME: LazyLock<std::time::Instant> = LazyLock::new(std::time::Instant::now);
 
 fn get_uptime_seconds() -> u64 {
     START_TIME.elapsed().as_secs()
@@ -64,7 +68,7 @@ pub async fn run(
     routes: Vec<WebhookReceiverConfig>,
     transformer_tx: TransformerTx,
 ) -> std::io::Result<()> {
-    once_cell::sync::Lazy::force(&START_TIME);
+    LazyLock::force(&START_TIME);
     let state = InternalState::from_receiver_configs(routes, transformer_tx)
         .await
         .map_err(std::io::Error::other)?;
@@ -80,8 +84,10 @@ pub async fn run(
 
 struct WebhookIdHeader(Option<String>);
 
-#[async_trait]
-impl<S> FromRequestParts<S> for WebhookIdHeader {
+impl<S> FromRequestParts<S> for WebhookIdHeader
+where
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
     async fn from_request_parts(

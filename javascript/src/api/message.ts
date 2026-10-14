@@ -1,6 +1,14 @@
 // this file is @generated
 
 import {
+  type BulkExpungeContentsIn,
+  BulkExpungeContentsInSerializer,
+} from "../models/bulkExpungeContentsIn";
+import {
+  type BulkExpungeContentsOut,
+  BulkExpungeContentsOutSerializer,
+} from "../models/bulkExpungeContentsOut";
+import {
   type ExpungeAllContentsOut,
   ExpungeAllContentsOutSerializer,
 } from "../models/expungeAllContentsOut";
@@ -32,7 +40,12 @@ export interface MessageListOptions {
   before?: Date | null;
   /** Only include items created after a certain date. */
   after?: Date | null;
-  /** When `true` message payloads are included in the response. */
+  /**
+   * When `true` message payloads are included in the response.
+   *
+   * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+   * without specifying this parameter.
+   */
   withContent?: boolean;
   /** Filter messages matching the provided tag. */
   tag?: string;
@@ -41,7 +54,12 @@ export interface MessageListOptions {
 }
 
 export interface MessageCreateOptions {
-  /** When `true`, message payloads are included in the response. */
+  /**
+   * When `true`, message payloads are included in the response.
+   *
+   * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+   * without specifying this parameter.
+   */
   withContent?: boolean;
   idempotencyKey?: string;
 }
@@ -51,8 +69,17 @@ export interface MessagePrecheckOptions {
 }
 
 export interface MessageGetOptions {
-  /** When `true` message payloads are included in the response. */
+  /**
+   * When `true` message payloads are included in the response.
+   *
+   * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+   * without specifying this parameter.
+   */
   withContent?: boolean;
+}
+
+export interface MessageBulkExpungeContentOptions {
+  idempotencyKey?: string;
 }
 
 export interface MessageExpungeAllContentsOptions {
@@ -90,7 +117,7 @@ export class Message {
       channel: options?.channel,
       before: options?.before,
       after: options?.after,
-      with_content: options?.withContent,
+      with_content: options?.withContent ?? false,
       tag: options?.tag,
       event_types: options?.eventTypes,
     });
@@ -121,19 +148,12 @@ export class Message {
 
     request.setPathParam("app_id", appId);
     request.setQueryParams({
-      with_content: false,
+      with_content: options?.withContent ?? false,
     });
     request.setHeaderParam("idempotency-key", options?.idempotencyKey);
     request.setBody(MessageInSerializer._toJsonObject(messageIn));
 
-    const response = await request.send(
-      this.requestCtx,
-      MessageOutSerializer._fromJsonObject
-    );
-    if (options?.withContent ?? true) {
-      response.payload = messageIn.payload;
-    }
-    return response;
+    return await request.send(this.requestCtx, MessageOutSerializer._fromJsonObject);
   }
 
   /**
@@ -175,7 +195,7 @@ export class Message {
     request.setPathParam("app_id", appId);
     request.setPathParam("msg_id", msgId);
     request.setQueryParams({
-      with_content: options?.withContent,
+      with_content: options?.withContent ?? false,
     });
 
     return await request.send(this.requestCtx, MessageOutSerializer._fromJsonObject);
@@ -185,7 +205,8 @@ export class Message {
    * Delete the given message's payload.
    *
    * Useful in cases when a message was accidentally sent with sensitive content.
-   * The message can't be replayed or resent once its payload has been deleted or expired.
+   * The message can't be replayed or resent once its payload has been deleted
+   * (or has expired).
    */
   public async expungeContent(appId: string, msgId: string): Promise<void> {
     const request = new SvixRequest(
@@ -197,6 +218,33 @@ export class Message {
     request.setPathParam("msg_id", msgId);
 
     return await request.sendNoResponseBody(this.requestCtx);
+  }
+
+  /**
+   * Delete the payloads from the given messages under the current application
+   *
+   * Useful in cases when a message was accidentally sent with sensitive content.
+   * A message can't be replayed or resent once its payload has been deleted
+   * (or has expired).
+   */
+  public async bulkExpungeContent(
+    appId: string,
+    bulkExpungeContentsIn: BulkExpungeContentsIn = {},
+    options?: MessageBulkExpungeContentOptions
+  ): Promise<BulkExpungeContentsOut> {
+    const request = new SvixRequest(
+      HttpMethod.POST,
+      "/api/v1/app/{app_id}/msg/bulk-expunge"
+    );
+
+    request.setPathParam("app_id", appId);
+    request.setHeaderParam("idempotency-key", options?.idempotencyKey);
+    request.setBody(BulkExpungeContentsInSerializer._toJsonObject(bulkExpungeContentsIn));
+
+    return await request.send(
+      this.requestCtx,
+      BulkExpungeContentsOutSerializer._fromJsonObject
+    );
   }
 
   /**

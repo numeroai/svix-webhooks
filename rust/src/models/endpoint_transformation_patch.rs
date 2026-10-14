@@ -1,8 +1,9 @@
 // this file is @generated
+#[allow(unused_imports)]
 use js_option::JsOption;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct EndpointTransformationPatch {
     #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
     pub code: JsOption<String>,
@@ -11,7 +12,7 @@ pub struct EndpointTransformationPatch {
     pub enabled: Option<bool>,
 
     #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
-    pub variables: JsOption<std::collections::HashMap<String, String>>,
+    pub variables: JsOption<std::collections::BTreeMap<String, String>>,
 }
 
 impl EndpointTransformationPatch {
@@ -21,5 +22,11 @@ impl EndpointTransformationPatch {
             enabled: None,
             variables: JsOption::Undefined,
         }
+    }
+}
+
+impl Default for EndpointTransformationPatch {
+    fn default() -> Self {
+        Self::new()
     }
 }

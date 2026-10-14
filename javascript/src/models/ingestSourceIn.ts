@@ -7,6 +7,7 @@ import { type DocusignConfig, DocusignConfigSerializer } from "./docusignConfig"
 import { type EasypostConfig, EasypostConfigSerializer } from "./easypostConfig";
 import { type GithubConfig, GithubConfigSerializer } from "./githubConfig";
 import { type HubspotConfig, HubspotConfigSerializer } from "./hubspotConfig";
+import { type MergeConfig, MergeConfigSerializer } from "./mergeConfig";
 import { type MetaConfig, MetaConfigSerializer } from "./metaConfig";
 import { type NangoConfig, NangoConfigSerializer } from "./nangoConfig";
 import { type OpenClawConfig, OpenClawConfigSerializer } from "./openClawConfig";
@@ -27,10 +28,10 @@ import { type VgsConfig, VgsConfigSerializer } from "./vgsConfig";
 import { type ZoomConfig, ZoomConfigSerializer } from "./zoomConfig";
 
 interface _IngestSourceInFields {
-  metadata?: { [key: string]: string };
   name: string;
   /** The Source's UID. */
   uid?: string | null;
+  metadata?: { [key: string]: string };
 }
 
 // biome-ignore lint/suspicious/noEmptyInterface: backwards compat
@@ -104,6 +105,11 @@ interface IngestSourceInIncidentIo {
 interface IngestSourceInLithic {
   type: "lithic";
   config: SvixConfig;
+}
+
+interface IngestSourceInMerge {
+  type: "merge";
+  config: MergeConfig;
 }
 
 interface IngestSourceInMeta {
@@ -267,6 +273,7 @@ export type IngestSourceIn = _IngestSourceInFields &
     | IngestSourceInHubspot
     | IngestSourceInIncidentIo
     | IngestSourceInLithic
+    | IngestSourceInMerge
     | IngestSourceInMeta
     | IngestSourceInNango
     | IngestSourceInNash
@@ -332,6 +339,8 @@ export const IngestSourceInSerializer = {
           return SvixConfigSerializer._fromJsonObject(object["config"]);
         case "lithic":
           return SvixConfigSerializer._fromJsonObject(object["config"]);
+        case "merge":
+          return MergeConfigSerializer._fromJsonObject(object["config"]);
         case "meta":
           return MetaConfigSerializer._fromJsonObject(object["config"]);
         case "nango":
@@ -398,9 +407,9 @@ export const IngestSourceInSerializer = {
     return {
       type,
       config: getConfig(type),
-      metadata: object["metadata"],
       name: object["name"],
       uid: object["uid"],
+      metadata: object["metadata"],
     };
   },
 
@@ -449,6 +458,9 @@ export const IngestSourceInSerializer = {
         break;
       case "lithic":
         config = SvixConfigSerializer._toJsonObject(self.config);
+        break;
+      case "merge":
+        config = MergeConfigSerializer._toJsonObject(self.config);
         break;
       case "meta":
         config = MetaConfigSerializer._toJsonObject(self.config);
@@ -542,9 +554,9 @@ export const IngestSourceInSerializer = {
     return {
       type: self.type,
       config: config,
-      metadata: self.metadata,
       name: self.name,
       uid: self.uid,
+      metadata: self.metadata,
     };
   },
 };

@@ -14,6 +14,7 @@ from .docusign_config_out import DocusignConfigOut
 from .easypost_config_out import EasypostConfigOut
 from .github_config_out import GithubConfigOut
 from .hubspot_config_out import HubspotConfigOut
+from .merge_config_out import MergeConfigOut
 from .meta_config_out import MetaConfigOut
 from .nango_config_out import NangoConfigOut
 from .open_claw_config_out import OpenClawConfigOut
@@ -35,21 +36,21 @@ from .zoom_config_out import ZoomConfigOut
 
 
 class IngestSourceOut(BaseModel):
-    created_at: datetime
-
     id: str
     """The Source's ID."""
-
-    ingest_url: t.Optional[str] = None
-
-    metadata: t.Dict[str, str]
-
-    name: str
 
     uid: t.Optional[str] = None
     """The Source's UID."""
 
+    name: str
+
+    ingest_url: t.Optional[str] = None
+
+    created_at: datetime
+
     updated_at: datetime
+
+    metadata: t.Dict[str, str]
 
     type: t.Union[
         t.Literal["generic-webhook"],
@@ -66,6 +67,7 @@ class IngestSourceOut(BaseModel):
         t.Literal["hubspot"],
         t.Literal["incident-io"],
         t.Literal["lithic"],
+        t.Literal["merge"],
         t.Literal["meta"],
         t.Literal["nango"],
         t.Literal["nash"],
@@ -106,6 +108,7 @@ class IngestSourceOut(BaseModel):
         EasypostConfigOut,
         GithubConfigOut,
         HubspotConfigOut,
+        MergeConfigOut,
         MetaConfigOut,
         NangoConfigOut,
         OpenClawConfigOut,
@@ -164,6 +167,8 @@ class IngestSourceOut(BaseModel):
             output.config = SvixConfigOut.model_validate(data.get("config", {}))
         elif output.type == "lithic":
             output.config = SvixConfigOut.model_validate(data.get("config", {}))
+        elif output.type == "merge":
+            output.config = MergeConfigOut.model_validate(data.get("config", {}))
         elif output.type == "meta":
             output.config = MetaConfigOut.model_validate(data.get("config", {}))
         elif output.type == "nango":

@@ -9,7 +9,9 @@ module Svix
   class SvixHttpClient
     def initialize(token, base_url)
       @token = token
-      @base_url = base_url
+      # Strip trailing slashes so that `https://api.svix.com/` does not
+      # produce request URLs such as `https://api.svix.com//api/v1/app`.
+      @base_url = base_url.to_s.sub(%r{/+\z}, "")
     end
 
     def execute_request(method, path, **kwargs)
@@ -113,11 +115,15 @@ module Svix
           elsif v.is_a?(Time)
             encoded_query_pairs.append("#{k}=#{CGI.escape(v.utc.to_datetime.rfc3339)}")
           else
-            encoded_query_pairs.append("#{k}=#{CGI.escape(v)}")
+            encoded_query_pairs.append("#{k}=#{CGI.escape(v.to_s)}")
           end
+        elsif k == "with_content"
+          # default with_content to false, it only defaults to true
+          # server-side because of backwards-compatibility
+          encoded_query_pairs.append("#{k}=false")
         elsif k == "expanded_statuses"
-          # HACK: default expanded_statuses to true, it only defaults to false
-          #       server-side because of backwards-compatibility for old SDKs
+          # default expanded_statuses to true, it only defaults to false
+          # server-side because of backwards-compatibility
           encoded_query_pairs.append("#{k}=true")
         end
       end

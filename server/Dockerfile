@@ -7,7 +7,7 @@
 
 # Base image for planner and build - keep in sync with .github/workflows/server-ci.yml
 FROM docker.io/rust:1.96-slim-trixie AS chef
-RUN cargo install cargo-chef
+RUN cargo install --locked cargo-chef
 WORKDIR /app
 
 # Build plan environment
@@ -46,33 +46,46 @@ RUN cargo chef cook --release --package svix-server --bin svix-server --recipe-p
 
 # Build the server
 COPY . .
+
+ARG WRITE_EXECUTABLE_METADATA="1"
 RUN cargo build --release --package svix-server --bin svix-server --frozen
 
 # Production
-FROM docker.io/debian:trixie-20260623-slim AS prod
+FROM docker.io/debian:trixie-20260918-slim AS prod
 
 SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 RUN <<EOF
     mkdir -p /app
-    useradd appuser
+    groupadd -g 1001 appgroup
+    useradd -u 1001 -g appgroup appuser
     chown -R appuser: /app
     mkdir -p /home/appuser
     chown -R appuser: /home/appuser
 EOF
 
+ARG __BUST_DOCKER_BUILD_CACHE=2026-10-01
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked --mount=target=/var/cache/apt,type=cache,sharing=locked <<EOF
     apt-get update -q
+    apt-get upgrade -y
     apt-get install -y \
         ca-certificates=20250419 \
-        libssl3t64=3.* \
         --no-install-recommends
     update-ca-certificates
 EOF
 
-USER appuser
+USER 1001
 EXPOSE 8071
 
 COPY --chown=root:root --chmod=755 --from=build /app/target/release/svix-server /usr/local/bin/svix-server
 COPY --chown=root:root --chmod=755 ./scripts/launch-svix-server /usr/local/bin/launch-svix-server
+
+LABEL org.opencontainers.image.authors="support@svix.com" \
+      org.opencontainers.image.url="https://www.svix.com" \
+      org.opencontainers.image.documentation="https://docs.svix.com" \
+      org.opencontainers.image.description="The Svix webhooks service, server component (OSS build)" \
+      org.opencontainers.image.title="svix-webhooks, server, oss" \
+      org.opencontainers.image.vendor="Svix" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.base.name="docker.io/debian:trixie"
 
 CMD ["/usr/local/bin/launch-svix-server"]

@@ -4,16 +4,19 @@ from dataclasses import dataclass
 
 from .. import models
 from ..models import (
-    EmptyResponse,
     EndpointSecretRotateIn,
     ListResponseStreamSinkOut,
     SinkSecretOut,
-    SinkTransformIn,
+    SinkSecretRotateOut,
     StreamSinkIn,
     StreamSinkOut,
     StreamSinkPatch,
 )
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
+from .streaming_sink_transformation import (
+    StreamingSinkTransformation,
+    StreamingSinkTransformationAsync,
+)
 
 
 @dataclass
@@ -59,7 +62,11 @@ class StreamingSinkRotateSecretOptions(BaseOptions):
         )
 
 
-class StreamingSinkAsync(ApiBase):
+class StreamingSinkAsync(ApiBaseAsync):
+    @property
+    def transformation(self) -> StreamingSinkTransformationAsync:
+        return StreamingSinkTransformationAsync(self._client, self._httpx_client)
+
     async def list(
         self,
         stream_id: str,
@@ -108,7 +115,7 @@ class StreamingSinkAsync(ApiBase):
         )
         return StreamSinkOut.model_validate(response.json())
 
-    async def update(
+    async def upsert(
         self, stream_id: str, sink_id: str, stream_sink_in: StreamSinkIn
     ) -> StreamSinkOut:
         """Create or update a sink."""
@@ -151,25 +158,8 @@ class StreamingSinkAsync(ApiBase):
         )
         return StreamSinkOut.model_validate(response.json())
 
-    async def transformation_partial_update(
-        self, stream_id: str, sink_id: str, sink_transform_in: SinkTransformIn
-    ) -> EmptyResponse:
-        """Set or unset the transformation code associated with this sink."""
-        response = await self._request_asyncio(
-            method="patch",
-            path="/api/v1/stream/{stream_id}/sink/{sink_id}/transformation",
-            path_params={
-                "stream_id": stream_id,
-                "sink_id": sink_id,
-            },
-            json_body=sink_transform_in.model_dump_json(
-                exclude_unset=True, by_alias=True
-            ),
-        )
-        return EmptyResponse.model_validate(response.json())
-
     async def get_secret(self, stream_id: str, sink_id: str) -> SinkSecretOut:
-        """Get the sink's signing secret (only supported for http sinks)
+        """Get the sink's signing secret (only supported for http sinks).
 
         This is used to verify the authenticity of the delivery.
 
@@ -192,8 +182,12 @@ class StreamingSinkAsync(ApiBase):
         options: StreamingSinkRotateSecretOptions = (
             StreamingSinkRotateSecretOptions()
         ),
-    ) -> EmptyResponse:
-        """Rotates the signing secret (only supported for http sinks)."""
+    ) -> SinkSecretRotateOut:
+        """Rotates the signing secret (only supported for http sinks).
+
+        This is used to verify the authenticity of the delivery.
+
+        For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/)."""
         response = await self._request_asyncio(
             method="post",
             path="/api/v1/stream/{stream_id}/sink/{sink_id}/secret/rotate",
@@ -207,10 +201,14 @@ class StreamingSinkAsync(ApiBase):
                 exclude_unset=True, by_alias=True
             ),
         )
-        return EmptyResponse.model_validate(response.json())
+        return SinkSecretRotateOut.model_validate(response.json())
 
 
-class StreamingSink(ApiBase):
+class StreamingSink(ApiBaseSync):
+    @property
+    def transformation(self) -> StreamingSinkTransformation:
+        return StreamingSinkTransformation(self._client, self._httpx_client)
+
     def list(
         self,
         stream_id: str,
@@ -259,7 +257,7 @@ class StreamingSink(ApiBase):
         )
         return StreamSinkOut.model_validate(response.json())
 
-    def update(
+    def upsert(
         self, stream_id: str, sink_id: str, stream_sink_in: StreamSinkIn
     ) -> StreamSinkOut:
         """Create or update a sink."""
@@ -302,25 +300,8 @@ class StreamingSink(ApiBase):
         )
         return StreamSinkOut.model_validate(response.json())
 
-    def transformation_partial_update(
-        self, stream_id: str, sink_id: str, sink_transform_in: SinkTransformIn
-    ) -> EmptyResponse:
-        """Set or unset the transformation code associated with this sink."""
-        response = self._request_sync(
-            method="patch",
-            path="/api/v1/stream/{stream_id}/sink/{sink_id}/transformation",
-            path_params={
-                "stream_id": stream_id,
-                "sink_id": sink_id,
-            },
-            json_body=sink_transform_in.model_dump_json(
-                exclude_unset=True, by_alias=True
-            ),
-        )
-        return EmptyResponse.model_validate(response.json())
-
     def get_secret(self, stream_id: str, sink_id: str) -> SinkSecretOut:
-        """Get the sink's signing secret (only supported for http sinks)
+        """Get the sink's signing secret (only supported for http sinks).
 
         This is used to verify the authenticity of the delivery.
 
@@ -343,8 +324,12 @@ class StreamingSink(ApiBase):
         options: StreamingSinkRotateSecretOptions = (
             StreamingSinkRotateSecretOptions()
         ),
-    ) -> EmptyResponse:
-        """Rotates the signing secret (only supported for http sinks)."""
+    ) -> SinkSecretRotateOut:
+        """Rotates the signing secret (only supported for http sinks).
+
+        This is used to verify the authenticity of the delivery.
+
+        For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/)."""
         response = self._request_sync(
             method="post",
             path="/api/v1/stream/{stream_id}/sink/{sink_id}/secret/rotate",
@@ -358,4 +343,4 @@ class StreamingSink(ApiBase):
                 exclude_unset=True, by_alias=True
             ),
         )
-        return EmptyResponse.model_validate(response.json())
+        return SinkSecretRotateOut.model_validate(response.json())

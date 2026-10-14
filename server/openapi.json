@@ -57,14 +57,6 @@
                         "minLength": 1,
                         "type": "string"
                     },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 1,
-                        "nullable": true,
-                        "type": "integer"
-                    },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this application's endpoints.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
@@ -107,14 +99,6 @@
                         "example": "My first application",
                         "type": "string"
                     },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 0,
-                        "nullable": true,
-                        "type": "integer"
-                    },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this application's endpoints.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
@@ -155,14 +139,6 @@
                     "name": {
                         "type": "string"
                     },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 0,
-                        "nullable": true,
-                        "type": "integer"
-                    },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this application's endpoints.\n\nOutgoing messages will be throttled to this rate.",
                         "format": "uint16",
@@ -190,6 +166,46 @@
             "BackgroundTaskType": {
                 "enum": [
                     "endpoint.recover"
+                ],
+                "type": "string"
+            },
+            "BulkExpungeContentsIn": {
+                "properties": {
+                    "ids": {
+                        "default": [],
+                        "description": "Message ID or UID to delete",
+                        "items": {
+                            "example": "unique-msg-identifier",
+                            "maxLength": 256,
+                            "minLength": 1,
+                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": true
+                    }
+                },
+                "type": "object"
+            },
+            "BulkExpungeContentsOut": {
+                "properties": {
+                    "results": {
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/BulkExpungeStatus"
+                        },
+                        "description": "Results of expunging (by ID)",
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "results"
+                ],
+                "type": "object"
+            },
+            "BulkExpungeStatus": {
+                "enum": [
+                    "expunged",
+                    "not-found"
                 ],
                 "type": "string"
             },
@@ -460,7 +476,7 @@
                         "example": false,
                         "type": "boolean"
                     },
-                    "filterTypes": {
+                    "eventTypes": {
                         "example": [
                             "user.signup",
                             "user.deleted"
@@ -482,14 +498,6 @@
                         },
                         "default": {},
                         "type": "object"
-                    },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 1,
-                        "nullable": true,
-                        "type": "integer"
                     },
                     "secret": {
                         "description": "The endpoint's verification secret. If `null` is passed, a secret is automatically generated. Format: `base64` encoded random bytes optionally prefixed with `whsec_`. Recommended size: 24.",
@@ -520,15 +528,6 @@
                         "maxLength": 65536,
                         "minLength": 1,
                         "type": "string"
-                    },
-                    "version": {
-                        "default": 1,
-                        "deprecated": true,
-                        "example": 1,
-                        "format": "uint16",
-                        "minimum": 1,
-                        "nullable": true,
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -642,7 +641,7 @@
                         "example": false,
                         "type": "boolean"
                     },
-                    "filterTypes": {
+                    "eventTypes": {
                         "example": [
                             "user.signup",
                             "user.deleted"
@@ -667,14 +666,6 @@
                             "type": "string"
                         },
                         "type": "object"
-                    },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 0,
-                        "nullable": true,
-                        "type": "integer"
                     },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
@@ -702,13 +693,6 @@
                         "maxLength": 65536,
                         "minLength": 1,
                         "type": "string"
-                    },
-                    "version": {
-                        "deprecated": true,
-                        "example": 1,
-                        "format": "uint16",
-                        "minimum": 1,
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -717,8 +701,7 @@
                     "id",
                     "metadata",
                     "updatedAt",
-                    "url",
-                    "version"
+                    "url"
                 ],
                 "type": "object"
             },
@@ -741,7 +724,7 @@
                     "disabled": {
                         "type": "boolean"
                     },
-                    "filterTypes": {
+                    "eventTypes": {
                         "items": {
                             "example": "user.signup",
                             "maxLength": 256,
@@ -757,14 +740,6 @@
                             "type": "string"
                         },
                         "type": "object"
-                    },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 0,
-                        "nullable": true,
-                        "type": "integer"
                     },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
@@ -784,13 +759,6 @@
                     "url": {
                         "format": "uri",
                         "type": "string"
-                    },
-                    "version": {
-                        "deprecated": true,
-                        "example": 1,
-                        "format": "uint16",
-                        "minimum": 1,
-                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -908,7 +876,7 @@
                         "example": false,
                         "type": "boolean"
                     },
-                    "filterTypes": {
+                    "eventTypes": {
                         "example": [
                             "user.signup",
                             "user.deleted"
@@ -930,14 +898,6 @@
                         },
                         "default": {},
                         "type": "object"
-                    },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 1,
-                        "nullable": true,
-                        "type": "integer"
                     },
                     "throttleRate": {
                         "description": "Maximum messages per second to send to this endpoint.\n\nOutgoing messages will be throttled to this rate.",
@@ -961,15 +921,6 @@
                         "maxLength": 65536,
                         "minLength": 1,
                         "type": "string"
-                    },
-                    "version": {
-                        "default": 1,
-                        "deprecated": true,
-                        "example": 1,
-                        "format": "uint16",
-                        "minimum": 1,
-                        "nullable": true,
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -1834,7 +1785,7 @@
                         "example": false,
                         "type": "boolean"
                     },
-                    "filterTypes": {
+                    "eventTypes": {
                         "example": [
                             "user.signup",
                             "user.deleted"
@@ -1858,14 +1809,6 @@
                         "format": "date-time",
                         "nullable": true,
                         "type": "string"
-                    },
-                    "rateLimit": {
-                        "deprecated": true,
-                        "description": "Deprecated, use `throttleRate` instead.",
-                        "format": "uint16",
-                        "minimum": 0,
-                        "nullable": true,
-                        "type": "integer"
                     },
                     "status": {
                         "$ref": "#/components/schemas/MessageStatus"
@@ -1899,13 +1842,6 @@
                         "maxLength": 65536,
                         "minLength": 1,
                         "type": "string"
-                    },
-                    "version": {
-                        "deprecated": true,
-                        "example": 1,
-                        "format": "uint16",
-                        "minimum": 1,
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -1915,8 +1851,7 @@
                     "status",
                     "statusText",
                     "updatedAt",
-                    "url",
-                    "version"
+                    "url"
                 ],
                 "type": "object"
             },
@@ -3989,7 +3924,7 @@
                                 }
                             }
                         },
-                        "description": ""
+                        "description": "The value of the headers is returned in the `headers` field.\n\nSensitive headers that have been redacted are returned in the sensitive field."
                     },
                     "401": {
                         "content": {
@@ -5412,6 +5347,122 @@
                 ]
             }
         },
+        "/api/v1/app/{app_id}/msg/bulk-expunge": {
+            "post": {
+                "description": "Delete the payloads from the given messages under the current application\n\nUseful in cases when a message was accidentally sent with sensitive content.\nA message can't be replayed or resent once its payload has been deleted\n(or has expired).",
+                "operationId": "v1.message.bulk-expunge-content",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "app_id",
+                        "required": true,
+                        "schema": {
+                            "example": "unique-app-identifier",
+                            "maxLength": 256,
+                            "minLength": 1,
+                            "pattern": "^[a-zA-Z0-9\\-_.]+$",
+                            "type": "string"
+                        },
+                        "style": "simple"
+                    },
+                    {
+                        "description": "The request's idempotency key",
+                        "in": "header",
+                        "name": "idempotency-key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkExpungeContentsIn"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BulkExpungeContentsOut"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpErrorOut"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpErrorOut"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpErrorOut"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpErrorOut"
+                                }
+                            }
+                        },
+                        "description": "Conflict"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpErrorOut"
+                                }
+                            }
+                        },
+                        "description": "Too Many Requests"
+                    }
+                },
+                "summary": "Bulk Expunge Message Content",
+                "tags": [
+                    "Message"
+                ]
+            }
+        },
         "/api/v1/app/{app_id}/msg/{msg_id}": {
             "get": {
                 "description": "Get a message by its ID or eventID.",
@@ -5765,7 +5816,7 @@
         },
         "/api/v1/app/{app_id}/msg/{msg_id}/content": {
             "delete": {
-                "description": "Delete the given message's payload. Useful in cases when a message was accidentally sent with sensitive content.\n\nThe message can't be replayed or resent once its payload has been deleted or expired.",
+                "description": "Delete the given message's payload. Useful in cases when a message was accidentally sent with sensitive content.\n\nThe message can't be replayed or resent once its payload has been deleted (or has expired).",
                 "operationId": "v1.message.expunge-content",
                 "parameters": [
                     {

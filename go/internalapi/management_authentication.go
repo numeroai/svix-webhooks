@@ -4,18 +4,16 @@ package internalapi
 import (
 	"context"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type ManagementAuthentication struct {
 	client *internal.SvixHttpClient
 }
 
-func newManagementAuthentication(client *internal.SvixHttpClient) *ManagementAuthentication {
-	return &ManagementAuthentication{
-		client: client,
-	}
+func newManagementAuthentication(client *internal.SvixHttpClient) ManagementAuthentication {
+	return ManagementAuthentication{client}
 }
 
 type ManagementAuthenticationExpireApiTokenOptions struct {
@@ -27,27 +25,28 @@ type ManagementAuthenticationCreateApiTokenOptions struct {
 }
 
 // Expire the selected API Token.
-func (managementAuthentication *ManagementAuthentication) ExpireApiToken(
+func (managementAuthentication ManagementAuthentication) ExpireApiToken(
 	ctx context.Context,
 	envId string,
 	keyId string,
 	apiTokenExpireIn models.ApiTokenExpireIn,
 	o *ManagementAuthenticationExpireApiTokenOptions,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"env_id": envId,
 		"key_id": keyId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return err
-		}
+	if o == nil {
+		opts := ManagementAuthenticationExpireApiTokenOptions{}
+		o = &opts
 	}
-	_, err := internal.ExecuteRequest[models.ApiTokenExpireIn, any](
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return err
+	}
+	_, err = internal.ExecuteRequest[models.ApiTokenExpireIn, any](
 		ctx,
 		managementAuthentication.client,
 		"POST",
@@ -61,7 +60,7 @@ func (managementAuthentication *ManagementAuthentication) ExpireApiToken(
 }
 
 // Patch an API token
-func (managementAuthentication *ManagementAuthentication) PatchApiToken(
+func (managementAuthentication ManagementAuthentication) PatchApiToken(
 	ctx context.Context,
 	envId string,
 	keyId string,
@@ -84,23 +83,24 @@ func (managementAuthentication *ManagementAuthentication) PatchApiToken(
 }
 
 // Create a new API Token.
-func (managementAuthentication *ManagementAuthentication) CreateApiToken(
+func (managementAuthentication ManagementAuthentication) CreateApiToken(
 	ctx context.Context,
 	envId string,
 	apiTokenIn models.ApiTokenIn,
 	o *ManagementAuthenticationCreateApiTokenOptions,
 ) (*models.ApiTokenOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"env_id": envId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := ManagementAuthenticationCreateApiTokenOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.ApiTokenIn, models.ApiTokenOut](
 		ctx,

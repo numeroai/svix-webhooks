@@ -4,11 +4,11 @@ require "json"
 
 module Svix
   class MessagePrecheckIn
-    attr_accessor :channels
     # The event type's name
     attr_accessor :event_type
+    attr_accessor :channels
 
-    ALL_FIELD ||= ["channels", "event_type"].freeze
+    ALL_FIELD ||= ["event_type", "channels"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -29,22 +29,22 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["channels"] = attributes["channels"]
       attrs["event_type"] = attributes["eventType"]
+      attrs["channels"] = attributes["channels"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["channels"] = Svix::serialize_primitive(@channels) if @channels
-      out["eventType"] = Svix::serialize_primitive(@event_type) if @event_type
+      out["eventType"] = Svix::serialize_primitive(@event_type) unless @event_type.nil?
+      out["channels"] = Svix::serialize_primitive(@channels) unless @channels.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

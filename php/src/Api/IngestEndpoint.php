@@ -12,17 +12,18 @@ use Svix\Models\IngestEndpointIn;
 use Svix\Models\IngestEndpointOut;
 use Svix\Models\IngestEndpointSecretIn;
 use Svix\Models\IngestEndpointSecretOut;
-use Svix\Models\IngestEndpointTransformationOut;
-use Svix\Models\IngestEndpointTransformationPatch;
-use Svix\Models\IngestEndpointUpdate;
+use Svix\Models\IngestEndpointUpsertIn;
 use Svix\Models\ListResponseIngestEndpointOut;
 use Svix\Request\SvixHttpClient;
 
 class IngestEndpoint
 {
+    public IngestEndpointTransformation $transformation;
+
     public function __construct(
         private readonly SvixHttpClient $client,
     ) {
+        $this->transformation = new IngestEndpointTransformation($client);
     }
 
     /**
@@ -32,12 +33,12 @@ class IngestEndpoint
      */
     public function list(
         string $sourceId,
-        ?IngestEndpointListOptions $options = null,
+        IngestEndpointListOptions $options = new IngestEndpointListOptions(),
     ): ListResponseIngestEndpointOut {
         $request = $this->client->newReq('GET', "/ingest/api/v1/source/{$sourceId}/endpoint");
-        $request->setQueryParam('limit', $options?->limit);
-        $request->setQueryParam('iterator', $options?->iterator);
-        $request->setQueryParam('order', $options?->order);
+        $request->setQueryParam('limit', $options->limit);
+        $request->setQueryParam('iterator', $options->iterator);
+        $request->setQueryParam('order', $options->order);
         $res = $this->client->send($request);
 
         return ListResponseIngestEndpointOut::fromJson($res);
@@ -51,10 +52,10 @@ class IngestEndpoint
     public function create(
         string $sourceId,
         IngestEndpointIn $ingestEndpointIn,
-        ?IngestEndpointCreateOptions $options = null,
+        IngestEndpointCreateOptions $options = new IngestEndpointCreateOptions(),
     ): IngestEndpointOut {
         $request = $this->client->newReq('POST', "/ingest/api/v1/source/{$sourceId}/endpoint");
-        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
+        $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
         $request->setBody(json_encode($ingestEndpointIn));
         $res = $this->client->send($request);
 
@@ -81,13 +82,13 @@ class IngestEndpoint
      *
      * @throws ApiException
      */
-    public function update(
+    public function upsert(
         string $sourceId,
         string $endpointId,
-        IngestEndpointUpdate $ingestEndpointUpdate,
+        IngestEndpointUpsertIn $ingestEndpointUpsertIn,
     ): IngestEndpointOut {
         $request = $this->client->newReq('PUT', "/ingest/api/v1/source/{$sourceId}/endpoint/{$endpointId}");
-        $request->setBody(json_encode($ingestEndpointUpdate));
+        $request->setBody(json_encode($ingestEndpointUpsertIn));
         $res = $this->client->send($request);
 
         return IngestEndpointOut::fromJson($res);
@@ -127,7 +128,7 @@ class IngestEndpoint
     /**
      * Rotates an ingest endpoint's signing secret.
      *
-     * The previous secret will remain valid for the next 24 hours.
+     * The previous secret will remain valid for the specified grace period (default 24 hours).
      *
      * @throws ApiException
      */
@@ -135,10 +136,10 @@ class IngestEndpoint
         string $sourceId,
         string $endpointId,
         IngestEndpointSecretIn $ingestEndpointSecretIn,
-        ?IngestEndpointRotateSecretOptions $options = null,
+        IngestEndpointRotateSecretOptions $options = new IngestEndpointRotateSecretOptions(),
     ): void {
         $request = $this->client->newReq('POST', "/ingest/api/v1/source/{$sourceId}/endpoint/{$endpointId}/secret/rotate");
-        $request->setHeaderParam('idempotency-key', $options?->idempotencyKey);
+        $request->setHeaderParam('idempotency-key', $options->idempotencyKey);
         $request->setBody(json_encode($ingestEndpointSecretIn));
         $res = $this->client->sendNoResponseBody($request);
     }
@@ -163,43 +164,13 @@ class IngestEndpoint
      *
      * @throws ApiException
      */
-    public function updateHeaders(
+    public function setHeaders(
         string $sourceId,
         string $endpointId,
         IngestEndpointHeadersIn $ingestEndpointHeadersIn,
     ): void {
         $request = $this->client->newReq('PUT', "/ingest/api/v1/source/{$sourceId}/endpoint/{$endpointId}/headers");
         $request->setBody(json_encode($ingestEndpointHeadersIn));
-        $res = $this->client->sendNoResponseBody($request);
-    }
-
-    /**
-     * Get the transformation code associated with this ingest endpoint.
-     *
-     * @throws ApiException
-     */
-    public function getTransformation(
-        string $sourceId,
-        string $endpointId,
-    ): IngestEndpointTransformationOut {
-        $request = $this->client->newReq('GET', "/ingest/api/v1/source/{$sourceId}/endpoint/{$endpointId}/transformation");
-        $res = $this->client->send($request);
-
-        return IngestEndpointTransformationOut::fromJson($res);
-    }
-
-    /**
-     * Set or unset the transformation code associated with this ingest endpoint.
-     *
-     * @throws ApiException
-     */
-    public function setTransformation(
-        string $sourceId,
-        string $endpointId,
-        IngestEndpointTransformationPatch $ingestEndpointTransformationPatch,
-    ): void {
-        $request = $this->client->newReq('PATCH', "/ingest/api/v1/source/{$sourceId}/endpoint/{$endpointId}/transformation");
-        $request->setBody(json_encode($ingestEndpointTransformationPatch));
         $res = $this->client->sendNoResponseBody($request);
     }
 }

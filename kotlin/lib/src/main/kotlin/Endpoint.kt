@@ -2,6 +2,7 @@
 package com.svix.kotlin
 
 import com.svix.kotlin.models.BulkReplayIn
+import com.svix.kotlin.models.EndpointAttemptStats
 import com.svix.kotlin.models.EndpointHeadersIn
 import com.svix.kotlin.models.EndpointHeadersOut
 import com.svix.kotlin.models.EndpointHeadersPatchIn
@@ -12,9 +13,7 @@ import com.svix.kotlin.models.EndpointSecretOut
 import com.svix.kotlin.models.EndpointSecretRotateIn
 import com.svix.kotlin.models.EndpointStats
 import com.svix.kotlin.models.EndpointTransformationIn
-import com.svix.kotlin.models.EndpointTransformationOut
-import com.svix.kotlin.models.EndpointTransformationPatch
-import com.svix.kotlin.models.EndpointUpdate
+import com.svix.kotlin.models.EndpointUpsertIn
 import com.svix.kotlin.models.EventExampleIn
 import com.svix.kotlin.models.ListResponseEndpointOut
 import com.svix.kotlin.models.MessageOut
@@ -23,7 +22,7 @@ import com.svix.kotlin.models.RecoverIn
 import com.svix.kotlin.models.RecoverOut
 import com.svix.kotlin.models.ReplayIn
 import com.svix.kotlin.models.ReplayOut
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import okhttp3.Headers
 
 data class EndpointListOptions(
@@ -50,11 +49,20 @@ data class EndpointGetStatsOptions(
     val until: Instant? = null,
 )
 
+data class EndpointGetAttemptStatsOptions(
+    /** Filter the range to data starting from this date. */
+    val since: Instant? = null,
+    /** Filter the range to data ending by this date. */
+    val until: Instant? = null,
+)
+
 data class EndpointRecoverOptions(val idempotencyKey: String? = null)
 
 data class EndpointSendExampleOptions(val idempotencyKey: String? = null)
 
 class Endpoint(private val client: SvixHttpClient) {
+    val transformation: EndpointTransformation = EndpointTransformation(client)
+
     /** List the application's endpoints. */
     suspend fun list(
         appId: String,
@@ -96,17 +104,17 @@ class Endpoint(private val client: SvixHttpClient) {
     }
 
     /** Create or update an endpoint. */
-    suspend fun update(
+    suspend fun upsert(
         appId: String,
         endpointId: String,
-        endpointUpdate: EndpointUpdate,
+        endpointUpsertIn: EndpointUpsertIn,
     ): EndpointOut {
         val url = client.newUrlBuilder().encodedPath("/api/v1/app/$appId/endpoint/$endpointId")
 
-        return client.executeRequest<EndpointUpdate, EndpointOut>(
+        return client.executeRequest<EndpointUpsertIn, EndpointOut>(
             "PUT",
             url.build(),
-            reqBody = endpointUpdate,
+            reqBody = endpointUpsertIn,
         )
     }
 
@@ -146,14 +154,14 @@ class Endpoint(private val client: SvixHttpClient) {
     /**
      * Rotates the endpoint's signing secret.
      *
-     * The previous secret will remain valid for the next 24 hours.
+     * The previous secret will remain valid for the specified grace period (default 24 hours).
      */
     suspend fun rotateSecret(
         appId: String,
         endpointId: String,
         endpointSecretRotateIn: EndpointSecretRotateIn,
         options: EndpointRotateSecretOptions = EndpointRotateSecretOptions(),
-    ) {
+    ): EndpointSecretOut {
         val url =
             client
                 .newUrlBuilder()
@@ -161,7 +169,7 @@ class Endpoint(private val client: SvixHttpClient) {
         val headers = Headers.Builder()
         options.idempotencyKey?.let { headers.add("idempotency-key", it) }
 
-        client.executeRequest<EndpointSecretRotateIn, Boolean>(
+        return client.executeRequest<EndpointSecretRotateIn, EndpointSecretOut>(
             "POST",
             url.build(),
             headers = headers.build(),
@@ -177,7 +185,7 @@ class Endpoint(private val client: SvixHttpClient) {
     }
 
     /** Set the additional headers to be sent with the webhook. */
-    suspend fun updateHeaders(
+    suspend fun setHeaders(
         appId: String,
         endpointId: String,
         endpointHeadersIn: EndpointHeadersIn,
@@ -205,33 +213,6 @@ class Endpoint(private val client: SvixHttpClient) {
             "PATCH",
             url.build(),
             reqBody = endpointHeadersPatchIn,
-        )
-    }
-
-    /** Get the transformation code associated with this endpoint. */
-    suspend fun transformationGet(appId: String, endpointId: String): EndpointTransformationOut {
-        val url =
-            client
-                .newUrlBuilder()
-                .encodedPath("/api/v1/app/$appId/endpoint/$endpointId/transformation")
-        return client.executeRequest<Any, EndpointTransformationOut>("GET", url.build())
-    }
-
-    /** Set or unset the transformation code associated with this endpoint. */
-    suspend fun patchTransformation(
-        appId: String,
-        endpointId: String,
-        endpointTransformationPatch: EndpointTransformationPatch,
-    ) {
-        val url =
-            client
-                .newUrlBuilder()
-                .encodedPath("/api/v1/app/$appId/endpoint/$endpointId/transformation")
-
-        client.executeRequest<EndpointTransformationPatch, Boolean>(
-            "PATCH",
-            url.build(),
-            reqBody = endpointTransformationPatch,
         )
     }
 
@@ -324,6 +305,25 @@ class Endpoint(private val client: SvixHttpClient) {
         options.since?.let { url.addQueryParameter("since", serializeQueryParam(it)) }
         options.until?.let { url.addQueryParameter("until", serializeQueryParam(it)) }
         return client.executeRequest<Any, EndpointStats>("GET", url.build())
+    }
+
+    /**
+     * Get basic statistics about attempted deliveries for the endpoint.
+     *
+     * Time windows are always rounded to hour granularity
+     */
+    suspend fun getAttemptStats(
+        appId: String,
+        endpointId: String,
+        options: EndpointGetAttemptStatsOptions = EndpointGetAttemptStatsOptions(),
+    ): EndpointAttemptStats {
+        val url =
+            client
+                .newUrlBuilder()
+                .encodedPath("/api/v1/app/$appId/endpoint/$endpointId/attempt-stats")
+        options.since?.let { url.addQueryParameter("since", serializeQueryParam(it)) }
+        options.until?.let { url.addQueryParameter("until", serializeQueryParam(it)) }
+        return client.executeRequest<Any, EndpointAttemptStats>("GET", url.build())
     }
 
     /**

@@ -261,7 +261,7 @@ SVIX_QUEUE_TYPE = "redis"
 
 ### OpenTelemetry
 
-You may send tracing information to the OpenTelemetry Collector which allows forwarding trace events to a number of external applications/services such as DataDog, Jaeger, NewRelic, Prometheus, Sentry, Signoz, and Zipkin.
+You may send traces, metrics, and logs to the OpenTelemetry Collector which allows forwarding this data to a number of external applications/services such as DataDog, Jaeger, NewRelic, Prometheus, Sentry, Signoz, and Zipkin.
 
 You can see more in [these instructions](./OpenTelemetry.md).
 
@@ -360,8 +360,8 @@ curl -X 'POST' \
   -d '{
         "url": "https://operational-webhook-destination.com/webhook/",
         "filterTypes": [
-          “endpoint.updated”,
-          “endpoint.deleted”
+          "endpoint.updated",
+          "endpoint.deleted"
         ],
     }'
 ```

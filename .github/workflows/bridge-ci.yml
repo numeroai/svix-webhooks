@@ -16,10 +16,12 @@ jobs:
     name: Check formatting
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
+          toolchain: nightly
           components: rustfmt
 
       - name: rustfmt
@@ -33,7 +35,7 @@ jobs:
         name: Checkout
 
       - name: Install cargo sort
-        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-sort
 
@@ -44,27 +46,39 @@ jobs:
     name: Check for unused dependencies
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: taiki-e/install-action@cargo-machete
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-machete
 
       - run: cargo machete
+
+  hadolint:
+    name: Bridge Hadolint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: bridge/Dockerfile
 
   test-versions:
     name: Webhook Bridge CI
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        rust: ["1.91.1", stable, beta]
+        rust: ["1.95", stable, beta]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@master
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: "bridge -> target"
           # only save the cache on the main branch
@@ -73,7 +87,9 @@ jobs:
           # include relevant information in the cache name
           prefix-key: "bridge-${{ matrix.rust }}"
 
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: nextest
 
       - name: Clippy
         run: cargo clippy --locked --all-targets --all-features -- -D warnings
@@ -88,6 +104,15 @@ jobs:
             libssl-dev=* \
             pkg-config=1.8.* \
             zlib1g-dev=1:*
+
+      - name: Build (no features)
+        run: cargo check --no-default-features
+
+      - name: Build (all features)
+        run: cargo check --all-features
+
+      - name: Build (default features)
+        run: cargo check
 
       - name: Start required services
         run: docker compose -f "testing-docker-compose.yml" up -d

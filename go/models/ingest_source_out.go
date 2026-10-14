@@ -17,6 +17,7 @@ import (
 //   - "easypost": Use EasypostConfigOut
 //   - "github": Use GithubConfigOut
 //   - "hubspot": Use HubspotConfigOut
+//   - "merge": Use MergeConfigOut
 //   - "meta": Use MetaConfigOut
 //   - "nango": Use NangoConfigOut
 //   - "openclaw": Use OpenClawConfigOut
@@ -36,13 +37,13 @@ import (
 //   - "vgs": Use VgsConfigOut
 //   - "zoom": Use ZoomConfigOut
 type IngestSourceOut struct {
-	CreatedAt time.Time             `json:"createdAt"`
-	Id        string                `json:"id"` // The Source's ID.
-	IngestUrl *string               `json:"ingestUrl,omitempty"`
-	Metadata  map[string]string     `json:"metadata"`
-	Name      string                `json:"name"`
+	Id        string                `json:"id"`            // The Source's ID.
 	Uid       *string               `json:"uid,omitempty"` // The Source's UID.
+	Name      string                `json:"name"`
+	IngestUrl *string               `json:"ingestUrl,omitempty"`
+	CreatedAt time.Time             `json:"createdAt"`
 	UpdatedAt time.Time             `json:"updatedAt"`
+	Metadata  map[string]string     `json:"metadata"`
 	Type      IngestSourceOutType   `json:"type"`
 	Config    IngestSourceOutConfig `json:"config"`
 }
@@ -64,6 +65,7 @@ const (
 	IngestSourceOutTypeHubspot        IngestSourceOutType = "hubspot"
 	IngestSourceOutTypeIncidentIo     IngestSourceOutType = "incident-io"
 	IngestSourceOutTypeLithic         IngestSourceOutType = "lithic"
+	IngestSourceOutTypeMerge          IngestSourceOutType = "merge"
 	IngestSourceOutTypeMeta           IngestSourceOutType = "meta"
 	IngestSourceOutTypeNango          IngestSourceOutType = "nango"
 	IngestSourceOutTypeNash           IngestSourceOutType = "nash"
@@ -108,6 +110,7 @@ func (DocusignConfigOut) isIngestSourceOutConfig()  {}
 func (EasypostConfigOut) isIngestSourceOutConfig()  {}
 func (GithubConfigOut) isIngestSourceOutConfig()    {}
 func (HubspotConfigOut) isIngestSourceOutConfig()   {}
+func (MergeConfigOut) isIngestSourceOutConfig()     {}
 func (MetaConfigOut) isIngestSourceOutConfig()      {}
 func (NangoConfigOut) isIngestSourceOutConfig()     {}
 func (OpenClawConfigOut) isIngestSourceOutConfig()  {}
@@ -171,6 +174,10 @@ func (i *IngestSourceOut) UnmarshalJSON(data []byte) error {
 		i.Config = c
 	case "hubspot":
 		var c HubspotConfigOut
+		err = json.Unmarshal(aux.Config, &c)
+		i.Config = c
+	case "merge":
+		var c MergeConfigOut
 		err = json.Unmarshal(aux.Config, &c)
 		i.Config = c
 	case "meta":
@@ -279,6 +286,7 @@ var IngestSourceOutTypeFromString = map[string]IngestSourceOutType{
 	"hubspot":         IngestSourceOutTypeHubspot,
 	"incident-io":     IngestSourceOutTypeIncidentIo,
 	"lithic":          IngestSourceOutTypeLithic,
+	"merge":           IngestSourceOutTypeMerge,
 	"meta":            IngestSourceOutTypeMeta,
 	"nango":           IngestSourceOutTypeNango,
 	"nash":            IngestSourceOutTypeNash,

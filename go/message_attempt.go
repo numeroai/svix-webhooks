@@ -5,18 +5,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type MessageAttempt struct {
 	client *internal.SvixHttpClient
 }
 
-func newMessageAttempt(client *internal.SvixHttpClient) *MessageAttempt {
-	return &MessageAttempt{
-		client: client,
-	}
+func newMessageAttempt(client *internal.SvixHttpClient) MessageAttempt {
+	return MessageAttempt{client}
 }
 
 type MessageAttemptListByEndpointOptions struct {
@@ -38,7 +36,10 @@ type MessageAttemptListByEndpointOptions struct {
 	Before *time.Time
 	// Only include items created after a certain date
 	After *time.Time
-	// When `true` attempt content is included in the response
+	// When `true` attempt content is included in the response.
+	//
+	// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+	// without specifying this parameter.
 	WithContent *bool
 	// When `true`, the message information is included in the response
 	//
@@ -73,7 +74,10 @@ type MessageAttemptListByMsgOptions struct {
 	Before *time.Time
 	// Only include items created after a certain date
 	After *time.Time
-	// When `true` attempt content is included in the response
+	// When `true` attempt content is included in the response.
+	//
+	// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+	// without specifying this parameter.
 	WithContent *bool
 	// When `true`, return the Canceled (4) status in attempts.
 	//
@@ -99,7 +103,10 @@ type MessageAttemptListAttemptedMessagesOptions struct {
 	Before *time.Time
 	// Only include items created after a certain date
 	After *time.Time
-	// When `true` message payloads are included in the response
+	// When `true` message payloads are included in the response.
+	//
+	// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+	// without specifying this parameter.
 	WithContent *bool
 	// When `true`, return the Canceled (4) status in attempts.
 	//
@@ -133,35 +140,36 @@ type MessageAttemptResendOptions struct {
 // relative to now or, if an iterator is provided, 90 days before/after the time indicated
 // by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
 // set the `before` or `after` parameter as appropriate.
-func (messageAttempt *MessageAttempt) ListByEndpoint(
+func (messageAttempt MessageAttempt) ListByEndpoint(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	o *MessageAttemptListByEndpointOptions,
 ) (*models.ListResponseMessageAttemptOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("status", o.Status, queryMap, &err)
-		internal.SerializeParamToMap("status_code_class", o.StatusCodeClass, queryMap, &err)
-		internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
-		internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
-		internal.SerializeParamToMap("before", o.Before, queryMap, &err)
-		internal.SerializeParamToMap("after", o.After, queryMap, &err)
-		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
-		internal.SerializeParamToMap("with_msg", o.WithMsg, queryMap, &err)
-		internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
-		internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageAttemptListByEndpointOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("status", o.Status, queryMap, &err)
+	internal.SerializeParamToMap("status_code_class", o.StatusCodeClass, queryMap, &err)
+	internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
+	internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
+	internal.SerializeParamToMap("before", o.Before, queryMap, &err)
+	internal.SerializeParamToMap("after", o.After, queryMap, &err)
+	internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
+	internal.SerializeParamToMap("with_msg", o.WithMsg, queryMap, &err)
+	internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
+	internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseMessageAttemptOut](
 		ctx,
@@ -181,35 +189,36 @@ func (messageAttempt *MessageAttempt) ListByEndpoint(
 // relative to now or, if an iterator is provided, 90 days before/after the time indicated
 // by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
 // set the `before` or `after` parameter as appropriate.
-func (messageAttempt *MessageAttempt) ListByMsg(
+func (messageAttempt MessageAttempt) ListByMsg(
 	ctx context.Context,
 	appId string,
 	msgId string,
 	o *MessageAttemptListByMsgOptions,
 ) (*models.ListResponseMessageAttemptOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 		"msg_id": msgId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("status", o.Status, queryMap, &err)
-		internal.SerializeParamToMap("status_code_class", o.StatusCodeClass, queryMap, &err)
-		internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
-		internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
-		internal.SerializeParamToMap("endpoint_id", o.EndpointId, queryMap, &err)
-		internal.SerializeParamToMap("before", o.Before, queryMap, &err)
-		internal.SerializeParamToMap("after", o.After, queryMap, &err)
-		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
-		internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
-		internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageAttemptListByMsgOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("status", o.Status, queryMap, &err)
+	internal.SerializeParamToMap("status_code_class", o.StatusCodeClass, queryMap, &err)
+	internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
+	internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
+	internal.SerializeParamToMap("endpoint_id", o.EndpointId, queryMap, &err)
+	internal.SerializeParamToMap("before", o.Before, queryMap, &err)
+	internal.SerializeParamToMap("after", o.After, queryMap, &err)
+	internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
+	internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
+	internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseMessageAttemptOut](
 		ctx,
@@ -232,33 +241,34 @@ func (messageAttempt *MessageAttempt) ListByMsg(
 // relative to now or, if an iterator is provided, 90 days before/after the time indicated
 // by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
 // set the `before` or `after` parameter as appropriate.
-func (messageAttempt *MessageAttempt) ListAttemptedMessages(
+func (messageAttempt MessageAttempt) ListAttemptedMessages(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	o *MessageAttemptListAttemptedMessagesOptions,
 ) (*models.ListResponseEndpointMessageOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
-		internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
-		internal.SerializeParamToMap("status", o.Status, queryMap, &err)
-		internal.SerializeParamToMap("before", o.Before, queryMap, &err)
-		internal.SerializeParamToMap("after", o.After, queryMap, &err)
-		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
-		internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
-		internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageAttemptListAttemptedMessagesOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
+	internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
+	internal.SerializeParamToMap("status", o.Status, queryMap, &err)
+	internal.SerializeParamToMap("before", o.Before, queryMap, &err)
+	internal.SerializeParamToMap("after", o.After, queryMap, &err)
+	internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
+	internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
+	internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseEndpointMessageOut](
 		ctx,
@@ -276,25 +286,26 @@ func (messageAttempt *MessageAttempt) ListAttemptedMessages(
 //
 // Additionally includes metadata about the latest message attempt.
 // By default, endpoints are listed in ascending order by ID.
-func (messageAttempt *MessageAttempt) ListAttemptedDestinations(
+func (messageAttempt MessageAttempt) ListAttemptedDestinations(
 	ctx context.Context,
 	appId string,
 	msgId string,
 	o *MessageAttemptListAttemptedDestinationsOptions,
 ) (*models.ListResponseMessageEndpointOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 		"msg_id": msgId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageAttemptListAttemptedDestinationsOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseMessageEndpointOut](
 		ctx,
@@ -309,26 +320,27 @@ func (messageAttempt *MessageAttempt) ListAttemptedDestinations(
 }
 
 // `msg_id`: Use a message id or a message `eventId`
-func (messageAttempt *MessageAttempt) Get(
+func (messageAttempt MessageAttempt) Get(
 	ctx context.Context,
 	appId string,
 	msgId string,
 	attemptId string,
 	o *MessageAttemptGetOptions,
 ) (*models.MessageAttemptOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":     appId,
 		"msg_id":     msgId,
 		"attempt_id": attemptId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageAttemptGetOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("expanded_statuses", o.ExpandedStatuses, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.MessageAttemptOut](
 		ctx,
@@ -346,18 +358,19 @@ func (messageAttempt *MessageAttempt) Get(
 //
 // Useful when an endpoint accidentally returned sensitive content.
 // The message can't be replayed or resent once its payload has been deleted or expired.
-func (messageAttempt *MessageAttempt) ExpungeContent(
+func (messageAttempt MessageAttempt) ExpungeContent(
 	ctx context.Context,
 	appId string,
 	msgId string,
 	attemptId string,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id":     appId,
 		"msg_id":     msgId,
 		"attempt_id": attemptId,
 	}
-	_, err := internal.ExecuteRequest[any, any](
+	_, err = internal.ExecuteRequest[any, any](
 		ctx,
 		messageAttempt.client,
 		"DELETE",
@@ -371,26 +384,27 @@ func (messageAttempt *MessageAttempt) ExpungeContent(
 }
 
 // Resend a message to the specified endpoint.
-func (messageAttempt *MessageAttempt) Resend(
+func (messageAttempt MessageAttempt) Resend(
 	ctx context.Context,
 	appId string,
 	msgId string,
 	endpointId string,
 	o *MessageAttemptResendOptions,
 ) (*models.EmptyResponse, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"msg_id":      msgId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageAttemptResendOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.EmptyResponse](
 		ctx,

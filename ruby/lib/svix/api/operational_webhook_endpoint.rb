@@ -44,11 +44,11 @@ module Svix
       OperationalWebhookEndpointOut.deserialize(res)
     end
 
-    def update(endpoint_id, operational_webhook_endpoint_update)
+    def upsert(endpoint_id, operational_webhook_endpoint_upsert_in)
       res = @client.execute_request(
         "PUT",
         "/api/v1/operational-webhook/endpoint/#{endpoint_id}",
-        body: operational_webhook_endpoint_update
+        body: operational_webhook_endpoint_upsert_in
       )
       OperationalWebhookEndpointOut.deserialize(res)
     end
@@ -88,7 +88,7 @@ module Svix
       OperationalWebhookEndpointHeadersOut.deserialize(res)
     end
 
-    def update_headers(endpoint_id, operational_webhook_endpoint_headers_in)
+    def set_headers(endpoint_id, operational_webhook_endpoint_headers_in)
       @client.execute_request(
         "PUT",
         "/api/v1/operational-webhook/endpoint/#{endpoint_id}/headers",

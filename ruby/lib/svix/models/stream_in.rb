@@ -4,13 +4,13 @@ require "json"
 
 module Svix
   class StreamIn
-    attr_accessor :metadata
     # The stream's name.
     attr_accessor :name
     # An optional unique identifier for the stream.
     attr_accessor :uid
+    attr_accessor :metadata
 
-    ALL_FIELD ||= ["metadata", "name", "uid"].freeze
+    ALL_FIELD ||= ["name", "uid", "metadata"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -31,24 +31,24 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["metadata"] = attributes["metadata"]
       attrs["name"] = attributes["name"]
       attrs["uid"] = attributes["uid"]
+      attrs["metadata"] = attributes["metadata"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["metadata"] = Svix::serialize_primitive(@metadata) if @metadata
-      out["name"] = Svix::serialize_primitive(@name) if @name
-      out["uid"] = Svix::serialize_primitive(@uid) if @uid
+      out["name"] = Svix::serialize_primitive(@name) unless @name.nil?
+      out["uid"] = Svix::serialize_primitive(@uid) unless @uid.nil?
+      out["metadata"] = Svix::serialize_primitive(@metadata) unless @metadata.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

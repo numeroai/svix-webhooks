@@ -57,36 +57,51 @@ RUN <<EOF
 EOF
 
 COPY bridge /app/bridge
+
+ARG WRITE_EXECUTABLE_METADATA="1"
+
 # touching the lib.rs/main.rs ensures cargo rebuilds them instead of considering them already built.
-RUN touch */src/lib.rs && touch */src/main.rs
+RUN touch ./*/src/lib.rs && touch ./*/src/main.rs
 RUN cargo build --release --frozen
 
 # Production
-FROM docker.io/debian:trixie-20260623-slim AS prod
+FROM docker.io/debian:trixie-20260918-slim AS prod
 
 SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 RUN <<EOF
     mkdir -p /app
-    useradd appuser
+    groupadd -g 1001 appgroup
+    useradd -u 1001 -g appgroup appuser
     chown -R appuser: /app
     mkdir -p /home/appuser
     chown -R appuser: /home/appuser
 EOF
 
+ARG __BUST_DOCKER_BUILD_CACHE=2026-10-01
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked --mount=target=/var/cache/apt,type=cache,sharing=locked <<EOF
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -q
+    apt-get upgrade -y
     apt-get install --no-install-recommends -y ca-certificates=20250419
     update-ca-certificates
 EOF
 
-USER appuser
+USER 1001
 
 COPY --from=build /app/bridge/target/release/svix-bridge /usr/local/bin/svix-bridge
 COPY bridge/scripts/check-deps.sh /usr/local/bin/check-deps.sh
 
 # Verify all the dynamic libs we depend on are present in the runtime stage
 RUN /usr/local/bin/check-deps.sh /usr/local/bin/svix-bridge
+
+LABEL org.opencontainers.image.authors="support@svix.com" \
+      org.opencontainers.image.url="https://www.svix.com" \
+      org.opencontainers.image.documentation="https://docs.svix.com" \
+      org.opencontainers.image.description="The Svix webhooks service, Bridge component (OSS build)" \
+      org.opencontainers.image.title="svix-webhooks, bridge, oss" \
+      org.opencontainers.image.vendor="Svix" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.base.name="docker.io/debian:trixie"
 
 EXPOSE 5000
 

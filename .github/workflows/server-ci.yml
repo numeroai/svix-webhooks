@@ -14,12 +14,13 @@ defaults:
 jobs:
   check-fmt:
     name: Check formatting
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
+          toolchain: nightly
           components: rustfmt
 
       - name: rustfmt
@@ -27,11 +28,11 @@ jobs:
 
   check-unused-deps:
     name: Check for unused dependencies
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-machete
 
@@ -39,13 +40,13 @@ jobs:
 
   cargo-sort:
     name: 'Run cargo-sort'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         name: Checkout
 
       - name: Install cargo sort
-        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-sort
 
@@ -54,20 +55,20 @@ jobs:
 
   test-versions:
     name: Server CI
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
-        # bump this when bumping the MSRV
+        # keep this in sync with server/Cargo.toml
         rust: ["1.88.0", stable, beta]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: "server -> target"
           # only save the cache on the main branch
@@ -76,7 +77,17 @@ jobs:
           # include relevant information in the cache name
           prefix-key: "server-${{ matrix.rust }}"
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install nextest
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: nextest
+
+      - name: Update lockfile
+        # If it's the MSRV job, rather than stable or beta
+        if: ${{ startsWith(matrix.rust, '1.') }}
+        run: cargo update
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
 
       - name: Build
         run: cargo test --all-features --no-run --locked

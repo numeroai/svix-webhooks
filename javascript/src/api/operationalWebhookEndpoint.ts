@@ -29,9 +29,9 @@ import {
   OperationalWebhookEndpointSecretOutSerializer,
 } from "../models/operationalWebhookEndpointSecretOut";
 import {
-  type OperationalWebhookEndpointUpdate,
-  OperationalWebhookEndpointUpdateSerializer,
-} from "../models/operationalWebhookEndpointUpdate";
+  type OperationalWebhookEndpointUpsertIn,
+  OperationalWebhookEndpointUpsertInSerializer,
+} from "../models/operationalWebhookEndpointUpsertIn";
 import type { Ordering } from "../models/ordering";
 import { HttpMethod, SvixRequest, type SvixRequestContext } from "../request";
 
@@ -113,9 +113,9 @@ export class OperationalWebhookEndpoint {
   }
 
   /** Create or update an operational webhook endpoint. */
-  public async update(
+  public async upsert(
     endpointId: string,
-    operationalWebhookEndpointUpdate: OperationalWebhookEndpointUpdate
+    operationalWebhookEndpointUpsertIn: OperationalWebhookEndpointUpsertIn
   ): Promise<OperationalWebhookEndpointOut> {
     const request = new SvixRequest(
       HttpMethod.PUT,
@@ -124,8 +124,8 @@ export class OperationalWebhookEndpoint {
 
     request.setPathParam("endpoint_id", endpointId);
     request.setBody(
-      OperationalWebhookEndpointUpdateSerializer._toJsonObject(
-        operationalWebhookEndpointUpdate
+      OperationalWebhookEndpointUpsertInSerializer._toJsonObject(
+        operationalWebhookEndpointUpsertIn
       )
     );
 
@@ -172,7 +172,7 @@ export class OperationalWebhookEndpoint {
   /**
    * Rotates an operational webhook endpoint's signing secret.
    *
-   * The previous secret will remain valid for the next 24 hours.
+   * The previous secret will remain valid for the specified grace period (default 24 hours).
    */
   public async rotateSecret(
     endpointId: string,
@@ -213,7 +213,7 @@ export class OperationalWebhookEndpoint {
   }
 
   /** Set the additional headers to be sent with the operational webhook. */
-  public async updateHeaders(
+  public async setHeaders(
     endpointId: string,
     operationalWebhookEndpointHeadersIn: OperationalWebhookEndpointHeadersIn
   ): Promise<void> {

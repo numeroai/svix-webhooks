@@ -56,7 +56,7 @@ impl<'a> Authentication<'a> {
         let AuthenticationAppPortalAccessOptions { idempotency_key } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/auth/app-portal-access/{app_id}",
         )
         .with_path_param("app_id", app_id)
@@ -68,7 +68,7 @@ impl<'a> Authentication<'a> {
 
     /// Return information about the account associated with the current token
     pub async fn whoami(&self) -> Result<WhoamiOut> {
-        crate::request::Request::new(http1::Method::GET, "/api/v1/auth/whoami")
+        crate::request::Request::new(http::Method::GET, "/api/v1/auth/whoami")
             .execute(self.cfg)
             .await
     }
@@ -79,7 +79,7 @@ impl<'a> Authentication<'a> {
     pub async fn logout(&self, options: Option<AuthenticationLogoutOptions>) -> Result<()> {
         let AuthenticationLogoutOptions { idempotency_key } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::POST, "/api/v1/auth/logout")
+        crate::request::Request::new(http::Method::POST, "/api/v1/auth/logout")
             .with_optional_header_param("idempotency-key", idempotency_key)
             .returns_nothing()
             .execute(self.cfg)
@@ -95,33 +95,13 @@ impl<'a> Authentication<'a> {
     ) -> Result<()> {
         let AuthenticationExpireAllOptions { idempotency_key } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::POST, "/api/v1/auth/app/{app_id}/expire-all")
+        crate::request::Request::new(http::Method::POST, "/api/v1/auth/app/{app_id}/expire-all")
             .with_path_param("app_id", app_id)
             .with_optional_header_param("idempotency-key", idempotency_key)
             .with_body_param(application_token_expire_in)
             .returns_nothing()
             .execute(self.cfg)
             .await
-    }
-
-    #[deprecated = "Please use app_portal_access instead."]
-    #[allow(deprecated)]
-    pub async fn dashboard_access(
-        &self,
-        app_id: String,
-        options: Option<super::AuthenticationDashboardAccessOptions>,
-    ) -> Result<DashboardAccessOut> {
-        let super::AuthenticationDashboardAccessOptions { idempotency_key } =
-            options.unwrap_or_default();
-
-        crate::request::Request::new(
-            http1::Method::POST,
-            "/api/v1/auth/dashboard-access/{app_id}",
-        )
-        .with_path_param("app_id", app_id)
-        .with_optional_header_param("idempotency-key", idempotency_key)
-        .execute(self.cfg)
-        .await
     }
 
     /// Use this function to get magic links (and authentication codes) for
@@ -136,7 +116,7 @@ impl<'a> Authentication<'a> {
             options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/auth/stream-portal-access/{stream_id}",
         )
         .with_path_param("stream_id", stream_id)
@@ -155,7 +135,7 @@ impl<'a> Authentication<'a> {
     ) -> Result<()> {
         let AuthenticationStreamLogoutOptions { idempotency_key } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::POST, "/api/v1/auth/stream-logout")
+        crate::request::Request::new(http::Method::POST, "/api/v1/auth/stream-logout")
             .with_optional_header_param("idempotency-key", idempotency_key)
             .returns_nothing()
             .execute(self.cfg)
@@ -172,7 +152,7 @@ impl<'a> Authentication<'a> {
         let AuthenticationStreamExpireAllOptions { idempotency_key } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/auth/stream/{stream_id}/expire-all",
         )
         .with_path_param("stream_id", stream_id)
@@ -195,7 +175,7 @@ impl<'a> Authentication<'a> {
             options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/auth/stream/{stream_id}/sink/{sink_id}/poller/token/rotate",
         )
         .with_path_param("stream_id", stream_id)
@@ -213,7 +193,7 @@ impl<'a> Authentication<'a> {
         sink_id: String,
     ) -> Result<ApiTokenOut> {
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/auth/stream/{stream_id}/sink/{sink_id}/poller/token",
         )
         .with_path_param("stream_id", stream_id)

@@ -4,10 +4,10 @@ require "json"
 
 module Svix
   class AppPortalAccessOut
-    attr_accessor :token
     attr_accessor :url
+    attr_accessor :token
 
-    ALL_FIELD ||= ["token", "url"].freeze
+    ALL_FIELD ||= ["url", "token"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -28,22 +28,22 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["token"] = attributes["token"]
       attrs["url"] = attributes["url"]
+      attrs["token"] = attributes["token"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["token"] = Svix::serialize_primitive(@token) if @token
-      out["url"] = Svix::serialize_primitive(@url) if @url
+      out["url"] = Svix::serialize_primitive(@url) unless @url.nil?
+      out["token"] = Svix::serialize_primitive(@token) unless @token.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

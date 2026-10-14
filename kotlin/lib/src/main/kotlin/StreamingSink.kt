@@ -1,12 +1,11 @@
 // this file is @generated
 package com.svix.kotlin
 
-import com.svix.kotlin.models.EmptyResponse
 import com.svix.kotlin.models.EndpointSecretRotateIn
 import com.svix.kotlin.models.ListResponseStreamSinkOut
 import com.svix.kotlin.models.Ordering
 import com.svix.kotlin.models.SinkSecretOut
-import com.svix.kotlin.models.SinkTransformIn
+import com.svix.kotlin.models.SinkSecretRotateOut
 import com.svix.kotlin.models.StreamSinkIn
 import com.svix.kotlin.models.StreamSinkOut
 import com.svix.kotlin.models.StreamSinkPatch
@@ -26,6 +25,8 @@ data class StreamingSinkCreateOptions(val idempotencyKey: String? = null)
 data class StreamingSinkRotateSecretOptions(val idempotencyKey: String? = null)
 
 class StreamingSink(private val client: SvixHttpClient) {
+    val transformation: StreamingSinkTransformation = StreamingSinkTransformation(client)
+
     /** List of all the stream's sinks. */
     suspend fun list(
         streamId: String,
@@ -63,7 +64,7 @@ class StreamingSink(private val client: SvixHttpClient) {
     }
 
     /** Create or update a sink. */
-    suspend fun update(
+    suspend fun upsert(
         streamId: String,
         sinkId: String,
         streamSinkIn: StreamSinkIn,
@@ -98,26 +99,8 @@ class StreamingSink(private val client: SvixHttpClient) {
         )
     }
 
-    /** Set or unset the transformation code associated with this sink. */
-    suspend fun transformationPartialUpdate(
-        streamId: String,
-        sinkId: String,
-        sinkTransformIn: SinkTransformIn,
-    ): EmptyResponse {
-        val url =
-            client
-                .newUrlBuilder()
-                .encodedPath("/api/v1/stream/$streamId/sink/$sinkId/transformation")
-
-        return client.executeRequest<SinkTransformIn, EmptyResponse>(
-            "PATCH",
-            url.build(),
-            reqBody = sinkTransformIn,
-        )
-    }
-
     /**
-     * Get the sink's signing secret (only supported for http sinks)
+     * Get the sink's signing secret (only supported for http sinks).
      *
      * This is used to verify the authenticity of the delivery.
      *
@@ -129,13 +112,20 @@ class StreamingSink(private val client: SvixHttpClient) {
         return client.executeRequest<Any, SinkSecretOut>("GET", url.build())
     }
 
-    /** Rotates the signing secret (only supported for http sinks). */
+    /**
+     * Rotates the signing secret (only supported for http sinks).
+     *
+     * This is used to verify the authenticity of the delivery.
+     *
+     * For more information please refer to
+     * [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
+     */
     suspend fun rotateSecret(
         streamId: String,
         sinkId: String,
         endpointSecretRotateIn: EndpointSecretRotateIn,
         options: StreamingSinkRotateSecretOptions = StreamingSinkRotateSecretOptions(),
-    ): EmptyResponse {
+    ): SinkSecretRotateOut {
         val url =
             client
                 .newUrlBuilder()
@@ -143,7 +133,7 @@ class StreamingSink(private val client: SvixHttpClient) {
         val headers = Headers.Builder()
         options.idempotencyKey?.let { headers.add("idempotency-key", it) }
 
-        return client.executeRequest<EndpointSecretRotateIn, EmptyResponse>(
+        return client.executeRequest<EndpointSecretRotateIn, SinkSecretRotateOut>(
             "POST",
             url.build(),
             headers = headers.build(),

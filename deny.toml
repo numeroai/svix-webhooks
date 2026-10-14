@@ -15,18 +15,15 @@ unused-ignored-advisory = "allow"
 ignore = [
     # TODO: Update dependencies that use rsa crate
     "RUSTSEC-2023-0071",
-    # TODO: Wait for dependencies to upgrade off of proc-macro-error (validator)
-    # and proc-macro-error2 (sea-orm/sea-bae)
-    "RUSTSEC-2024-0370",
     "RUSTSEC-2026-0173",
     # TODO: Wait for dependencies to upgrade off of paste
     "RUSTSEC-2024-0436",
-    # rustls-pemfile is unmaintained, but we only use it for parsing system
-    # certificates. This is not a serious attack vector for our use case.
-    # TODO: Upgrade rustls-native-certs to 0.8.x to get rid of this.
-    "RUSTSEC-2025-0134",
     # bincode (depended on by deno) is unmaintained
     "RUSTSEC-2025-0141",
+    # smartstring (dependency of deno) is unmaintained
+    "RUSTSEC-2026-0249",
+    # unsafe-libyaml (dependency of serde_yaml) is unmaintained
+    "RUSTSEC-2024-0449",
 ]
 
 [licenses]
@@ -35,6 +32,7 @@ allow = [
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    "BSL-1.0",
     "CDLA-Permissive-2.0",
     "ISC",
     "MIT",
@@ -79,7 +77,7 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
     "https://github.com/svix/hyper.git",
     "https://github.com/svix/omniqueue-rs.git",
-    "https://github.com/svix/validator.git",
+    "https://github.com/svix/rust-executable-metadata.git",
 ]
 # there are several projects in here, so it's okay if we don't use them all
 unused-allowed-source = "allow"

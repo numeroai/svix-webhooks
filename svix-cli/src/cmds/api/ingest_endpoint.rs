@@ -4,14 +4,17 @@ use svix::api::Svix;
 #[allow(unused_imports)]
 use svix::models::*;
 
+use super::ingest_endpoint_transformation::IngestEndpointTransformationArgs;
 #[derive(Args, Clone)]
 pub struct IngestEndpointListOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// The sorting order of the returned items
     #[arg(long)]
     pub order: Option<Ordering>,
@@ -68,6 +71,7 @@ pub struct IngestEndpointArgs {
 #[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum IngestEndpointCommands {
+    Transformation(IngestEndpointTransformationArgs),
     /// List ingest endpoints.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
@@ -80,19 +84,19 @@ pub enum IngestEndpointCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"createdAt\": \"2030-01-01T00:00:00Z\",
-    \"description\": \"...\",
-    \"disabled\": false,
     \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-    \"metadata\": {\"key\": \"...\"},
-    \"rateLimit\": 123,
+    \"url\": \"https://example.com/webhook/\",
+    \"description\": \"...\",
+    \"throttleRate\": 123,
     \"uid\": \"unique-identifier\",
+    \"disabled\": false,
+    \"createdAt\": \"2030-01-01T00:00:00Z\",
     \"updatedAt\": \"2030-01-01T00:00:00Z\",
-    \"url\": \"https://example.com/webhook/\"
+    \"metadata\": {\"key\": \"...\"}
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     List {
         source_id: String,
@@ -110,24 +114,28 @@ pub enum IngestEndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
+  \"url\": \"https://example.com/webhook/\",
   \"description\": \"An example endpoint name\",
-  \"disabled\": false,
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
-  \"secret\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
+  \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"url\": \"https://example.com/webhook/\"
+  \"disabled\": false,
+  \"secret\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
+  \"metadata\": {\"key\": \"...\"},
+  \"headers\": {
+    \"X-Example\": \"123\",
+    \"X-Foobar\": \"Bar\"
+  }
 }\n\nExample response:
 {
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
+  \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
+  \"disabled\": false,
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
   \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\"
+  \"metadata\": {\"key\": \"...\"}
 }\n")]
     Create {
         source_id: String,
@@ -146,15 +154,15 @@ pub enum IngestEndpointCommands {
         ))]
     #[command(after_help = "Example response:
 {
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
+  \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
+  \"disabled\": false,
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
   \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\"
+  \"metadata\": {\"key\": \"...\"}
 }\n")]
     Get {
         source_id: String,
@@ -164,35 +172,35 @@ pub enum IngestEndpointCommands {
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
-            "Example: svix ingest endpoint update src_abc000000000000000000 ep_abc000000000000000000000000 {...}\n",
+            "Example: svix ingest endpoint upsert src_abc000000000000000000 ep_abc000000000000000000000000 {...}\n",
             "{after-help}",
             "\n",
             "{all-args}",
         ))]
     #[command(after_help = "Example body:
 {
+  \"url\": \"https://example.com/webhook/\",
   \"description\": \"An example endpoint name\",
-  \"disabled\": false,
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"url\": \"https://example.com/webhook/\"
+  \"disabled\": false,
+  \"metadata\": {\"key\": \"...\"}
 }\n\nExample response:
 {
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
+  \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
+  \"disabled\": false,
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
   \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\"
+  \"metadata\": {\"key\": \"...\"}
 }\n")]
-    Update {
+    Upsert {
         source_id: String,
         endpoint_id: String,
-        ingest_endpoint_update: crate::json::JsonOf<IngestEndpointUpdate>,
+        ingest_endpoint_upsert_in: crate::json::JsonOf<IngestEndpointUpsertIn>,
     },
     /// Delete an ingest endpoint.
     #[command(help_template = concat!(
@@ -229,7 +237,7 @@ pub enum IngestEndpointCommands {
     },
     /// Rotates an ingest endpoint's signing secret.
     ///
-    /// The previous secret will remain valid for the next 24 hours.
+    /// The previous secret will remain valid for the specified grace period (default 24 hours).
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
@@ -240,7 +248,8 @@ pub enum IngestEndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"key\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\"
+  \"key\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
+  \"gracePeriodSeconds\": 123
 }\n")]
     RotateSecret {
         source_id: String,
@@ -274,7 +283,7 @@ pub enum IngestEndpointCommands {
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
-            "Example: svix ingest endpoint update-headers src_abc000000000000000000 ep_abc000000000000000000000000 {...}\n",
+            "Example: svix ingest endpoint set-headers src_abc000000000000000000 ep_abc000000000000000000000000 {...}\n",
             "{after-help}",
             "\n",
             "{all-args}",
@@ -286,48 +295,10 @@ pub enum IngestEndpointCommands {
     \"X-Foobar\": \"Bar\"
   }
 }\n")]
-    UpdateHeaders {
+    SetHeaders {
         source_id: String,
         endpoint_id: String,
         ingest_endpoint_headers_in: crate::json::JsonOf<IngestEndpointHeadersIn>,
-    },
-    /// Get the transformation code associated with this ingest endpoint.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix ingest endpoint get-transformation src_abc000000000000000000 ep_abc000000000000000000000000\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example response:
-{
-  \"code\": \"...\",
-  \"enabled\": true
-}\n")]
-    GetTransformation {
-        source_id: String,
-        endpoint_id: String,
-    },
-    /// Set or unset the transformation code associated with this ingest endpoint.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix ingest endpoint set-transformation src_abc000000000000000000 ep_abc000000000000000000000000 {...}\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example body:
-{
-  \"code\": \"...\",
-  \"enabled\": true
-}\n")]
-    SetTransformation {
-        source_id: String,
-        endpoint_id: String,
-        ingest_endpoint_transformation_patch:
-            Option<crate::json::JsonOf<IngestEndpointTransformationPatch>>,
     },
 }
 
@@ -338,6 +309,9 @@ impl IngestEndpointCommands {
         color_mode: colored_json::ColorMode,
     ) -> anyhow::Result<()> {
         match self {
+            Self::Transformation(args) => {
+                args.command.exec(client, color_mode).await?;
+            }
             Self::List { source_id, options } => {
                 let resp = client
                     .ingest()
@@ -373,15 +347,19 @@ impl IngestEndpointCommands {
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
-            Self::Update {
+            Self::Upsert {
                 source_id,
                 endpoint_id,
-                ingest_endpoint_update,
+                ingest_endpoint_upsert_in,
             } => {
                 let resp = client
                     .ingest()
                     .endpoint()
-                    .update(source_id, endpoint_id, ingest_endpoint_update.into_inner())
+                    .upsert(
+                        source_id,
+                        endpoint_id,
+                        ingest_endpoint_upsert_in.into_inner(),
+                    )
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
@@ -434,7 +412,7 @@ impl IngestEndpointCommands {
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
-            Self::UpdateHeaders {
+            Self::SetHeaders {
                 source_id,
                 endpoint_id,
                 ingest_endpoint_headers_in,
@@ -442,38 +420,10 @@ impl IngestEndpointCommands {
                 client
                     .ingest()
                     .endpoint()
-                    .update_headers(
+                    .set_headers(
                         source_id,
                         endpoint_id,
                         ingest_endpoint_headers_in.into_inner(),
-                    )
-                    .await?;
-            }
-            Self::GetTransformation {
-                source_id,
-                endpoint_id,
-            } => {
-                let resp = client
-                    .ingest()
-                    .endpoint()
-                    .get_transformation(source_id, endpoint_id)
-                    .await?;
-                crate::json::print_json_output(&resp, color_mode)?;
-            }
-            Self::SetTransformation {
-                source_id,
-                endpoint_id,
-                ingest_endpoint_transformation_patch,
-            } => {
-                client
-                    .ingest()
-                    .endpoint()
-                    .set_transformation(
-                        source_id,
-                        endpoint_id,
-                        ingest_endpoint_transformation_patch
-                            .unwrap_or_default()
-                            .into_inner(),
                     )
                     .await?;
             }

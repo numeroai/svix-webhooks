@@ -13,13 +13,13 @@ export interface AppUsageStatsOut {
   id: string;
   status: BackgroundTaskStatus;
   task: BackgroundTaskType;
+  updatedAt: Date;
   /**
    * Any app IDs or UIDs received in the request that weren't found.
    *
    * Stats will be produced for all the others.
    */
   unresolvedAppIds: string[];
-  updatedAt: Date;
 }
 
 export const AppUsageStatsOutSerializer = {
@@ -28,8 +28,8 @@ export const AppUsageStatsOutSerializer = {
       id: object["id"],
       status: BackgroundTaskStatusSerializer._fromJsonObject(object["status"]),
       task: BackgroundTaskTypeSerializer._fromJsonObject(object["task"]),
-      unresolvedAppIds: object["unresolvedAppIds"],
       updatedAt: new Date(object["updatedAt"]),
+      unresolvedAppIds: object["unresolvedAppIds"],
     };
   },
 
@@ -38,8 +38,8 @@ export const AppUsageStatsOutSerializer = {
       id: self.id,
       status: BackgroundTaskStatusSerializer._toJsonObject(self.status),
       task: BackgroundTaskTypeSerializer._toJsonObject(self.task),
-      unresolvedAppIds: self.unresolvedAppIds,
       updatedAt: self.updatedAt,
+      unresolvedAppIds: self.unresolvedAppIds,
     };
   },
 };

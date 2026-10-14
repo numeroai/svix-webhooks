@@ -15,9 +15,9 @@ class AppUsageStatsOut(BaseModel):
 
     task: BackgroundTaskType
 
+    updated_at: datetime
+
     unresolved_app_ids: t.List[str]
     """Any app IDs or UIDs received in the request that weren't found.
 
     Stats will be produced for all the others."""
-
-    updated_at: datetime

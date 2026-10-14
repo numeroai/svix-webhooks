@@ -1,43 +1,48 @@
 // this file is @generated
+#[allow(unused_imports)]
 use js_option::JsOption;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    amazon_s3_patch_config::AmazonS3PatchConfig,
-    azure_blob_storage_patch_config::AzureBlobStoragePatchConfig,
-    big_query_patch_config::BigQueryPatchConfig, clickhouse_patch_config::ClickhousePatchConfig,
-    event_bridge_patch_config::EventBridgePatchConfig,
-    google_cloud_pub_sub_patch_config::GoogleCloudPubSubPatchConfig,
-    google_cloud_storage_patch_config::GoogleCloudStoragePatchConfig,
-    http_patch_config::HttpPatchConfig, otel_tracing_patch_config::OtelTracingPatchConfig,
-    rabbit_mq_patch_config::RabbitMqPatchConfig, redshift_patch_config::RedshiftPatchConfig,
-    sink_status_in::SinkStatusIn, snowflake_patch_config::SnowflakePatchConfig,
-    sns_patch_config::SnsPatchConfig, sqs_patch_config::SqsPatchConfig,
+    azure_blob_storage_config_patch::AzureBlobStorageConfigPatch,
+    big_query_config_patch::BigQueryConfigPatch, clickhouse_config_patch::ClickhouseConfigPatch,
+    elastic_search_config_patch::ElasticSearchConfigPatch,
+    event_bridge_config_patch::EventBridgeConfigPatch,
+    google_cloud_pub_sub_config_patch::GoogleCloudPubSubConfigPatch,
+    google_cloud_storage_config_patch::GoogleCloudStorageConfigPatch,
+    otel_tracing_config_patch::OtelTracingConfigPatch, postgres_config_patch::PostgresConfigPatch,
+    rabbit_mq_config_patch::RabbitMqConfigPatch, redshift_config_patch::RedshiftConfigPatch,
+    s3_config_patch::S3ConfigPatch, sink_http_config_patch::SinkHttpConfigPatch,
+    sink_status_in::SinkStatusIn, snowflake_config_patch::SnowflakeConfigPatch,
+    sns_config_patch::SnsConfigPatch, sqs_config_patch::SqsConfigPatch,
 };
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct StreamSinkPatch {
+    /// The StreamSink's UID.
+    #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
+    pub uid: JsOption<String>,
+
+    #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
+    pub status: JsOption<SinkStatusIn>,
+
     #[serde(rename = "batchSize")]
     #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
     pub batch_size: JsOption<u16>,
-
-    #[serde(rename = "eventTypes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub event_types: Option<Vec<String>>,
 
     #[serde(rename = "maxWaitSecs")]
     #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
     pub max_wait_secs: JsOption<u16>,
 
+    #[serde(rename = "eventTypes")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<std::collections::HashMap<String, String>>,
+    pub event_types: Option<Vec<String>>,
 
-    #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
-    pub status: JsOption<SinkStatusIn>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channels: Option<Vec<String>>,
 
-    /// The StreamSink's UID.
-    #[serde(default, skip_serializing_if = "JsOption::is_undefined")]
-    pub uid: JsOption<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<std::collections::BTreeMap<String, String>>,
 
     #[serde(flatten)]
     pub config: StreamSinkPatchConfig,
@@ -49,38 +54,35 @@ pub enum StreamSinkPatchConfig {
     #[serde(rename = "poller")]
     Poller,
     #[serde(rename = "azureBlobStorage")]
-    AzureBlobStorage(AzureBlobStoragePatchConfig),
+    AzureBlobStorage(AzureBlobStorageConfigPatch),
     #[serde(rename = "otelTracing")]
-    OtelTracing(OtelTracingPatchConfig),
+    OtelTracing(OtelTracingConfigPatch),
     #[serde(rename = "http")]
-    Http(HttpPatchConfig),
+    Http(SinkHttpConfigPatch),
     #[serde(rename = "amazonS3")]
-    AmazonS3(AmazonS3PatchConfig),
+    AmazonS3(S3ConfigPatch),
     #[serde(rename = "googleCloudStorage")]
-    GoogleCloudStorage(GoogleCloudStoragePatchConfig),
+    GoogleCloudStorage(GoogleCloudStorageConfigPatch),
     #[serde(rename = "googleCloudPubSub")]
-    GoogleCloudPubSub(GoogleCloudPubSubPatchConfig),
+    GoogleCloudPubSub(GoogleCloudPubSubConfigPatch),
     #[serde(rename = "sqs")]
-    Sqs(SqsPatchConfig),
+    Sqs(SqsConfigPatch),
     #[serde(rename = "sns")]
-    Sns(SnsPatchConfig),
+    Sns(SnsConfigPatch),
     #[serde(rename = "bigQuery")]
-    BigQuery(BigQueryPatchConfig),
+    BigQuery(BigQueryConfigPatch),
     #[serde(rename = "clickhouse")]
-    Clickhouse(ClickhousePatchConfig),
+    Clickhouse(ClickhouseConfigPatch),
     #[serde(rename = "eventBridge")]
-    EventBridge(EventBridgePatchConfig),
+    EventBridge(EventBridgeConfigPatch),
     #[serde(rename = "snowflake")]
-    Snowflake(SnowflakePatchConfig),
+    Snowflake(SnowflakeConfigPatch),
     #[serde(rename = "rabbitMq")]
-    RabbitMq(RabbitMqPatchConfig),
+    RabbitMq(RabbitMqConfigPatch),
     #[serde(rename = "redshift")]
-    Redshift(RedshiftPatchConfig),
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for StreamSinkPatchConfig {
-    fn default() -> Self {
-        Self::Poller
-    }
+    Redshift(RedshiftConfigPatch),
+    #[serde(rename = "postgres")]
+    Postgres(PostgresConfigPatch),
+    #[serde(rename = "elasticSearch")]
+    ElasticSearch(ElasticSearchConfigPatch),
 }

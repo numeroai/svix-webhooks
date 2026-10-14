@@ -9,7 +9,7 @@ from ..models import (
     ApplicationPatch,
     ListResponseApplicationOut,
 )
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
 
 
 @dataclass
@@ -52,7 +52,7 @@ class ApplicationCreateOptions(BaseOptions):
         )
 
 
-class ApplicationAsync(ApiBase):
+class ApplicationAsync(ApiBaseAsync):
     async def list(
         self, options: ApplicationListOptions = (ApplicationListOptions())
     ) -> ListResponseApplicationOut:
@@ -108,7 +108,7 @@ class ApplicationAsync(ApiBase):
         )
         return ApplicationOut.model_validate(response.json())
 
-    async def update(
+    async def upsert(
         self, app_id: str, application_in: ApplicationIn
     ) -> ApplicationOut:
         """Create or update an application."""
@@ -149,7 +149,7 @@ class ApplicationAsync(ApiBase):
         return ApplicationOut.model_validate(response.json())
 
 
-class Application(ApiBase):
+class Application(ApiBaseSync):
     def list(
         self, options: ApplicationListOptions = (ApplicationListOptions())
     ) -> ListResponseApplicationOut:
@@ -205,7 +205,7 @@ class Application(ApiBase):
         )
         return ApplicationOut.model_validate(response.json())
 
-    def update(self, app_id: str, application_in: ApplicationIn) -> ApplicationOut:
+    def upsert(self, app_id: str, application_in: ApplicationIn) -> ApplicationOut:
         """Create or update an application."""
         response = self._request_sync(
             method="put",

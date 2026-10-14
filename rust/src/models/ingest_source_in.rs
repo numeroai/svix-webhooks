@@ -5,24 +5,25 @@ use super::{
     adobe_sign_config::AdobeSignConfig, airwallex_config::AirwallexConfig,
     checkbook_config::CheckbookConfig, cron_config::CronConfig, docusign_config::DocusignConfig,
     easypost_config::EasypostConfig, github_config::GithubConfig, hubspot_config::HubspotConfig,
-    meta_config::MetaConfig, nango_config::NangoConfig, open_claw_config::OpenClawConfig,
-    orum_io_config::OrumIoConfig, panda_doc_config::PandaDocConfig, port_io_config::PortIoConfig,
-    rutter_config::RutterConfig, segment_config::SegmentConfig, shopify_config::ShopifyConfig,
-    slack_config::SlackConfig, stripe_config::StripeConfig, svix_config::SvixConfig,
-    tailscale_config::TailscaleConfig, telnyx_config::TelnyxConfig, vapi_config::VapiConfig,
-    veriff_config::VeriffConfig, vgs_config::VgsConfig, zoom_config::ZoomConfig,
+    merge_config::MergeConfig, meta_config::MetaConfig, nango_config::NangoConfig,
+    open_claw_config::OpenClawConfig, orum_io_config::OrumIoConfig,
+    panda_doc_config::PandaDocConfig, port_io_config::PortIoConfig, rutter_config::RutterConfig,
+    segment_config::SegmentConfig, shopify_config::ShopifyConfig, slack_config::SlackConfig,
+    stripe_config::StripeConfig, svix_config::SvixConfig, tailscale_config::TailscaleConfig,
+    telnyx_config::TelnyxConfig, vapi_config::VapiConfig, veriff_config::VeriffConfig,
+    vgs_config::VgsConfig, zoom_config::ZoomConfig,
 };
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct IngestSourceIn {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<std::collections::HashMap<String, String>>,
-
     pub name: String,
 
     /// The Source's UID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uid: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<std::collections::BTreeMap<String, String>>,
 
     #[serde(flatten)]
     pub config: IngestSourceInConfig,
@@ -59,6 +60,8 @@ pub enum IngestSourceInConfig {
     IncidentIo(SvixConfig),
     #[serde(rename = "lithic")]
     Lithic(SvixConfig),
+    #[serde(rename = "merge")]
+    Merge(MergeConfig),
     #[serde(rename = "meta")]
     Meta(MetaConfig),
     #[serde(rename = "nango")]
@@ -117,11 +120,4 @@ pub enum IngestSourceInConfig {
     Airwallex(AirwallexConfig),
     #[serde(rename = "vgs")]
     Vgs(VgsConfig),
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for IngestSourceInConfig {
-    fn default() -> Self {
-        Self::GenericWebhook
-    }
 }

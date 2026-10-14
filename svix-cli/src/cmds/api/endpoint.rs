@@ -4,14 +4,17 @@ use svix::api::Svix;
 #[allow(unused_imports)]
 use svix::models::*;
 
+use super::endpoint_transformation::EndpointTransformationArgs;
 #[derive(Args, Clone)]
 pub struct EndpointListOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// The sorting order of the returned items
     #[arg(long)]
     pub order: Option<Ordering>,
@@ -97,10 +100,24 @@ pub struct EndpointGetStatsOptions {
 impl From<EndpointGetStatsOptions> for svix::api::EndpointGetStatsOptions {
     fn from(value: EndpointGetStatsOptions) -> Self {
         let EndpointGetStatsOptions { since, until } = value;
-        Self {
-            since: since.map(|dt| dt.to_rfc3339()),
-            until: until.map(|dt| dt.to_rfc3339()),
-        }
+        Self { since, until }
+    }
+}
+
+#[derive(Args, Clone)]
+pub struct EndpointGetAttemptStatsOptions {
+    /// Filter the range to data starting from this date.
+    #[arg(long)]
+    pub since: Option<chrono::DateTime<chrono::Utc>>,
+    /// Filter the range to data ending by this date.
+    #[arg(long)]
+    pub until: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl From<EndpointGetAttemptStatsOptions> for svix::api::EndpointGetAttemptStatsOptions {
+    fn from(value: EndpointGetAttemptStatsOptions) -> Self {
+        let EndpointGetAttemptStatsOptions { since, until } = value;
+        Self { since, until }
     }
 }
 
@@ -140,6 +157,7 @@ pub struct EndpointArgs {
 #[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum EndpointCommands {
+    Transformation(EndpointTransformationArgs),
     /// List the application's endpoints.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
@@ -152,23 +170,21 @@ pub enum EndpointCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"createdAt\": \"2030-01-01T00:00:00Z\",
-    \"description\": \"...\",
-    \"disabled\": false,
-    \"filterTypes\": [\"user.signup\",\"user.deleted\"],
     \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"metadata\": {\"key\": \"...\"},
-    \"rateLimit\": 123,
+    \"url\": \"https://example.com/webhook/\",
+    \"description\": \"...\",
     \"throttleRate\": 123,
     \"uid\": \"unique-identifier\",
-    \"updatedAt\": \"2030-01-01T00:00:00Z\",
-    \"url\": \"https://example.com/webhook/\",
-    \"version\": 1
+    \"disabled\": false,
+    \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"createdAt\": \"2030-01-01T00:00:00Z\",
+    \"updatedAt\": \"2030-01-01T00:00:00Z\"
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     List {
         app_id: String,
@@ -188,36 +204,32 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
+  \"url\": \"https://example.com/webhook/\",
   \"description\": \"An example endpoint name\",
+  \"throttleRate\": 123,
+  \"uid\": \"unique-identifier\",
   \"disabled\": false,
-  \"filterTypes\": [\"user.signup\",\"user.deleted\"],
+  \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"secret\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
+  \"metadata\": {\"key\": \"...\"},
   \"headers\": {
     \"X-Example\": \"123\",
     \"X-Foobar\": \"Bar\"
-  },
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
-  \"secret\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
-  \"throttleRate\": 123,
-  \"uid\": \"unique-identifier\",
-  \"url\": \"https://example.com/webhook/\",
-  \"version\": 1
+  }
 }\n\nExample response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
-  \"filterTypes\": [\"user.signup\",\"user.deleted\"],
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
   \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\",
-  \"version\": 1
+  \"disabled\": false,
+  \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
+  \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Create {
         app_id: String,
@@ -236,62 +248,59 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
-  \"filterTypes\": [\"user.signup\",\"user.deleted\"],
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
   \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\",
-  \"version\": 1
+  \"disabled\": false,
+  \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
+  \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
-    Get { app_id: String, id: String },
+    Get {
+        app_id: String,
+        id: String,
+    },
     /// Create or update an endpoint.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
-            "Example: svix endpoint update app_abc000000000000000000000000 ep_abc000000000000000000000000 {...}\n",
+            "Example: svix endpoint upsert app_abc000000000000000000000000 ep_abc000000000000000000000000 {...}\n",
             "{after-help}",
             "\n",
             "{all-args}",
         ))]
     #[command(after_help = "Example body:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
+  \"url\": \"https://example.com/webhook/\",
   \"description\": \"An example endpoint name\",
-  \"disabled\": false,
-  \"filterTypes\": [\"user.signup\",\"user.deleted\"],
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
   \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"url\": \"https://example.com/webhook/\",
-  \"version\": 1
+  \"disabled\": false,
+  \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"metadata\": {\"key\": \"...\"}
 }\n\nExample response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
-  \"filterTypes\": [\"user.signup\",\"user.deleted\"],
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
   \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\",
-  \"version\": 1
+  \"disabled\": false,
+  \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
+  \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
-    Update {
+    Upsert {
         app_id: String,
         id: String,
-        endpoint_update: crate::json::JsonOf<EndpointUpdate>,
+        endpoint_upsert_in: crate::json::JsonOf<EndpointUpsertIn>,
     },
     /// Delete an endpoint.
     #[command(help_template = concat!(
@@ -302,7 +311,10 @@ pub enum EndpointCommands {
             "\n",
             "{all-args}",
         ))]
-    Delete { app_id: String, id: String },
+    Delete {
+        app_id: String,
+        id: String,
+    },
     /// Partially update an endpoint.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
@@ -314,32 +326,27 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"channels\": [\"...\"],
   \"description\": \"...\",
-  \"disabled\": true,
-  \"filterTypes\": [\"...\"],
-  \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
-  \"secret\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
   \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
   \"url\": \"...\",
-  \"version\": 1
+  \"disabled\": true,
+  \"eventTypes\": [\"...\"],
+  \"channels\": [\"...\"],
+  \"metadata\": {\"key\": \"...\"}
 }\n\nExample response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"createdAt\": \"2030-01-01T00:00:00Z\",
-  \"description\": \"...\",
-  \"disabled\": false,
-  \"filterTypes\": [\"user.signup\",\"user.deleted\"],
   \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"metadata\": {\"key\": \"...\"},
-  \"rateLimit\": 123,
+  \"url\": \"https://example.com/webhook/\",
+  \"description\": \"...\",
   \"throttleRate\": 123,
   \"uid\": \"unique-identifier\",
-  \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"url\": \"https://example.com/webhook/\",
-  \"version\": 1
+  \"disabled\": false,
+  \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"createdAt\": \"2030-01-01T00:00:00Z\",
+  \"updatedAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Patch {
         app_id: String,
@@ -362,10 +369,13 @@ pub enum EndpointCommands {
 {
   \"key\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\"
 }\n")]
-    GetSecret { app_id: String, id: String },
+    GetSecret {
+        app_id: String,
+        id: String,
+    },
     /// Rotates the endpoint's signing secret.
     ///
-    /// The previous secret will remain valid for the next 24 hours.
+    /// The previous secret will remain valid for the specified grace period (default 24 hours).
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
@@ -376,7 +386,10 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"gracePeriodSeconds\": 123,
+  \"key\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\",
+  \"gracePeriodSeconds\": 123
+}\n\nExample response:
+{
   \"key\": \"whsec_C2FVsBQIhrscChlQIMV+b5sSYspob7oD\"
 }\n")]
     RotateSecret {
@@ -403,12 +416,15 @@ pub enum EndpointCommands {
   },
   \"sensitive\": [\"Authorization\"]
 }\n")]
-    GetHeaders { app_id: String, id: String },
+    GetHeaders {
+        app_id: String,
+        id: String,
+    },
     /// Set the additional headers to be sent with the webhook.
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
-            "Example: svix endpoint update-headers app_abc000000000000000000000000 ep_abc000000000000000000000000 {...}\n",
+            "Example: svix endpoint set-headers app_abc000000000000000000000000 ep_abc000000000000000000000000 {...}\n",
             "{after-help}",
             "\n",
             "{all-args}",
@@ -420,7 +436,7 @@ pub enum EndpointCommands {
     \"X-Foobar\": \"Bar\"
   }
 }\n")]
-    UpdateHeaders {
+    SetHeaders {
         app_id: String,
         id: String,
         endpoint_headers_in: crate::json::JsonOf<EndpointHeadersIn>,
@@ -436,53 +452,16 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"deleteHeaders\": [\"...\"],
   \"headers\": {
     \"X-Example\": \"123\",
     \"X-Foobar\": \"Bar\"
-  }
+  },
+  \"deleteHeaders\": [\"...\"]
 }\n")]
     PatchHeaders {
         app_id: String,
         id: String,
         endpoint_headers_patch_in: crate::json::JsonOf<EndpointHeadersPatchIn>,
-    },
-    /// Get the transformation code associated with this endpoint.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix endpoint transformation-get app_abc000000000000000000000000 ep_abc000000000000000000000000\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example response:
-{
-  \"code\": \"...\",
-  \"enabled\": true,
-  \"updatedAt\": \"2030-01-01T00:00:00Z\",
-  \"variables\": {\"key\": \"...\"}
-}\n")]
-    TransformationGet { app_id: String, id: String },
-    /// Set or unset the transformation code associated with this endpoint.
-    #[command(help_template = concat!(
-            "{about-with-newline}\n",
-            "{usage-heading} {usage}\n\n",
-            "Example: svix endpoint patch-transformation app_abc000000000000000000000000 ep_abc000000000000000000000000 {...}\n",
-            "{after-help}",
-            "\n",
-            "{all-args}",
-        ))]
-    #[command(after_help = "Example body:
-{
-  \"code\": \"function handler(webhook) { /* ... */ }\",
-  \"enabled\": true,
-  \"variables\": {\"key\": \"...\"}
-}\n")]
-    PatchTransformation {
-        app_id: String,
-        id: String,
-        endpoint_transformation_patch: Option<crate::json::JsonOf<EndpointTransformationPatch>>,
     },
     /// Replays messages to the endpoint.
     ///
@@ -552,13 +531,13 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"channel\": \"project_1337\",
-  \"eventTypes\": [\"...\"],
   \"since\": \"2030-01-01T00:00:00Z\",
-  \"status\": 0,
-  \"statusCodeClass\": 0,
+  \"until\": \"2030-01-01T00:00:00Z\",
+  \"eventTypes\": [\"...\"],
+  \"channel\": \"project_1337\",
   \"tag\": \"project_1337\",
-  \"until\": \"2030-01-01T00:00:00Z\"
+  \"status\": 0,
+  \"statusCodeClass\": 0
 }\n\nExample response:
 {
   \"id\": \"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
@@ -584,17 +563,40 @@ pub enum EndpointCommands {
         ))]
     #[command(after_help = "Example response:
 {
-  \"canceled\": 123,
-  \"fail\": 123,
+  \"success\": 123,
   \"pending\": 123,
   \"sending\": 123,
-  \"success\": 123
+  \"fail\": 123,
+  \"canceled\": 123
 }\n")]
     GetStats {
         app_id: String,
         id: String,
         #[clap(flatten)]
         options: EndpointGetStatsOptions,
+    },
+    /// Get basic statistics about attempted deliveries for the endpoint.
+    ///
+    /// Time windows are always rounded to hour granularity
+    #[command(help_template = concat!(
+            "{about-with-newline}\n",
+            "{usage-heading} {usage}\n\n",
+            "Example: svix endpoint get-attempt-stats app_abc000000000000000000000000 ep_abc000000000000000000000000\n",
+            "{after-help}",
+            "\n",
+            "{all-args}",
+        ))]
+    #[command(after_help = "Example response:
+{
+  \"success\": 123,
+  \"fail\": 123,
+  \"canceled\": 123
+}\n")]
+    GetAttemptStats {
+        app_id: String,
+        id: String,
+        #[clap(flatten)]
+        options: EndpointGetAttemptStatsOptions,
     },
     /// Resend all failed messages since a given time.
     ///
@@ -649,21 +651,22 @@ pub enum EndpointCommands {
     #[command(after_help = "Example body:
 {
   \"eventType\": \"user.signup\",
-  \"exampleIndex\": 123
+  \"exampleIndex\": 123,
+  \"payload\": {\"key\": \"...\"}
 }\n\nExample response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"deliverAt\": \"2030-01-01T00:00:00Z\",
   \"eventId\": \"unique-identifier\",
   \"eventType\": \"user.signup\",
-  \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"payload\": {
     \"email\": \"test@example.com\",
     \"type\": \"user.created\",
     \"username\": \"test_user\"
   },
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+  \"timestamp\": \"2030-01-01T00:00:00Z\",
   \"tags\": [\"...\"],
-  \"timestamp\": \"2030-01-01T00:00:00Z\"
+  \"deliverAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     SendExample {
         app_id: String,
@@ -700,6 +703,9 @@ impl EndpointCommands {
         color_mode: colored_json::ColorMode,
     ) -> anyhow::Result<()> {
         match self {
+            Self::Transformation(args) => {
+                args.command.exec(client, color_mode).await?;
+            }
             Self::List { app_id, options } => {
                 let resp = client.endpoint().list(app_id, Some(options.into())).await?;
                 crate::json::print_json_output(&resp, color_mode)?;
@@ -719,14 +725,14 @@ impl EndpointCommands {
                 let resp = client.endpoint().get(app_id, id).await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
-            Self::Update {
+            Self::Upsert {
                 app_id,
                 id,
-                endpoint_update,
+                endpoint_upsert_in,
             } => {
                 let resp = client
                     .endpoint()
-                    .update(app_id, id, endpoint_update.into_inner())
+                    .upsert(app_id, id, endpoint_upsert_in.into_inner())
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
@@ -754,7 +760,7 @@ impl EndpointCommands {
                 endpoint_secret_rotate_in,
                 options,
             } => {
-                client
+                let resp = client
                     .endpoint()
                     .rotate_secret(
                         app_id,
@@ -763,19 +769,20 @@ impl EndpointCommands {
                         Some(options.into()),
                     )
                     .await?;
+                crate::json::print_json_output(&resp, color_mode)?;
             }
             Self::GetHeaders { app_id, id } => {
                 let resp = client.endpoint().get_headers(app_id, id).await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
-            Self::UpdateHeaders {
+            Self::SetHeaders {
                 app_id,
                 id,
                 endpoint_headers_in,
             } => {
                 client
                     .endpoint()
-                    .update_headers(app_id, id, endpoint_headers_in.into_inner())
+                    .set_headers(app_id, id, endpoint_headers_in.into_inner())
                     .await?;
             }
             Self::PatchHeaders {
@@ -786,26 +793,6 @@ impl EndpointCommands {
                 client
                     .endpoint()
                     .patch_headers(app_id, id, endpoint_headers_patch_in.into_inner())
-                    .await?;
-            }
-            Self::TransformationGet { app_id, id } => {
-                let resp = client.endpoint().transformation_get(app_id, id).await?;
-                crate::json::print_json_output(&resp, color_mode)?;
-            }
-            Self::PatchTransformation {
-                app_id,
-                id,
-                endpoint_transformation_patch,
-            } => {
-                client
-                    .endpoint()
-                    .patch_transformation(
-                        app_id,
-                        id,
-                        endpoint_transformation_patch
-                            .unwrap_or_default()
-                            .into_inner(),
-                    )
                     .await?;
             }
             Self::ReplayMissing {
@@ -848,6 +835,17 @@ impl EndpointCommands {
                     .await?;
                 crate::json::print_json_output(&resp, color_mode)?;
             }
+            Self::GetAttemptStats {
+                app_id,
+                id,
+                options,
+            } => {
+                let resp = client
+                    .endpoint()
+                    .get_attempt_stats(app_id, id, Some(options.into()))
+                    .await?;
+                crate::json::print_json_output(&resp, color_mode)?;
+            }
             Self::Recover {
                 app_id,
                 id,
@@ -882,7 +880,7 @@ impl EndpointCommands {
                 id,
                 endpoint_transformation_in,
             } => {
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 client
                     .endpoint()
                     .transformation_partial_update(

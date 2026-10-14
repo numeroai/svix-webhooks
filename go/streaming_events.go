@@ -5,18 +5,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type StreamingEvents struct {
 	client *internal.SvixHttpClient
 }
 
-func newStreamingEvents(client *internal.SvixHttpClient) *StreamingEvents {
-	return &StreamingEvents{
-		client: client,
-	}
+func newStreamingEvents(client *internal.SvixHttpClient) StreamingEvents {
+	return StreamingEvents{client}
 }
 
 type StreamingEventsGetOptions struct {
@@ -34,26 +32,27 @@ type StreamingEventsCreateOptions struct {
 // Iterate over a stream of events.
 //
 // The sink must be of type `poller` to use the poller endpoint.
-func (streamingEvents *StreamingEvents) Get(
+func (streamingEvents StreamingEvents) Get(
 	ctx context.Context,
 	streamId string,
 	sinkId string,
 	o *StreamingEventsGetOptions,
 ) (*models.EventStreamOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"stream_id": streamId,
 		"sink_id":   sinkId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("after", o.After, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := StreamingEventsGetOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("after", o.After, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.EventStreamOut](
 		ctx,
@@ -68,23 +67,24 @@ func (streamingEvents *StreamingEvents) Get(
 }
 
 // Creates events on the Stream.
-func (streamingEvents *StreamingEvents) Create(
+func (streamingEvents StreamingEvents) Create(
 	ctx context.Context,
 	streamId string,
 	createStreamEventsIn models.CreateStreamEventsIn,
 	o *StreamingEventsCreateOptions,
 ) (*models.CreateStreamEventsOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"stream_id": streamId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := StreamingEventsCreateOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.CreateStreamEventsIn, models.CreateStreamEventsOut](
 		ctx,

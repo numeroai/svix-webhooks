@@ -166,7 +166,7 @@ impl<'de> Deserialize<'de> for EndpointMessageOut {
 #[derive(Debug, Deserialize, Validate, JsonSchema)]
 pub struct ListAttemptedMessagesQueryParams {
     /// Filter response based on the channel
-    #[validate]
+    #[validate(nested)]
     channel: Option<EventChannel>,
     /// Filter response based on the delivery status
     status: Option<MessageStatus>,
@@ -406,7 +406,7 @@ async fn list_attempted_messages(
     let mut msg_content_map: Option<HashMap<_, _>> = if with_content {
         let msg_ids = results.iter().map(|msg| msg.id.clone());
         Some(
-            messagecontent::Entity::secure_find_by_id_in(msg_ids.collect())
+            messagecontent::Entity::secure_find_by_id_in(msg_ids)
                 .all(db)
                 .await?
                 .into_iter()
@@ -450,7 +450,7 @@ pub struct ListAttemptsByEndpointQueryParams {
     /// Filter response based on the HTTP status code
     status_code_class: Option<StatusCodeClass>,
     /// Filter response based on the channel
-    #[validate]
+    #[validate(nested)]
     channel: Option<EventChannel>,
     /// Only include items created before a certain date
     before: Option<DateTime<Utc>>,
@@ -599,10 +599,10 @@ pub struct ListAttemptsByMsgQueryParams {
     /// Filter response based on the HTTP status code
     status_code_class: Option<StatusCodeClass>,
     /// Filter response based on the channel
-    #[validate]
+    #[validate(nested)]
     channel: Option<EventChannel>,
     /// Filter the attempts based on the attempted endpoint
-    #[validate]
+    #[validate(nested)]
     endpoint_id: Option<EndpointIdOrUid>,
     /// Only include items created before a certain date
     before: Option<DateTime<Utc>>,
@@ -800,7 +800,7 @@ async fn list_attempted_destinations(
 #[derive(Debug, Deserialize, Validate, JsonSchema)]
 pub struct ListAttemptsForEndpointQueryParams {
     /// Filter response based on the channel
-    #[validate]
+    #[validate(nested)]
     pub channel: Option<EventChannel>,
     /// Filter response based on the delivery status
     pub status: Option<MessageStatus>,
@@ -879,10 +879,10 @@ async fn list_attempts_for_endpoint(
 #[derive(Debug, Deserialize, Validate, JsonSchema)]
 pub struct AttemptListFetchQueryParams {
     /// Filter the attempts based on the attempted endpoint
-    #[validate]
+    #[validate(nested)]
     pub endpoint_id: Option<EndpointIdOrUid>,
     /// Filter response based on the channel
-    #[validate]
+    #[validate(nested)]
     pub channel: Option<EventChannel>,
     /// Filter response based on the delivery status
     pub status: Option<MessageStatus>,
@@ -1061,21 +1061,21 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         // use route / axum::routing to skip OpenAPI inclusion for the deprecated route
         .route(
-            "/app/:app_id/msg/:msg_id/attempt",
+            "/app/{app_id}/msg/{msg_id}/attempt",
             axum::routing::get(list_messageattempts),
         )
         .api_route_with(
-            "/app/:app_id/msg/:msg_id/attempt/:attempt_id",
+            "/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}",
             get_with(get_messageattempt, get_messageattempt_operation),
             &tag,
         )
         .api_route_with(
-            "/app/:app_id/msg/:msg_id/attempt/:attempt_id/content",
+            "/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}/content",
             delete_with(expunge_attempt_content, expunge_attempt_content_operation),
             &tag,
         )
         .api_route_with(
-            "/app/:app_id/msg/:msg_id/endpoint",
+            "/app/{app_id}/msg/{msg_id}/endpoint",
             get_with(
                 list_attempted_destinations,
                 list_attempted_destinations_operation,
@@ -1083,22 +1083,22 @@ pub fn router() -> ApiRouter<AppState> {
             &tag,
         )
         .api_route_with(
-            "/app/:app_id/msg/:msg_id/endpoint/:endpoint_id/resend",
+            "/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/resend",
             post_with(resend_webhook, resend_webhook_operation),
             &tag,
         )
         // use route / axum::routing to skip OpenAPI inclusion for the deprecated route
         .route(
-            "/app/:app_id/msg/:msg_id/endpoint/:endpoint_id/attempt",
+            "/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/attempt",
             axum::routing::get(list_attempts_for_endpoint),
         )
         .api_route_with(
-            "/app/:app_id/endpoint/:endpoint_id/msg",
+            "/app/{app_id}/endpoint/{endpoint_id}/msg",
             get_with(list_attempted_messages, list_attempted_messages_operation),
             &tag,
         )
         .api_route_with(
-            "/app/:app_id/attempt/endpoint/:endpoint_id",
+            "/app/{app_id}/attempt/endpoint/{endpoint_id}",
             get_with(
                 list_attempts_by_endpoint,
                 list_attempts_by_endpoint_operation,
@@ -1106,7 +1106,7 @@ pub fn router() -> ApiRouter<AppState> {
             &tag,
         )
         .api_route_with(
-            "/app/:app_id/attempt/msg/:msg_id",
+            "/app/{app_id}/attempt/msg/{msg_id}",
             get_with(list_attempts_by_msg, list_attempts_by_msg_operation),
             tag,
         )

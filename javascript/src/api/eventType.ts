@@ -12,9 +12,9 @@ import { type EventTypeIn, EventTypeInSerializer } from "../models/eventTypeIn";
 import { type EventTypeOut, EventTypeOutSerializer } from "../models/eventTypeOut";
 import { type EventTypePatch, EventTypePatchSerializer } from "../models/eventTypePatch";
 import {
-  type EventTypeUpdate,
-  EventTypeUpdateSerializer,
-} from "../models/eventTypeUpdate";
+  type EventTypeUpsertIn,
+  EventTypeUpsertInSerializer,
+} from "../models/eventTypeUpsertIn";
 import {
   type ListResponseEventTypeOut,
   ListResponseEventTypeOutSerializer,
@@ -44,7 +44,10 @@ export interface EventTypeImportOpenapiOptions {
 }
 
 export interface EventTypeDeleteOptions {
-  /** By default event types are archived when "deleted". Passing this to `true` deletes them entirely. */
+  /**
+   * By default event types are archived when "deleted". Passing this to `true` deletes them
+   * entirely.
+   */
   expunge?: boolean;
 }
 
@@ -60,7 +63,7 @@ export class EventType {
       iterator: options?.iterator,
       order: options?.order,
       include_archived: options?.includeArchived,
-      with_content: options?.withContent,
+      with_content: options?.withContent ?? false,
     });
 
     return await request.send(
@@ -125,9 +128,9 @@ export class EventType {
   }
 
   /** Create or update an event type. */
-  public async update(
+  public async upsert(
     eventTypeName: string,
-    eventTypeUpdate: EventTypeUpdate
+    eventTypeUpsertIn: EventTypeUpsertIn
   ): Promise<EventTypeOut> {
     const request = new SvixRequest(
       HttpMethod.PUT,
@@ -135,7 +138,7 @@ export class EventType {
     );
 
     request.setPathParam("event_type_name", eventTypeName);
-    request.setBody(EventTypeUpdateSerializer._toJsonObject(eventTypeUpdate));
+    request.setBody(EventTypeUpsertInSerializer._toJsonObject(eventTypeUpsertIn));
 
     return await request.send(this.requestCtx, EventTypeOutSerializer._fromJsonObject);
   }

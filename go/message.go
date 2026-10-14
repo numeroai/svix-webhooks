@@ -5,20 +5,20 @@ import (
 	"context"
 	"time"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type Message struct {
 	client *internal.SvixHttpClient
-	Poller *MessagePoller
 }
 
-func newMessage(client *internal.SvixHttpClient) *Message {
-	return &Message{
-		client: client,
-		Poller: newMessagePoller(client),
-	}
+func newMessage(client *internal.SvixHttpClient) Message {
+	return Message{client}
+}
+
+func (message Message) Poller() MessagePoller {
+	return newMessagePoller(message.client)
 }
 
 type MessageListOptions struct {
@@ -33,6 +33,9 @@ type MessageListOptions struct {
 	// Only include items created after a certain date.
 	After *time.Time
 	// When `true` message payloads are included in the response.
+	//
+	// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+	// without specifying this parameter.
 	WithContent *bool
 	// Filter messages matching the provided tag.
 	Tag *string
@@ -42,6 +45,9 @@ type MessageListOptions struct {
 
 type MessageCreateOptions struct {
 	// When `true`, message payloads are included in the response.
+	//
+	// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+	// without specifying this parameter.
 	WithContent    *bool
 	IdempotencyKey *string
 }
@@ -52,7 +58,14 @@ type MessagePrecheckOptions struct {
 
 type MessageGetOptions struct {
 	// When `true` message payloads are included in the response.
+	//
+	// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+	// without specifying this parameter.
 	WithContent *bool
+}
+
+type MessageBulkExpungeContentOptions struct {
+	IdempotencyKey *string
 }
 
 type MessageExpungeAllContentsOptions struct {
@@ -68,29 +81,30 @@ type MessageExpungeAllContentsOptions struct {
 // relative to now or, if an iterator is provided, 90 days before/after the time indicated
 // by the iterator ID. If you require data beyond those time ranges, you will need to explicitly
 // set the `before` or `after` parameter as appropriate.
-func (message *Message) List(
+func (message Message) List(
 	ctx context.Context,
 	appId string,
 	o *MessageListOptions,
 ) (*models.ListResponseMessageOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
-		internal.SerializeParamToMap("before", o.Before, queryMap, &err)
-		internal.SerializeParamToMap("after", o.After, queryMap, &err)
-		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
-		internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
-		internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageListOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("channel", o.Channel, queryMap, &err)
+	internal.SerializeParamToMap("before", o.Before, queryMap, &err)
+	internal.SerializeParamToMap("after", o.After, queryMap, &err)
+	internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
+	internal.SerializeParamToMap("tag", o.Tag, queryMap, &err)
+	internal.SerializeParamToMap("event_types", o.EventTypes, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseMessageOut](
 		ctx,
@@ -113,27 +127,28 @@ func (message *Message) List(
 // Messages can also have `channels`, which similar to event types let endpoints filter by them. Unlike event types, messages can have multiple channels, and channels don't imply a specific message content or schema.
 //
 // The `payload` property is the webhook's body (the actual webhook message). Svix supports payload sizes of up to 1MiB, though it's generally a good idea to keep webhook payloads small, probably no larger than 40kb.
-func (message *Message) Create(
+func (message Message) Create(
 	ctx context.Context,
 	appId string,
 	messageIn models.MessageIn,
 	o *MessageCreateOptions,
 ) (*models.MessageOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
 	queryMap := map[string]string{}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageCreateOptions{}
+		o = &opts
 	}
-	queryMap["with_content"] = "false"
-	response, err := internal.ExecuteRequest[models.MessageIn, models.MessageOut](
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
+	if err != nil {
+		return nil, err
+	}
+	return internal.ExecuteRequest[models.MessageIn, models.MessageOut](
 		ctx,
 		message.client,
 		"POST",
@@ -143,13 +158,6 @@ func (message *Message) Create(
 		headerMap,
 		&messageIn,
 	)
-	if err != nil {
-		return nil, err
-	}
-	if o == nil || o.WithContent == nil || *o.WithContent == true {
-		response.Payload = messageIn.Payload
-	}
-	return response, nil
 }
 
 // A pre-check call for `message.create` that checks whether any active endpoints are
@@ -158,23 +166,24 @@ func (message *Message) Create(
 // Note: most people shouldn't be using this API. Svix doesn't bill you for
 // messages not actually sent, so using this API doesn't save money.
 // If unsure, please ask Svix support before using this API.
-func (message *Message) Precheck(
+func (message Message) Precheck(
 	ctx context.Context,
 	appId string,
 	messagePrecheckIn models.MessagePrecheckIn,
 	o *MessagePrecheckOptions,
 ) (*models.MessagePrecheckOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessagePrecheckOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.MessagePrecheckIn, models.MessagePrecheckOut](
 		ctx,
@@ -189,24 +198,25 @@ func (message *Message) Precheck(
 }
 
 // Get a message by its ID or eventID.
-func (message *Message) Get(
+func (message Message) Get(
 	ctx context.Context,
 	appId string,
 	msgId string,
 	o *MessageGetOptions,
 ) (*models.MessageOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 		"msg_id": msgId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageGetOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("with_content", o.WithContent, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.MessageOut](
 		ctx,
@@ -223,17 +233,19 @@ func (message *Message) Get(
 // Delete the given message's payload.
 //
 // Useful in cases when a message was accidentally sent with sensitive content.
-// The message can't be replayed or resent once its payload has been deleted or expired.
-func (message *Message) ExpungeContent(
+// The message can't be replayed or resent once its payload has been deleted
+// (or has expired).
+func (message Message) ExpungeContent(
 	ctx context.Context,
 	appId string,
 	msgId string,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 		"msg_id": msgId,
 	}
-	_, err := internal.ExecuteRequest[any, any](
+	_, err = internal.ExecuteRequest[any, any](
 		ctx,
 		message.client,
 		"DELETE",
@@ -244,6 +256,42 @@ func (message *Message) ExpungeContent(
 		nil,
 	)
 	return err
+}
+
+// Delete the payloads from the given messages under the current application
+//
+// Useful in cases when a message was accidentally sent with sensitive content.
+// A message can't be replayed or resent once its payload has been deleted
+// (or has expired).
+func (message Message) BulkExpungeContent(
+	ctx context.Context,
+	appId string,
+	bulkExpungeContentsIn models.BulkExpungeContentsIn,
+	o *MessageBulkExpungeContentOptions,
+) (*models.BulkExpungeContentsOut, error) {
+	var err error
+	pathMap := map[string]string{
+		"app_id": appId,
+	}
+	headerMap := map[string]string{}
+	if o == nil {
+		opts := MessageBulkExpungeContentOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
+	}
+	return internal.ExecuteRequest[models.BulkExpungeContentsIn, models.BulkExpungeContentsOut](
+		ctx,
+		message.client,
+		"POST",
+		"/api/v1/app/{app_id}/msg/bulk-expunge",
+		pathMap,
+		nil,
+		headerMap,
+		&bulkExpungeContentsIn,
+	)
 }
 
 // Delete all message payloads for the application.
@@ -263,22 +311,23 @@ func (message *Message) ExpungeContent(
 //	}
 //
 // ```
-func (message *Message) ExpungeAllContents(
+func (message Message) ExpungeAllContents(
 	ctx context.Context,
 	appId string,
 	o *MessageExpungeAllContentsOptions,
 ) (*models.ExpungeAllContentsOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := MessageExpungeAllContentsOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ExpungeAllContentsOut](
 		ctx,

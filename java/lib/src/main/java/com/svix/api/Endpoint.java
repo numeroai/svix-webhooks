@@ -5,6 +5,7 @@ import com.svix.SvixHttpClient;
 import com.svix.Utils;
 import com.svix.exceptions.ApiException;
 import com.svix.models.BulkReplayIn;
+import com.svix.models.EndpointAttemptStats;
 import com.svix.models.EndpointHeadersIn;
 import com.svix.models.EndpointHeadersOut;
 import com.svix.models.EndpointHeadersPatchIn;
@@ -15,9 +16,7 @@ import com.svix.models.EndpointSecretOut;
 import com.svix.models.EndpointSecretRotateIn;
 import com.svix.models.EndpointStats;
 import com.svix.models.EndpointTransformationIn;
-import com.svix.models.EndpointTransformationOut;
-import com.svix.models.EndpointTransformationPatch;
-import com.svix.models.EndpointUpdate;
+import com.svix.models.EndpointUpsertIn;
 import com.svix.models.EventExampleIn;
 import com.svix.models.ListResponseEndpointOut;
 import com.svix.models.MessageOut;
@@ -25,6 +24,8 @@ import com.svix.models.RecoverIn;
 import com.svix.models.RecoverOut;
 import com.svix.models.ReplayIn;
 import com.svix.models.ReplayOut;
+
+import lombok.Getter;
 
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
@@ -36,8 +37,11 @@ import java.util.Map;
 public class Endpoint {
     private final SvixHttpClient client;
 
+    @Getter private final EndpointTransformation transformation;
+
     public Endpoint(SvixHttpClient client) {
         this.client = client;
+        this.transformation = new EndpointTransformation(client);
     }
 
     /** List the application's endpoints. */
@@ -107,8 +111,8 @@ public class Endpoint {
     }
 
     /** Create or update an endpoint. */
-    public EndpointOut update(
-            final String appId, final String endpointId, final EndpointUpdate endpointUpdate)
+    public EndpointOut upsert(
+            final String appId, final String endpointId, final EndpointUpsertIn endpointUpsertIn)
             throws IOException, ApiException {
         HttpUrl.Builder url =
                 this.client
@@ -116,7 +120,7 @@ public class Endpoint {
                         .encodedPath(
                                 String.format("/api/v1/app/%s/endpoint/%s", appId, endpointId));
         return this.client.executeRequest(
-                "PUT", url.build(), null, endpointUpdate, EndpointOut.class);
+                "PUT", url.build(), null, endpointUpsertIn, EndpointOut.class);
     }
 
     /** Delete an endpoint. */
@@ -163,23 +167,23 @@ public class Endpoint {
     /**
      * Rotates the endpoint's signing secret.
      *
-     * <p>The previous secret will remain valid for the next 24 hours.
+     * <p>The previous secret will remain valid for the specified grace period (default 24 hours).
      */
-    public void rotateSecret(
+    public EndpointSecretOut rotateSecret(
             final String appId,
             final String endpointId,
             final EndpointSecretRotateIn endpointSecretRotateIn)
             throws IOException, ApiException {
-        this.rotateSecret(
+        return this.rotateSecret(
                 appId, endpointId, endpointSecretRotateIn, new EndpointRotateSecretOptions());
     }
 
     /**
      * Rotates the endpoint's signing secret.
      *
-     * <p>The previous secret will remain valid for the next 24 hours.
+     * <p>The previous secret will remain valid for the specified grace period (default 24 hours).
      */
-    public void rotateSecret(
+    public EndpointSecretOut rotateSecret(
             final String appId,
             final String endpointId,
             final EndpointSecretRotateIn endpointSecretRotateIn,
@@ -196,8 +200,12 @@ public class Endpoint {
         if (options.idempotencyKey != null) {
             headers.put("idempotency-key", options.idempotencyKey);
         }
-        this.client.executeRequest(
-                "POST", url.build(), Headers.of(headers), endpointSecretRotateIn, null);
+        return this.client.executeRequest(
+                "POST",
+                url.build(),
+                Headers.of(headers),
+                endpointSecretRotateIn,
+                EndpointSecretOut.class);
     }
 
     /** Get the additional headers to be sent with the webhook. */
@@ -213,7 +221,7 @@ public class Endpoint {
     }
 
     /** Set the additional headers to be sent with the webhook. */
-    public void updateHeaders(
+    public void setHeaders(
             final String appId, final String endpointId, final EndpointHeadersIn endpointHeadersIn)
             throws IOException, ApiException {
         HttpUrl.Builder url =
@@ -238,36 +246,6 @@ public class Endpoint {
                                 String.format(
                                         "/api/v1/app/%s/endpoint/%s/headers", appId, endpointId));
         this.client.executeRequest("PATCH", url.build(), null, endpointHeadersPatchIn, null);
-    }
-
-    /** Get the transformation code associated with this endpoint. */
-    public EndpointTransformationOut transformationGet(final String appId, final String endpointId)
-            throws IOException, ApiException {
-        HttpUrl.Builder url =
-                this.client
-                        .newUrlBuilder()
-                        .encodedPath(
-                                String.format(
-                                        "/api/v1/app/%s/endpoint/%s/transformation",
-                                        appId, endpointId));
-        return this.client.executeRequest(
-                "GET", url.build(), null, null, EndpointTransformationOut.class);
-    }
-
-    /** Set or unset the transformation code associated with this endpoint. */
-    public void patchTransformation(
-            final String appId,
-            final String endpointId,
-            final EndpointTransformationPatch endpointTransformationPatch)
-            throws IOException, ApiException {
-        HttpUrl.Builder url =
-                this.client
-                        .newUrlBuilder()
-                        .encodedPath(
-                                String.format(
-                                        "/api/v1/app/%s/endpoint/%s/transformation",
-                                        appId, endpointId));
-        this.client.executeRequest("PATCH", url.build(), null, endpointTransformationPatch, null);
     }
 
     /**
@@ -387,6 +365,43 @@ public class Endpoint {
             url.addQueryParameter("until", Utils.serializeQueryParam(options.until));
         }
         return this.client.executeRequest("GET", url.build(), null, null, EndpointStats.class);
+    }
+
+    /**
+     * Get basic statistics about attempted deliveries for the endpoint.
+     *
+     * <p>Time windows are always rounded to hour granularity
+     */
+    public EndpointAttemptStats getAttemptStats(final String appId, final String endpointId)
+            throws IOException, ApiException {
+        return this.getAttemptStats(appId, endpointId, new EndpointGetAttemptStatsOptions());
+    }
+
+    /**
+     * Get basic statistics about attempted deliveries for the endpoint.
+     *
+     * <p>Time windows are always rounded to hour granularity
+     */
+    public EndpointAttemptStats getAttemptStats(
+            final String appId,
+            final String endpointId,
+            final EndpointGetAttemptStatsOptions options)
+            throws IOException, ApiException {
+        HttpUrl.Builder url =
+                this.client
+                        .newUrlBuilder()
+                        .encodedPath(
+                                String.format(
+                                        "/api/v1/app/%s/endpoint/%s/attempt-stats",
+                                        appId, endpointId));
+        if (options.since != null) {
+            url.addQueryParameter("since", Utils.serializeQueryParam(options.since));
+        }
+        if (options.until != null) {
+            url.addQueryParameter("until", Utils.serializeQueryParam(options.until));
+        }
+        return this.client.executeRequest(
+                "GET", url.build(), null, null, EndpointAttemptStats.class);
     }
 
     /**

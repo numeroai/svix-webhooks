@@ -4,41 +4,41 @@ require "json"
 
 module Svix
   class ConnectorOut
-    attr_accessor :allowed_event_types
-    attr_accessor :created_at
-    attr_accessor :description
-    attr_accessor :feature_flags
     # The Connector's ID.
     attr_accessor :id
-    attr_accessor :instructions
-    attr_accessor :kind
-    attr_accessor :logo
-    attr_accessor :name
     # The Environment's ID.
     attr_accessor :org_id
-    attr_accessor :product_type
-    attr_accessor :transformation
-    attr_accessor :transformation_updated_at
     # The Connector's UID.
     attr_accessor :uid
+    attr_accessor :kind
+    attr_accessor :name
+    attr_accessor :logo
+    attr_accessor :description
+    attr_accessor :instructions
+    attr_accessor :allowed_event_types
+    attr_accessor :transformation
+    attr_accessor :created_at
     attr_accessor :updated_at
+    attr_accessor :transformation_updated_at
+    attr_accessor :feature_flags
+    attr_accessor :product_type
 
     ALL_FIELD ||= [
-      "allowed_event_types",
-      "created_at",
-      "description",
-      "feature_flags",
       "id",
-      "instructions",
-      "kind",
-      "logo",
-      "name",
       "org_id",
-      "product_type",
-      "transformation",
-      "transformation_updated_at",
       "uid",
-      "updated_at"
+      "kind",
+      "name",
+      "logo",
+      "description",
+      "instructions",
+      "allowed_event_types",
+      "transformation",
+      "created_at",
+      "updated_at",
+      "transformation_updated_at",
+      "feature_flags",
+      "product_type"
     ].freeze
     private_constant :ALL_FIELD
 
@@ -60,51 +60,51 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["allowed_event_types"] = attributes["allowedEventTypes"]
-      attrs["created_at"] = DateTime.rfc3339(attributes["createdAt"]).to_time
-      attrs["description"] = attributes["description"]
-      attrs["feature_flags"] = attributes["featureFlags"]
       attrs["id"] = attributes["id"]
-      attrs["instructions"] = attributes["instructions"]
-      attrs["kind"] = Svix::ConnectorKind.deserialize(attributes["kind"])
-      attrs["logo"] = attributes["logo"]
-      attrs["name"] = attributes["name"]
       attrs["org_id"] = attributes["orgId"]
-      attrs["product_type"] = Svix::ConnectorProduct.deserialize(attributes["productType"])
-      attrs["transformation"] = attributes["transformation"]
-      attrs["transformation_updated_at"] = DateTime.rfc3339(attributes["transformationUpdatedAt"]).to_time
       attrs["uid"] = attributes["uid"]
+      attrs["kind"] = Svix::ConnectorKind.deserialize(attributes["kind"])
+      attrs["name"] = attributes["name"]
+      attrs["logo"] = attributes["logo"]
+      attrs["description"] = attributes["description"]
+      attrs["instructions"] = attributes["instructions"]
+      attrs["allowed_event_types"] = attributes["allowedEventTypes"]
+      attrs["transformation"] = attributes["transformation"]
+      attrs["created_at"] = DateTime.rfc3339(attributes["createdAt"]).to_time
       attrs["updated_at"] = DateTime.rfc3339(attributes["updatedAt"]).to_time
+      attrs["transformation_updated_at"] = DateTime.rfc3339(attributes["transformationUpdatedAt"]).to_time
+      attrs["feature_flags"] = attributes["featureFlags"]
+      attrs["product_type"] = Svix::ConnectorProduct.deserialize(attributes["productType"])
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["allowedEventTypes"] = Svix::serialize_primitive(@allowed_event_types) if @allowed_event_types
-      out["createdAt"] = Svix::serialize_primitive(@created_at) if @created_at
-      out["description"] = Svix::serialize_primitive(@description) if @description
-      out["featureFlags"] = Svix::serialize_primitive(@feature_flags) if @feature_flags
-      out["id"] = Svix::serialize_primitive(@id) if @id
-      out["instructions"] = Svix::serialize_primitive(@instructions) if @instructions
-      out["kind"] = Svix::serialize_schema_ref(@kind) if @kind
-      out["logo"] = Svix::serialize_primitive(@logo) if @logo
-      out["name"] = Svix::serialize_primitive(@name) if @name
-      out["orgId"] = Svix::serialize_primitive(@org_id) if @org_id
-      out["productType"] = Svix::serialize_schema_ref(@product_type) if @product_type
-      out["transformation"] = Svix::serialize_primitive(@transformation) if @transformation
-      if @transformation_updated_at
+      out["id"] = Svix::serialize_primitive(@id) unless @id.nil?
+      out["orgId"] = Svix::serialize_primitive(@org_id) unless @org_id.nil?
+      out["uid"] = Svix::serialize_primitive(@uid) unless @uid.nil?
+      out["kind"] = Svix::serialize_schema_ref(@kind) unless @kind.nil?
+      out["name"] = Svix::serialize_primitive(@name) unless @name.nil?
+      out["logo"] = Svix::serialize_primitive(@logo) unless @logo.nil?
+      out["description"] = Svix::serialize_primitive(@description) unless @description.nil?
+      out["instructions"] = Svix::serialize_primitive(@instructions) unless @instructions.nil?
+      out["allowedEventTypes"] = Svix::serialize_primitive(@allowed_event_types) unless @allowed_event_types.nil?
+      out["transformation"] = Svix::serialize_primitive(@transformation) unless @transformation.nil?
+      out["createdAt"] = Svix::serialize_primitive(@created_at) unless @created_at.nil?
+      out["updatedAt"] = Svix::serialize_primitive(@updated_at) unless @updated_at.nil?
+      unless @transformation_updated_at.nil?
         out["transformationUpdatedAt"] = Svix::serialize_primitive(@transformation_updated_at)
       end
 
-      out["uid"] = Svix::serialize_primitive(@uid) if @uid
-      out["updatedAt"] = Svix::serialize_primitive(@updated_at) if @updated_at
+      out["featureFlags"] = Svix::serialize_primitive(@feature_flags) unless @feature_flags.nil?
+      out["productType"] = Svix::serialize_schema_ref(@product_type) unless @product_type.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

@@ -5,7 +5,7 @@ use crate::{error::Result, models::*, Configuration};
 #[derive(Default)]
 pub struct MessageListOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -14,28 +14,30 @@ pub struct MessageListOptions {
     pub channel: Option<String>,
 
     /// Only include items created before a certain date.
-    ///
-    /// RFC3339 date string.
-    pub before: Option<String>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Only include items created after a certain date.
-    ///
-    /// RFC3339 date string.
-    pub after: Option<String>,
+    pub after: Option<chrono::DateTime<chrono::Utc>>,
 
     /// When `true` message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when
+    /// manually making a request without specifying this parameter.
     pub with_content: Option<bool>,
 
     /// Filter messages matching the provided tag.
     pub tag: Option<String>,
 
     /// Filter response based on the event type
-    pub event_types: Option<Vec<String>>,
+    pub event_types: Option<std::collections::BTreeSet<String>>,
 }
 
 #[derive(Default)]
 pub struct MessageCreateOptions {
     /// When `true`, message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when
+    /// manually making a request without specifying this parameter.
     pub with_content: Option<bool>,
 
     pub idempotency_key: Option<String>,
@@ -49,7 +51,15 @@ pub struct MessagePrecheckOptions {
 #[derive(Default)]
 pub struct MessageGetOptions {
     /// When `true` message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when
+    /// manually making a request without specifying this parameter.
     pub with_content: Option<bool>,
+}
+
+#[derive(Default)]
+pub struct MessageBulkExpungeContentOptions {
+    pub idempotency_key: Option<String>,
 }
 
 #[derive(Default)]
@@ -97,7 +107,7 @@ impl<'a> Message<'a> {
             event_types,
         } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::GET, "/api/v1/app/{app_id}/msg")
+        crate::request::Request::new(http::Method::GET, "/api/v1/app/{app_id}/msg")
             .with_path_param("app_id", app_id)
             .with_optional_query_param("limit", limit)
             .with_optional_query_param("iterator", iterator)
@@ -141,22 +151,13 @@ impl<'a> Message<'a> {
             idempotency_key,
         } = options.unwrap_or_default();
 
-        let payload = with_content
-            .unwrap_or(true)
-            .then(|| message_in.payload.clone());
-        let mut response: MessageOut =
-            crate::request::Request::new(http1::Method::POST, "/api/v1/app/{app_id}/msg")
-                .with_path_param("app_id", app_id)
-                .with_query_param("with_content", false)
-                .with_optional_header_param("idempotency-key", idempotency_key)
-                .with_body_param(message_in)
-                .execute(self.cfg)
-                .await?;
-        if let Some(p) = payload {
-            response.payload = p;
-        }
-
-        Ok(response)
+        crate::request::Request::new(http::Method::POST, "/api/v1/app/{app_id}/msg")
+            .with_path_param("app_id", app_id)
+            .with_optional_query_param("with_content", with_content)
+            .with_optional_header_param("idempotency-key", idempotency_key)
+            .with_body_param(message_in)
+            .execute(self.cfg)
+            .await
     }
 
     /// A pre-check call for `message.create` that checks whether any active
@@ -174,7 +175,7 @@ impl<'a> Message<'a> {
         let MessagePrecheckOptions { idempotency_key } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/app/{app_id}/msg/precheck/active",
         )
         .with_path_param("app_id", app_id)
@@ -193,7 +194,7 @@ impl<'a> Message<'a> {
     ) -> Result<MessageOut> {
         let MessageGetOptions { with_content } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::GET, "/api/v1/app/{app_id}/msg/{msg_id}")
+        crate::request::Request::new(http::Method::GET, "/api/v1/app/{app_id}/msg/{msg_id}")
             .with_path_param("app_id", app_id)
             .with_path_param("msg_id", msg_id)
             .with_optional_query_param("with_content", with_content)
@@ -205,10 +206,10 @@ impl<'a> Message<'a> {
     ///
     /// Useful in cases when a message was accidentally sent with sensitive
     /// content. The message can't be replayed or resent once its payload
-    /// has been deleted or expired.
+    /// has been deleted (or has expired).
     pub async fn expunge_content(&self, app_id: String, msg_id: String) -> Result<()> {
         crate::request::Request::new(
-            http1::Method::DELETE,
+            http::Method::DELETE,
             "/api/v1/app/{app_id}/msg/{msg_id}/content",
         )
         .with_path_param("app_id", app_id)
@@ -232,7 +233,7 @@ impl<'a> Message<'a> {
             after,
         } = params;
 
-        crate::request::Request::new(http1::Method::GET, "/api/v1/app/{app_id}/events")
+        crate::request::Request::new(http::Method::GET, "/api/v1/app/{app_id}/events")
             .with_path_param("app_id", app_id)
             .with_optional_query_param("limit", limit)
             .with_optional_query_param("iterator", iterator)
@@ -259,7 +260,7 @@ impl<'a> Message<'a> {
         } = params;
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/events/subscription/{subscription_id}",
         )
         .with_path_param("app_id", app_id.to_string())
@@ -271,6 +272,28 @@ impl<'a> Message<'a> {
         .with_optional_query_param("after", after)
         .execute(self.cfg)
         .await
+    }
+
+    /// Delete the payloads from the given messages under the current
+    /// application
+    ///
+    /// Useful in cases when a message was accidentally sent with sensitive
+    /// content. A message can't be replayed or resent once its payload has
+    /// been deleted (or has expired).
+    pub async fn bulk_expunge_content(
+        &self,
+        app_id: String,
+        bulk_expunge_contents_in: BulkExpungeContentsIn,
+        options: Option<MessageBulkExpungeContentOptions>,
+    ) -> Result<BulkExpungeContentsOut> {
+        let MessageBulkExpungeContentOptions { idempotency_key } = options.unwrap_or_default();
+
+        crate::request::Request::new(http::Method::POST, "/api/v1/app/{app_id}/msg/bulk-expunge")
+            .with_path_param("app_id", app_id)
+            .with_optional_header_param("idempotency-key", idempotency_key)
+            .with_body_param(bulk_expunge_contents_in)
+            .execute(self.cfg)
+            .await
     }
 
     /// Delete all message payloads for the application.
@@ -296,7 +319,7 @@ impl<'a> Message<'a> {
         let MessageExpungeAllContentsOptions { idempotency_key } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/app/{app_id}/msg/expunge-all-contents",
         )
         .with_path_param("app_id", app_id)
@@ -312,7 +335,7 @@ pub struct V1MessageEventsParams {
     /// The app's ID or UID
     pub app_id: String,
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
     /// Filter response based on the event type
@@ -330,7 +353,7 @@ pub struct V1MessageEventsSubscriptionParams {
     /// The esub's ID or UID
     pub subscription_id: String,
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
     /// Filter response based on the event type

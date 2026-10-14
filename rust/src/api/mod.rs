@@ -1,22 +1,26 @@
 // this file is @generated
 #![warn(unreachable_pub)]
 
-mod client;
-mod deprecated;
+pub(crate) mod client;
 
 pub use self::client::{Svix, SvixOptions};
-pub use crate::models::*;
 
 mod application;
 mod authentication;
+mod autoconfig_subscription;
 mod background_task;
 mod connector;
+mod destination;
+mod destination_transformation;
 mod endpoint;
+mod endpoint_transformation;
 mod environment;
 mod event_type;
 mod health;
 mod ingest;
+mod ingest_authentication;
 mod ingest_endpoint;
+mod ingest_endpoint_transformation;
 mod ingest_source;
 mod integration;
 mod message;
@@ -29,6 +33,7 @@ mod streaming;
 mod streaming_event_type;
 mod streaming_events;
 mod streaming_sink;
+mod streaming_sink_transformation;
 mod streaming_stream;
 
 #[cfg(feature = "svix_beta")]
@@ -41,25 +46,38 @@ pub use self::{
         AuthenticationStreamExpireAllOptions, AuthenticationStreamLogoutOptions,
         AuthenticationStreamPortalAccessOptions,
     },
+    autoconfig_subscription::{
+        AutoconfigSubscription, AutoconfigSubscriptionCreateOptions,
+        AutoconfigSubscriptionRotateOptions,
+    },
     background_task::{BackgroundTask, BackgroundTaskListOptions},
     connector::{Connector, ConnectorCreateOptions, ConnectorListOptions},
-    deprecated::*,
-    endpoint::{
-        Endpoint, EndpointBulkReplayOptions, EndpointCreateOptions, EndpointGetStatsOptions,
-        EndpointListOptions, EndpointRecoverOptions, EndpointReplayMissingOptions,
-        EndpointRotateSecretOptions, EndpointSendExampleOptions,
+    destination::{
+        Destination, DestinationCreateOptions, DestinationListOptions,
+        DestinationRotateSecretOptions,
     },
+    destination_transformation::DestinationTransformation,
+    endpoint::{
+        Endpoint, EndpointBulkReplayOptions, EndpointCreateOptions, EndpointGetAttemptStatsOptions,
+        EndpointGetStatsOptions, EndpointListOptions, EndpointRecoverOptions,
+        EndpointReplayMissingOptions, EndpointRotateSecretOptions, EndpointSendExampleOptions,
+    },
+    endpoint_transformation::EndpointTransformation,
     environment::{Environment, EnvironmentExportOptions, EnvironmentImportOptions},
     event_type::{
         EventType, EventTypeCreateOptions, EventTypeDeleteOptions, EventTypeImportOpenapiOptions,
         EventTypeListOptions,
     },
     health::Health,
-    ingest::{Ingest, IngestDashboardOptions},
+    ingest::Ingest,
+    ingest_authentication::{
+        IngestAuthentication, IngestAuthenticationConsumerPortalAccessOptions,
+    },
     ingest_endpoint::{
         IngestEndpoint, IngestEndpointCreateOptions, IngestEndpointListOptions,
         IngestEndpointRotateSecretOptions,
     },
+    ingest_endpoint_transformation::IngestEndpointTransformation,
     ingest_source::{
         IngestSource, IngestSourceCreateOptions, IngestSourceListOptions,
         IngestSourceRotateTokenOptions,
@@ -68,8 +86,9 @@ pub use self::{
         Integration, IntegrationCreateOptions, IntegrationListOptions, IntegrationRotateKeyOptions,
     },
     message::{
-        Message, MessageCreateOptions, MessageExpungeAllContentsOptions, MessageGetOptions,
-        MessageListOptions, MessagePrecheckOptions,
+        Message, MessageBulkExpungeContentOptions, MessageCreateOptions,
+        MessageExpungeAllContentsOptions, MessageGetOptions, MessageListOptions,
+        MessagePrecheckOptions,
     },
     message_attempt::{
         MessageAttempt, MessageAttemptGetOptions, MessageAttemptListAttemptedDestinationsOptions,
@@ -96,6 +115,7 @@ pub use self::{
         StreamingSink, StreamingSinkCreateOptions, StreamingSinkListOptions,
         StreamingSinkRotateSecretOptions,
     },
+    streaming_sink_transformation::StreamingSinkTransformation,
     streaming_stream::{StreamingStream, StreamingStreamCreateOptions, StreamingStreamListOptions},
 };
 
@@ -106,11 +126,17 @@ impl Svix {
     pub fn authentication(&self) -> Authentication<'_> {
         Authentication::new(&self.cfg)
     }
+    pub fn autoconfig_subscription(&self) -> AutoconfigSubscription<'_> {
+        AutoconfigSubscription::new(&self.cfg)
+    }
     pub fn background_task(&self) -> BackgroundTask<'_> {
         BackgroundTask::new(&self.cfg)
     }
     pub fn connector(&self) -> Connector<'_> {
         Connector::new(&self.cfg)
+    }
+    pub fn destination(&self) -> Destination<'_> {
+        Destination::new(&self.cfg)
     }
     pub fn endpoint(&self) -> Endpoint<'_> {
         Endpoint::new(&self.cfg)
@@ -144,9 +170,5 @@ impl Svix {
     }
     pub fn streaming(&self) -> Streaming<'_> {
         Streaming::new(&self.cfg)
-    }
-    #[deprecated = "Use .operational_webhook().endpoint() instead"]
-    pub fn operational_webhook_endpoint(&self) -> OperationalWebhookEndpoint<'_> {
-        OperationalWebhookEndpoint::new(&self.cfg)
     }
 }

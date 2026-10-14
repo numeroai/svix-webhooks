@@ -13,10 +13,10 @@ import kotlinx.serialization.json.buildJsonObject
 
 @Serializable(with = IngestSourceInSerializer::class)
 data class IngestSourceIn(
-    val metadata: Map<String, String>? = null,
     val name: String,
     /** The Source's UID. */
     val uid: String? = null,
+    val metadata: Map<String, String>? = null,
     val config: IngestSourceInConfig,
 )
 
@@ -99,6 +99,11 @@ sealed class IngestSourceInConfig {
     @VariantName("lithic")
     data class Lithic(val lithic: SvixConfig) : IngestSourceInConfig() {
         override fun toJsonElement() = Json.encodeToJsonElement(SvixConfig.serializer(), lithic)
+    }
+
+    @VariantName("merge")
+    data class Merge(val merge: MergeConfig) : IngestSourceInConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(MergeConfig.serializer(), merge)
     }
 
     @VariantName("meta")
@@ -306,6 +311,10 @@ sealed class IngestSourceInConfig {
                     { config ->
                         Lithic(Json.decodeFromJsonElement(SvixConfig.serializer(), config))
                     },
+                "merge" to
+                    { config ->
+                        Merge(Json.decodeFromJsonElement(MergeConfig.serializer(), config))
+                    },
                 "meta" to
                     { config ->
                         Meta(Json.decodeFromJsonElement(MetaConfig.serializer(), config))
@@ -434,12 +443,12 @@ sealed class IngestSourceInConfig {
 class IngestSourceInSerializer : KSerializer<IngestSourceIn> {
     @Serializable
     private data class IngestSourceInSurrogate(
-        val metadata: Map<String, String>? = null,
         val name: String,
         /** The Source's UID. */
         val uid: String? = null,
+        val metadata: Map<String, String>? = null,
         val type: String,
-        val config: JsonElement,
+        val config: JsonElement = buildJsonObject {},
     )
 
     override val descriptor: SerialDescriptor = IngestSourceInSurrogate.serializer().descriptor
@@ -447,9 +456,9 @@ class IngestSourceInSerializer : KSerializer<IngestSourceIn> {
     override fun serialize(encoder: Encoder, value: IngestSourceIn) {
         val surrogate =
             IngestSourceInSurrogate(
-                metadata = value.metadata,
                 name = value.name,
                 uid = value.uid,
+                metadata = value.metadata,
                 type = value.config.variantName,
                 config = value.config.toJsonElement(),
             )
@@ -459,9 +468,9 @@ class IngestSourceInSerializer : KSerializer<IngestSourceIn> {
     override fun deserialize(decoder: Decoder): IngestSourceIn {
         val surrogate = decoder.decodeSerializableValue(IngestSourceInSurrogate.serializer())
         return IngestSourceIn(
-            metadata = surrogate.metadata,
             name = surrogate.name,
             uid = surrogate.uid,
+            metadata = surrogate.metadata,
             config = IngestSourceInConfig.fromTypeAndConfig(surrogate.type, surrogate.config),
         )
     }

@@ -9,10 +9,12 @@ use super::message_poller::MessagePollerArgs;
 pub struct MessageListOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// Filter response based on the channel.
     #[arg(long)]
     pub channel: Option<String>,
@@ -22,9 +24,14 @@ pub struct MessageListOptions {
     /// Only include items created after a certain date.
     #[arg(long)]
     pub after: Option<chrono::DateTime<chrono::Utc>>,
+
     /// When `true` message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+    /// without specifying this parameter.
     #[arg(long)]
     pub with_content: Option<bool>,
+
     /// Filter messages matching the provided tag.
     #[arg(long)]
     pub tag: Option<String>,
@@ -49,11 +56,11 @@ impl From<MessageListOptions> for svix::api::MessageListOptions {
             limit,
             iterator,
             channel,
-            before: before.map(|dt| dt.to_rfc3339()),
-            after: after.map(|dt| dt.to_rfc3339()),
+            before,
+            after,
             with_content,
             tag,
-            event_types,
+            event_types: event_types.map(|list| list.into_iter().collect()),
         }
     }
 }
@@ -61,6 +68,9 @@ impl From<MessageListOptions> for svix::api::MessageListOptions {
 #[derive(Args, Clone)]
 pub struct MessageCreateOptions {
     /// When `true`, message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+    /// without specifying this parameter.
     #[arg(long)]
     pub with_content: Option<bool>,
 
@@ -97,6 +107,9 @@ impl From<MessagePrecheckOptions> for svix::api::MessagePrecheckOptions {
 #[derive(Args, Clone)]
 pub struct MessageGetOptions {
     /// When `true` message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+    /// without specifying this parameter.
     #[arg(long)]
     pub with_content: Option<bool>,
 }
@@ -105,6 +118,19 @@ impl From<MessageGetOptions> for svix::api::MessageGetOptions {
     fn from(value: MessageGetOptions) -> Self {
         let MessageGetOptions { with_content } = value;
         Self { with_content }
+    }
+}
+
+#[derive(Args, Clone)]
+pub struct MessageBulkExpungeContentOptions {
+    #[arg(long)]
+    pub idempotency_key: Option<String>,
+}
+
+impl From<MessageBulkExpungeContentOptions> for svix::api::MessageBulkExpungeContentOptions {
+    fn from(value: MessageBulkExpungeContentOptions) -> Self {
+        let MessageBulkExpungeContentOptions { idempotency_key } = value;
+        Self { idempotency_key }
     }
 }
 
@@ -152,22 +178,22 @@ pub enum MessageCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"deliverAt\": \"2030-01-01T00:00:00Z\",
     \"eventId\": \"unique-identifier\",
     \"eventType\": \"user.signup\",
-    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"payload\": {
       \"email\": \"test@example.com\",
       \"type\": \"user.created\",
       \"username\": \"test_user\"
     },
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"tags\": [\"...\"],
-    \"timestamp\": \"2030-01-01T00:00:00Z\"
+    \"deliverAt\": \"2030-01-01T00:00:00Z\"
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     List {
         app_id: String,
@@ -193,15 +219,6 @@ pub enum MessageCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"application\": {
-    \"metadata\": {\"key\": \"...\"},
-    \"name\": \"My first application\",
-    \"rateLimit\": 123,
-    \"throttleRate\": 123,
-    \"uid\": \"unique-identifier\"
-  },
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"deliverAt\": \"2030-01-01T00:00:00Z\",
   \"eventId\": \"unique-identifier\",
   \"eventType\": \"user.signup\",
   \"payload\": {
@@ -209,24 +226,32 @@ pub enum MessageCommands {
     \"type\": \"user.created\",
     \"username\": \"test_user\"
   },
-  \"payloadRetentionHours\": 123,
-  \"payloadRetentionPeriod\": 90,
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"application\": {
+    \"name\": \"My first application\",
+    \"throttleRate\": 123,
+    \"uid\": \"unique-identifier\",
+    \"metadata\": {\"key\": \"...\"}
+  },
   \"tags\": [\"my_tag\",\"other\"],
-  \"transformationsParams\": {\"key\": \"...\"}
+  \"transformationsParams\": {\"key\": \"...\"},
+  \"deliverAt\": \"2030-01-01T00:00:00Z\",
+  \"payloadRetentionPeriod\": 90,
+  \"payloadRetentionHours\": 123
 }\n\nExample response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"deliverAt\": \"2030-01-01T00:00:00Z\",
   \"eventId\": \"unique-identifier\",
   \"eventType\": \"user.signup\",
-  \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"payload\": {
     \"email\": \"test@example.com\",
     \"type\": \"user.created\",
     \"username\": \"test_user\"
   },
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+  \"timestamp\": \"2030-01-01T00:00:00Z\",
   \"tags\": [\"...\"],
-  \"timestamp\": \"2030-01-01T00:00:00Z\"
+  \"deliverAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Create {
         app_id: String,
@@ -250,8 +275,8 @@ pub enum MessageCommands {
         ))]
     #[command(after_help = "Example body:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"eventType\": \"user.signup\"
+  \"eventType\": \"user.signup\",
+  \"channels\": [\"project_123\",\"group_2\"]
 }\n\nExample response:
 {
   \"active\": true
@@ -273,18 +298,18 @@ pub enum MessageCommands {
         ))]
     #[command(after_help = "Example response:
 {
-  \"channels\": [\"project_123\",\"group_2\"],
-  \"deliverAt\": \"2030-01-01T00:00:00Z\",
   \"eventId\": \"unique-identifier\",
   \"eventType\": \"user.signup\",
-  \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"payload\": {
     \"email\": \"test@example.com\",
     \"type\": \"user.created\",
     \"username\": \"test_user\"
   },
+  \"channels\": [\"project_123\",\"group_2\"],
+  \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+  \"timestamp\": \"2030-01-01T00:00:00Z\",
   \"tags\": [\"...\"],
-  \"timestamp\": \"2030-01-01T00:00:00Z\"
+  \"deliverAt\": \"2030-01-01T00:00:00Z\"
 }\n")]
     Get {
         app_id: String,
@@ -295,7 +320,8 @@ pub enum MessageCommands {
     /// Delete the given message's payload.
     ///
     /// Useful in cases when a message was accidentally sent with sensitive content.
-    /// The message can't be replayed or resent once its payload has been deleted or expired.
+    /// The message can't be replayed or resent once its payload has been deleted
+    /// (or has expired).
     #[command(help_template = concat!(
             "{about-with-newline}\n",
             "{usage-heading} {usage}\n\n",
@@ -307,6 +333,32 @@ pub enum MessageCommands {
     ExpungeContent {
         app_id: String,
         id: String,
+    },
+    /// Delete the payloads from the given messages under the current application
+    ///
+    /// Useful in cases when a message was accidentally sent with sensitive content.
+    /// A message can't be replayed or resent once its payload has been deleted
+    /// (or has expired).
+    #[command(help_template = concat!(
+            "{about-with-newline}\n",
+            "{usage-heading} {usage}\n\n",
+            "Example: svix message bulk-expunge-content app_abc000000000000000000000000 {...}\n",
+            "{after-help}",
+            "\n",
+            "{all-args}",
+        ))]
+    #[command(after_help = "Example body:
+{
+  \"ids\": [\"...\"]
+}\n\nExample response:
+{
+  \"results\": {\"key\": \"expunged\"}
+}\n")]
+    BulkExpungeContent {
+        app_id: String,
+        bulk_expunge_contents_in: Option<crate::json::JsonOf<BulkExpungeContentsIn>>,
+        #[clap(flatten)]
+        options: MessageBulkExpungeContentOptions,
     },
     /// Delete all message payloads for the application.
     ///
@@ -398,6 +450,21 @@ impl MessageCommands {
             }
             Self::ExpungeContent { app_id, id } => {
                 client.message().expunge_content(app_id, id).await?;
+            }
+            Self::BulkExpungeContent {
+                app_id,
+                bulk_expunge_contents_in,
+                options,
+            } => {
+                let resp = client
+                    .message()
+                    .bulk_expunge_content(
+                        app_id,
+                        bulk_expunge_contents_in.unwrap_or_default().into_inner(),
+                        Some(options.into()),
+                    )
+                    .await?;
+                crate::json::print_json_output(&resp, color_mode)?;
             }
             Self::ExpungeAllContents { app_id, options } => {
                 let resp = client

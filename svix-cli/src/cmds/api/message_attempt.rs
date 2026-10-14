@@ -8,19 +8,24 @@ use svix::models::*;
 pub struct MessageAttemptListByEndpointOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// Filter response based on the status of the attempt: Success (0), Pending (1), Failed (2), Sending (3), or Canceled (4)
     #[arg(long)]
     pub status: Option<MessageStatus>,
+
     /// Filter response based on the HTTP status code
     #[arg(long)]
     pub status_code_class: Option<StatusCodeClass>,
+
     /// Filter response based on the channel
     #[arg(long)]
     pub channel: Option<String>,
+
     /// Filter response based on the tag
     #[arg(long)]
     pub tag: Option<String>,
@@ -30,14 +35,20 @@ pub struct MessageAttemptListByEndpointOptions {
     /// Only include items created after a certain date
     #[arg(long)]
     pub after: Option<chrono::DateTime<chrono::Utc>>,
-    /// When `true` attempt content is included in the response
+
+    /// When `true` attempt content is included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+    /// without specifying this parameter.
     #[arg(long)]
     pub with_content: Option<bool>,
+
     /// When `true`, the message information is included in the response
     ///
     /// Note that message payloads are never included in the response, regardless of this flag.
     #[arg(long)]
     pub with_msg: Option<bool>,
+
     /// When `true`, return the Canceled (4) status in attempts.
     ///
     /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
@@ -71,12 +82,12 @@ impl From<MessageAttemptListByEndpointOptions> for svix::api::MessageAttemptList
             status_code_class,
             channel,
             tag,
-            before: before.map(|dt| dt.to_rfc3339()),
-            after: after.map(|dt| dt.to_rfc3339()),
+            before,
+            after,
             with_content,
             with_msg,
             expanded_statuses,
-            event_types,
+            event_types: event_types.map(|list| list.into_iter().collect()),
         }
     }
 }
@@ -85,22 +96,28 @@ impl From<MessageAttemptListByEndpointOptions> for svix::api::MessageAttemptList
 pub struct MessageAttemptListByMsgOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// Filter response based on the status of the attempt: Success (0), Pending (1), Failed (2), Sending (3), or Canceled (4)
     #[arg(long)]
     pub status: Option<MessageStatus>,
+
     /// Filter response based on the HTTP status code
     #[arg(long)]
     pub status_code_class: Option<StatusCodeClass>,
+
     /// Filter response based on the channel
     #[arg(long)]
     pub channel: Option<String>,
+
     /// Filter response based on the tag
     #[arg(long)]
     pub tag: Option<String>,
+
     /// Filter the attempts based on the attempted endpoint
     #[arg(long)]
     pub endpoint_id: Option<String>,
@@ -110,9 +127,14 @@ pub struct MessageAttemptListByMsgOptions {
     /// Only include items created after a certain date
     #[arg(long)]
     pub after: Option<chrono::DateTime<chrono::Utc>>,
-    /// When `true` attempt content is included in the response
+
+    /// When `true` attempt content is included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+    /// without specifying this parameter.
     #[arg(long)]
     pub with_content: Option<bool>,
+
     /// When `true`, return the Canceled (4) status in attempts.
     ///
     /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
@@ -147,11 +169,11 @@ impl From<MessageAttemptListByMsgOptions> for svix::api::MessageAttemptListByMsg
             channel,
             tag,
             endpoint_id,
-            before: before.map(|dt| dt.to_rfc3339()),
-            after: after.map(|dt| dt.to_rfc3339()),
+            before,
+            after,
             with_content,
             expanded_statuses,
-            event_types,
+            event_types: event_types.map(|list| list.into_iter().collect()),
         }
     }
 }
@@ -160,16 +182,20 @@ impl From<MessageAttemptListByMsgOptions> for svix::api::MessageAttemptListByMsg
 pub struct MessageAttemptListAttemptedMessagesOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// Filter response based on the channel
     #[arg(long)]
     pub channel: Option<String>,
+
     /// Filter response based on the message tags
     #[arg(long)]
     pub tag: Option<String>,
+
     /// Filter response based on the status of the attempt: Success (0), Pending (1), Failed (2), Sending (3), or Canceled (4)
     #[arg(long)]
     pub status: Option<MessageStatus>,
@@ -179,9 +205,14 @@ pub struct MessageAttemptListAttemptedMessagesOptions {
     /// Only include items created after a certain date
     #[arg(long)]
     pub after: Option<chrono::DateTime<chrono::Utc>>,
-    /// When `true` message payloads are included in the response
+
+    /// When `true` message payloads are included in the response.
+    ///
+    /// Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+    /// without specifying this parameter.
     #[arg(long)]
     pub with_content: Option<bool>,
+
     /// When `true`, return the Canceled (4) status in attempts.
     ///
     /// If `false`, canceled attempts are returned as Success (0) for backwards compatibility.
@@ -214,11 +245,11 @@ impl From<MessageAttemptListAttemptedMessagesOptions>
             channel,
             tag,
             status,
-            before: before.map(|dt| dt.to_rfc3339()),
-            after: after.map(|dt| dt.to_rfc3339()),
+            before,
+            after,
             with_content,
             expanded_statuses,
-            event_types,
+            event_types: event_types.map(|list| list.into_iter().collect()),
         }
     }
 }
@@ -227,7 +258,8 @@ impl From<MessageAttemptListAttemptedMessagesOptions>
 pub struct MessageAttemptListAttemptedDestinationsOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
@@ -298,35 +330,35 @@ pub enum MessageAttemptCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
+    \"url\": \"https://example.com/webhook/\",
+    \"response\": \"{}\",
+    \"responseStatusCode\": 200,
+    \"responseDurationMs\": 123,
+    \"status\": 0,
+    \"statusText\": \"success\",
+    \"triggerType\": 0,
+    \"msgId\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"endpointId\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"id\": \"atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"msg\": {
-      \"channels\": [\"project_123\",\"group_2\"],
-      \"deliverAt\": \"2030-01-01T00:00:00Z\",
       \"eventId\": \"unique-identifier\",
       \"eventType\": \"user.signup\",
-      \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
       \"payload\": {
         \"email\": \"test@example.com\",
         \"type\": \"user.created\",
         \"username\": \"test_user\"
       },
+      \"channels\": [\"project_123\",\"group_2\"],
+      \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+      \"timestamp\": \"2030-01-01T00:00:00Z\",
       \"tags\": [\"...\"],
-      \"timestamp\": \"2030-01-01T00:00:00Z\"
-    },
-    \"msgId\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-    \"response\": \"{}\",
-    \"responseDurationMs\": 123,
-    \"responseStatusCode\": 200,
-    \"status\": 0,
-    \"statusText\": \"success\",
-    \"timestamp\": \"2030-01-01T00:00:00Z\",
-    \"triggerType\": 0,
-    \"url\": \"https://example.com/webhook/\"
+      \"deliverAt\": \"2030-01-01T00:00:00Z\"
+    }
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     ListByEndpoint {
         app_id: String,
@@ -351,35 +383,35 @@ pub enum MessageAttemptCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
+    \"url\": \"https://example.com/webhook/\",
+    \"response\": \"{}\",
+    \"responseStatusCode\": 200,
+    \"responseDurationMs\": 123,
+    \"status\": 0,
+    \"statusText\": \"success\",
+    \"triggerType\": 0,
+    \"msgId\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"endpointId\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"id\": \"atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"msg\": {
-      \"channels\": [\"project_123\",\"group_2\"],
-      \"deliverAt\": \"2030-01-01T00:00:00Z\",
       \"eventId\": \"unique-identifier\",
       \"eventType\": \"user.signup\",
-      \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
       \"payload\": {
         \"email\": \"test@example.com\",
         \"type\": \"user.created\",
         \"username\": \"test_user\"
       },
+      \"channels\": [\"project_123\",\"group_2\"],
+      \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+      \"timestamp\": \"2030-01-01T00:00:00Z\",
       \"tags\": [\"...\"],
-      \"timestamp\": \"2030-01-01T00:00:00Z\"
-    },
-    \"msgId\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-    \"response\": \"{}\",
-    \"responseDurationMs\": 123,
-    \"responseStatusCode\": 200,
-    \"status\": 0,
-    \"statusText\": \"success\",
-    \"timestamp\": \"2030-01-01T00:00:00Z\",
-    \"triggerType\": 0,
-    \"url\": \"https://example.com/webhook/\"
+      \"deliverAt\": \"2030-01-01T00:00:00Z\"
+    }
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     ListByMsg {
         app_id: String,
@@ -407,25 +439,25 @@ pub enum MessageAttemptCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"deliverAt\": \"2030-01-01T00:00:00Z\",
+    \"status\": 0,
+    \"statusText\": \"success\",
+    \"nextAttempt\": \"2030-01-01T00:00:00Z\",
     \"eventId\": \"unique-identifier\",
     \"eventType\": \"user.signup\",
-    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-    \"nextAttempt\": \"2030-01-01T00:00:00Z\",
     \"payload\": {
       \"email\": \"test@example.com\",
       \"type\": \"user.created\",
       \"username\": \"test_user\"
     },
-    \"status\": 0,
-    \"statusText\": \"success\",
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"tags\": [\"...\"],
-    \"timestamp\": \"2030-01-01T00:00:00Z\"
+    \"deliverAt\": \"2030-01-01T00:00:00Z\"
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     ListAttemptedMessages {
         app_id: String,
@@ -448,25 +480,23 @@ pub enum MessageAttemptCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"createdAt\": \"2030-01-01T00:00:00Z\",
-    \"description\": \"...\",
-    \"disabled\": false,
-    \"filterTypes\": [\"user.signup\",\"user.deleted\"],
     \"id\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-    \"nextAttempt\": \"2030-01-01T00:00:00Z\",
-    \"rateLimit\": 123,
     \"status\": 0,
     \"statusText\": \"success\",
+    \"nextAttempt\": \"2030-01-01T00:00:00Z\",
+    \"url\": \"https://example.com/webhook/\",
+    \"description\": \"...\",
     \"throttleRate\": 123,
     \"uid\": \"unique-identifier\",
-    \"updatedAt\": \"2030-01-01T00:00:00Z\",
-    \"url\": \"https://example.com/webhook/\",
-    \"version\": 1
+    \"disabled\": false,
+    \"eventTypes\": [\"user.signup\",\"user.deleted\"],
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"createdAt\": \"2030-01-01T00:00:00Z\",
+    \"updatedAt\": \"2030-01-01T00:00:00Z\"
   }],
-  \"done\": true,
   \"iterator\": \"iterator\",
-  \"prevIterator\": \"-iterator\"
+  \"prevIterator\": \"-iterator\",
+  \"done\": true
 }\n")]
     ListAttemptedDestinations {
         app_id: String,
@@ -485,31 +515,31 @@ pub enum MessageAttemptCommands {
         ))]
     #[command(after_help = "Example response:
 {
+  \"url\": \"https://example.com/webhook/\",
+  \"response\": \"{}\",
+  \"responseStatusCode\": 200,
+  \"responseDurationMs\": 123,
+  \"status\": 0,
+  \"statusText\": \"success\",
+  \"triggerType\": 0,
+  \"msgId\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"endpointId\": \"ep_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
   \"id\": \"atmpt_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+  \"timestamp\": \"2030-01-01T00:00:00Z\",
   \"msg\": {
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"deliverAt\": \"2030-01-01T00:00:00Z\",
     \"eventId\": \"unique-identifier\",
     \"eventType\": \"user.signup\",
-    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"payload\": {
       \"email\": \"test@example.com\",
       \"type\": \"user.created\",
       \"username\": \"test_user\"
     },
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"tags\": [\"...\"],
-    \"timestamp\": \"2030-01-01T00:00:00Z\"
-  },
-  \"msgId\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
-  \"response\": \"{}\",
-  \"responseDurationMs\": 123,
-  \"responseStatusCode\": 200,
-  \"status\": 0,
-  \"statusText\": \"success\",
-  \"timestamp\": \"2030-01-01T00:00:00Z\",
-  \"triggerType\": 0,
-  \"url\": \"https://example.com/webhook/\"
+    \"deliverAt\": \"2030-01-01T00:00:00Z\"
+  }
 }\n")]
     Get {
         app_id: String,

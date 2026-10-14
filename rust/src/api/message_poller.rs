@@ -4,7 +4,7 @@ use crate::{error::Result, models::*, Configuration};
 #[derive(Default)]
 pub struct MessagePollerPollOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -15,7 +15,7 @@ pub struct MessagePollerPollOptions {
     /// Filters messages sent with this channel (optional).
     pub channel: Option<String>,
 
-    pub after: Option<String>,
+    pub after: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Default)]
@@ -26,7 +26,7 @@ pub struct MessagePollerConsumerSeekOptions {
 #[derive(Default)]
 pub struct MessagePollerConsumerPollOptions {
     /// Limit the number of returned items
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
 
     /// The iterator returned from a prior invocation
     pub iterator: Option<String>,
@@ -57,7 +57,7 @@ impl<'a> MessagePoller<'a> {
             after,
         } = options.unwrap_or_default();
 
-        crate::request::Request::new(http1::Method::GET, "/api/v1/app/{app_id}/poller/{sink_id}")
+        crate::request::Request::new(http::Method::GET, "/api/v1/app/{app_id}/poller/{sink_id}")
             .with_path_param("app_id", app_id)
             .with_path_param("sink_id", sink_id)
             .with_optional_query_param("limit", limit)
@@ -81,7 +81,7 @@ impl<'a> MessagePoller<'a> {
         let MessagePollerConsumerSeekOptions { idempotency_key } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::POST,
+            http::Method::POST,
             "/api/v1/app/{app_id}/poller/{sink_id}/consumer/{consumer_id}/seek",
         )
         .with_path_param("app_id", app_id)
@@ -106,7 +106,7 @@ impl<'a> MessagePoller<'a> {
         let MessagePollerConsumerPollOptions { limit, iterator } = options.unwrap_or_default();
 
         crate::request::Request::new(
-            http1::Method::GET,
+            http::Method::GET,
             "/api/v1/app/{app_id}/poller/{sink_id}/consumer/{consumer_id}",
         )
         .with_path_param("app_id", app_id)

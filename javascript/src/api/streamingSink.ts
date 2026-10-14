@@ -1,6 +1,5 @@
 // this file is @generated
 
-import { type EmptyResponse, EmptyResponseSerializer } from "../models/emptyResponse";
 import {
   type EndpointSecretRotateIn,
   EndpointSecretRotateInSerializer,
@@ -12,15 +11,16 @@ import {
 import type { Ordering } from "../models/ordering";
 import { type SinkSecretOut, SinkSecretOutSerializer } from "../models/sinkSecretOut";
 import {
-  type SinkTransformIn,
-  SinkTransformInSerializer,
-} from "../models/sinkTransformIn";
+  type SinkSecretRotateOut,
+  SinkSecretRotateOutSerializer,
+} from "../models/sinkSecretRotateOut";
 import { type StreamSinkIn, StreamSinkInSerializer } from "../models/streamSinkIn";
 import { type StreamSinkOut, StreamSinkOutSerializer } from "../models/streamSinkOut";
 import {
   type StreamSinkPatch,
   StreamSinkPatchSerializer,
 } from "../models/streamSinkPatch";
+import { StreamingSinkTransformation } from "./streamingSinkTransformation";
 import { HttpMethod, SvixRequest, type SvixRequestContext } from "../request";
 
 export interface StreamingSinkListOptions {
@@ -42,6 +42,10 @@ export interface StreamingSinkRotateSecretOptions {
 
 export class StreamingSink {
   public constructor(private readonly requestCtx: SvixRequestContext) {}
+
+  public get transformation() {
+    return new StreamingSinkTransformation(this.requestCtx);
+  }
 
   /** List of all the stream's sinks. */
   public async list(
@@ -92,7 +96,7 @@ export class StreamingSink {
   }
 
   /** Create or update a sink. */
-  public async update(
+  public async upsert(
     streamId: string,
     sinkId: string,
     streamSinkIn: StreamSinkIn
@@ -140,26 +144,8 @@ export class StreamingSink {
     return await request.send(this.requestCtx, StreamSinkOutSerializer._fromJsonObject);
   }
 
-  /** Set or unset the transformation code associated with this sink. */
-  public async transformationPartialUpdate(
-    streamId: string,
-    sinkId: string,
-    sinkTransformIn: SinkTransformIn = {}
-  ): Promise<EmptyResponse> {
-    const request = new SvixRequest(
-      HttpMethod.PATCH,
-      "/api/v1/stream/{stream_id}/sink/{sink_id}/transformation"
-    );
-
-    request.setPathParam("stream_id", streamId);
-    request.setPathParam("sink_id", sinkId);
-    request.setBody(SinkTransformInSerializer._toJsonObject(sinkTransformIn));
-
-    return await request.send(this.requestCtx, EmptyResponseSerializer._fromJsonObject);
-  }
-
   /**
-   * Get the sink's signing secret (only supported for http sinks)
+   * Get the sink's signing secret (only supported for http sinks).
    *
    * This is used to verify the authenticity of the delivery.
    *
@@ -177,13 +163,19 @@ export class StreamingSink {
     return await request.send(this.requestCtx, SinkSecretOutSerializer._fromJsonObject);
   }
 
-  /** Rotates the signing secret (only supported for http sinks). */
+  /**
+   * Rotates the signing secret (only supported for http sinks).
+   *
+   * This is used to verify the authenticity of the delivery.
+   *
+   * For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
+   */
   public async rotateSecret(
     streamId: string,
     sinkId: string,
     endpointSecretRotateIn: EndpointSecretRotateIn = {},
     options?: StreamingSinkRotateSecretOptions
-  ): Promise<EmptyResponse> {
+  ): Promise<SinkSecretRotateOut> {
     const request = new SvixRequest(
       HttpMethod.POST,
       "/api/v1/stream/{stream_id}/sink/{sink_id}/secret/rotate"
@@ -196,6 +188,9 @@ export class StreamingSink {
       EndpointSecretRotateInSerializer._toJsonObject(endpointSecretRotateIn)
     );
 
-    return await request.send(this.requestCtx, EmptyResponseSerializer._fromJsonObject);
+    return await request.send(
+      this.requestCtx,
+      SinkSecretRotateOutSerializer._fromJsonObject
+    );
   }
 }

@@ -5,18 +5,20 @@ import (
 	"context"
 	"time"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type Endpoint struct {
 	client *internal.SvixHttpClient
 }
 
-func newEndpoint(client *internal.SvixHttpClient) *Endpoint {
-	return &Endpoint{
-		client: client,
-	}
+func newEndpoint(client *internal.SvixHttpClient) Endpoint {
+	return Endpoint{client}
+}
+
+func (endpoint Endpoint) Transformation() EndpointTransformation {
+	return newEndpointTransformation(endpoint.client)
 }
 
 type EndpointListOptions struct {
@@ -52,6 +54,13 @@ type EndpointGetStatsOptions struct {
 	Until *time.Time
 }
 
+type EndpointGetAttemptStatsOptions struct {
+	// Filter the range to data starting from this date.
+	Since *time.Time
+	// Filter the range to data ending by this date.
+	Until *time.Time
+}
+
 type EndpointRecoverOptions struct {
 	IdempotencyKey *string
 }
@@ -61,24 +70,25 @@ type EndpointSendExampleOptions struct {
 }
 
 // List the application's endpoints.
-func (endpoint *Endpoint) List(
+func (endpoint Endpoint) List(
 	ctx context.Context,
 	appId string,
 	o *EndpointListOptions,
 ) (*models.ListResponseEndpointOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointListOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("order", o.Order, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseEndpointOut](
 		ctx,
@@ -95,23 +105,24 @@ func (endpoint *Endpoint) List(
 // Create a new endpoint for the application.
 //
 // When `secret` is `null` the secret is automatically generated (recommended).
-func (endpoint *Endpoint) Create(
+func (endpoint Endpoint) Create(
 	ctx context.Context,
 	appId string,
 	endpointIn models.EndpointIn,
 	o *EndpointCreateOptions,
 ) (*models.EndpointOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id": appId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointCreateOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.EndpointIn, models.EndpointOut](
 		ctx,
@@ -126,7 +137,7 @@ func (endpoint *Endpoint) Create(
 }
 
 // Get an endpoint.
-func (endpoint *Endpoint) Get(
+func (endpoint Endpoint) Get(
 	ctx context.Context,
 	appId string,
 	endpointId string,
@@ -148,17 +159,17 @@ func (endpoint *Endpoint) Get(
 }
 
 // Create or update an endpoint.
-func (endpoint *Endpoint) Update(
+func (endpoint Endpoint) Upsert(
 	ctx context.Context,
 	appId string,
 	endpointId string,
-	endpointUpdate models.EndpointUpdate,
+	endpointUpsertIn models.EndpointUpsertIn,
 ) (*models.EndpointOut, error) {
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
-	return internal.ExecuteRequest[models.EndpointUpdate, models.EndpointOut](
+	return internal.ExecuteRequest[models.EndpointUpsertIn, models.EndpointOut](
 		ctx,
 		endpoint.client,
 		"PUT",
@@ -166,21 +177,22 @@ func (endpoint *Endpoint) Update(
 		pathMap,
 		nil,
 		nil,
-		&endpointUpdate,
+		&endpointUpsertIn,
 	)
 }
 
 // Delete an endpoint.
-func (endpoint *Endpoint) Delete(
+func (endpoint Endpoint) Delete(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[any, any](
+	_, err = internal.ExecuteRequest[any, any](
 		ctx,
 		endpoint.client,
 		"DELETE",
@@ -194,7 +206,7 @@ func (endpoint *Endpoint) Delete(
 }
 
 // Partially update an endpoint.
-func (endpoint *Endpoint) Patch(
+func (endpoint Endpoint) Patch(
 	ctx context.Context,
 	appId string,
 	endpointId string,
@@ -220,7 +232,7 @@ func (endpoint *Endpoint) Patch(
 //
 // This is used to verify the authenticity of the webhook.
 // For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
-func (endpoint *Endpoint) GetSecret(
+func (endpoint Endpoint) GetSecret(
 	ctx context.Context,
 	appId string,
 	endpointId string,
@@ -243,28 +255,29 @@ func (endpoint *Endpoint) GetSecret(
 
 // Rotates the endpoint's signing secret.
 //
-// The previous secret will remain valid for the next 24 hours.
-func (endpoint *Endpoint) RotateSecret(
+// The previous secret will remain valid for the specified grace period (default 24 hours).
+func (endpoint Endpoint) RotateSecret(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	endpointSecretRotateIn models.EndpointSecretRotateIn,
 	o *EndpointRotateSecretOptions,
-) error {
+) (*models.EndpointSecretOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return err
-		}
+	if o == nil {
+		opts := EndpointRotateSecretOptions{}
+		o = &opts
 	}
-	_, err := internal.ExecuteRequest[models.EndpointSecretRotateIn, any](
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
+	}
+	return internal.ExecuteRequest[models.EndpointSecretRotateIn, models.EndpointSecretOut](
 		ctx,
 		endpoint.client,
 		"POST",
@@ -274,11 +287,10 @@ func (endpoint *Endpoint) RotateSecret(
 		headerMap,
 		&endpointSecretRotateIn,
 	)
-	return err
 }
 
 // Get the additional headers to be sent with the webhook.
-func (endpoint *Endpoint) GetHeaders(
+func (endpoint Endpoint) GetHeaders(
 	ctx context.Context,
 	appId string,
 	endpointId string,
@@ -300,17 +312,18 @@ func (endpoint *Endpoint) GetHeaders(
 }
 
 // Set the additional headers to be sent with the webhook.
-func (endpoint *Endpoint) UpdateHeaders(
+func (endpoint Endpoint) SetHeaders(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	endpointHeadersIn models.EndpointHeadersIn,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[models.EndpointHeadersIn, any](
+	_, err = internal.ExecuteRequest[models.EndpointHeadersIn, any](
 		ctx,
 		endpoint.client,
 		"PUT",
@@ -324,17 +337,18 @@ func (endpoint *Endpoint) UpdateHeaders(
 }
 
 // Partially set the additional headers to be sent with the webhook.
-func (endpoint *Endpoint) PatchHeaders(
+func (endpoint Endpoint) PatchHeaders(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	endpointHeadersPatchIn models.EndpointHeadersPatchIn,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[models.EndpointHeadersPatchIn, any](
+	_, err = internal.ExecuteRequest[models.EndpointHeadersPatchIn, any](
 		ctx,
 		endpoint.client,
 		"PATCH",
@@ -343,52 +357,6 @@ func (endpoint *Endpoint) PatchHeaders(
 		nil,
 		nil,
 		&endpointHeadersPatchIn,
-	)
-	return err
-}
-
-// Get the transformation code associated with this endpoint.
-func (endpoint *Endpoint) TransformationGet(
-	ctx context.Context,
-	appId string,
-	endpointId string,
-) (*models.EndpointTransformationOut, error) {
-	pathMap := map[string]string{
-		"app_id":      appId,
-		"endpoint_id": endpointId,
-	}
-	return internal.ExecuteRequest[any, models.EndpointTransformationOut](
-		ctx,
-		endpoint.client,
-		"GET",
-		"/api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation",
-		pathMap,
-		nil,
-		nil,
-		nil,
-	)
-}
-
-// Set or unset the transformation code associated with this endpoint.
-func (endpoint *Endpoint) PatchTransformation(
-	ctx context.Context,
-	appId string,
-	endpointId string,
-	endpointTransformationPatch models.EndpointTransformationPatch,
-) error {
-	pathMap := map[string]string{
-		"app_id":      appId,
-		"endpoint_id": endpointId,
-	}
-	_, err := internal.ExecuteRequest[models.EndpointTransformationPatch, any](
-		ctx,
-		endpoint.client,
-		"PATCH",
-		"/api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation",
-		pathMap,
-		nil,
-		nil,
-		&endpointTransformationPatch,
 	)
 	return err
 }
@@ -411,25 +379,26 @@ func (endpoint *Endpoint) PatchTransformation(
 //	}
 //
 // ```
-func (endpoint *Endpoint) ReplayMissing(
+func (endpoint Endpoint) ReplayMissing(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	replayIn models.ReplayIn,
 	o *EndpointReplayMissingOptions,
 ) (*models.ReplayOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointReplayMissingOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.ReplayIn, models.ReplayOut](
 		ctx,
@@ -461,25 +430,26 @@ func (endpoint *Endpoint) ReplayMissing(
 //	}
 //
 // ```
-func (endpoint *Endpoint) BulkReplay(
+func (endpoint Endpoint) BulkReplay(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	bulkReplayIn models.BulkReplayIn,
 	o *EndpointBulkReplayOptions,
 ) (*models.ReplayOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointBulkReplayOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.BulkReplayIn, models.ReplayOut](
 		ctx,
@@ -494,31 +464,68 @@ func (endpoint *Endpoint) BulkReplay(
 }
 
 // Get basic statistics for the endpoint.
-func (endpoint *Endpoint) GetStats(
+func (endpoint Endpoint) GetStats(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	o *EndpointGetStatsOptions,
 ) (*models.EndpointStats, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("since", o.Since, queryMap, &err)
-		internal.SerializeParamToMap("until", o.Until, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointGetStatsOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("since", o.Since, queryMap, &err)
+	internal.SerializeParamToMap("until", o.Until, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.EndpointStats](
 		ctx,
 		endpoint.client,
 		"GET",
 		"/api/v1/app/{app_id}/endpoint/{endpoint_id}/stats",
+		pathMap,
+		queryMap,
+		nil,
+		nil,
+	)
+}
+
+// Get basic statistics about attempted deliveries for the endpoint.
+//
+// Time windows are always rounded to hour granularity
+func (endpoint Endpoint) GetAttemptStats(
+	ctx context.Context,
+	appId string,
+	endpointId string,
+	o *EndpointGetAttemptStatsOptions,
+) (*models.EndpointAttemptStats, error) {
+	var err error
+	pathMap := map[string]string{
+		"app_id":      appId,
+		"endpoint_id": endpointId,
+	}
+	queryMap := map[string]string{}
+	if o == nil {
+		opts := EndpointGetAttemptStatsOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("since", o.Since, queryMap, &err)
+	internal.SerializeParamToMap("until", o.Until, queryMap, &err)
+	if err != nil {
+		return nil, err
+	}
+	return internal.ExecuteRequest[any, models.EndpointAttemptStats](
+		ctx,
+		endpoint.client,
+		"GET",
+		"/api/v1/app/{app_id}/endpoint/{endpoint_id}/attempt-stats",
 		pathMap,
 		queryMap,
 		nil,
@@ -543,25 +550,26 @@ func (endpoint *Endpoint) GetStats(
 //	}
 //
 // ```
-func (endpoint *Endpoint) Recover(
+func (endpoint Endpoint) Recover(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	recoverIn models.RecoverIn,
 	o *EndpointRecoverOptions,
 ) (*models.RecoverOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointRecoverOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.RecoverIn, models.RecoverOut](
 		ctx,
@@ -576,25 +584,26 @@ func (endpoint *Endpoint) Recover(
 }
 
 // Send an example message for an event.
-func (endpoint *Endpoint) SendExample(
+func (endpoint Endpoint) SendExample(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	eventExampleIn models.EventExampleIn,
 	o *EndpointSendExampleOptions,
 ) (*models.MessageOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := EndpointSendExampleOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.EventExampleIn, models.MessageOut](
 		ctx,
@@ -611,17 +620,18 @@ func (endpoint *Endpoint) SendExample(
 // This operation was renamed to `set-transformation`.
 //
 // Deprecated: TransformationPartialUpdate is deprecated.
-func (endpoint *Endpoint) TransformationPartialUpdate(
+func (endpoint Endpoint) TransformationPartialUpdate(
 	ctx context.Context,
 	appId string,
 	endpointId string,
 	endpointTransformationIn models.EndpointTransformationIn,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"app_id":      appId,
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[models.EndpointTransformationIn, any](
+	_, err = internal.ExecuteRequest[models.EndpointTransformationIn, any](
 		ctx,
 		endpoint.client,
 		"PATCH",

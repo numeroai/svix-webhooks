@@ -38,7 +38,12 @@ export interface MessageAttemptListByEndpointOptions {
   before?: Date | null;
   /** Only include items created after a certain date */
   after?: Date | null;
-  /** When `true` attempt content is included in the response */
+  /**
+   * When `true` attempt content is included in the response.
+   *
+   * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+   * without specifying this parameter.
+   */
   withContent?: boolean;
   /**
    * When `true`, the message information is included in the response
@@ -75,7 +80,12 @@ export interface MessageAttemptListByMsgOptions {
   before?: Date | null;
   /** Only include items created after a certain date */
   after?: Date | null;
-  /** When `true` attempt content is included in the response */
+  /**
+   * When `true` attempt content is included in the response.
+   *
+   * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+   * without specifying this parameter.
+   */
   withContent?: boolean;
   /**
    * When `true`, return the Canceled (4) status in attempts.
@@ -102,7 +112,12 @@ export interface MessageAttemptListAttemptedMessagesOptions {
   before?: Date | null;
   /** Only include items created after a certain date */
   after?: Date | null;
-  /** When `true` message payloads are included in the response */
+  /**
+   * When `true` message payloads are included in the response.
+   *
+   * Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+   * without specifying this parameter.
+   */
   withContent?: boolean;
   /**
    * When `true`, return the Canceled (4) status in attempts.
@@ -166,7 +181,7 @@ export class MessageAttempt {
       tag: options?.tag,
       before: options?.before,
       after: options?.after,
-      with_content: options?.withContent,
+      with_content: options?.withContent ?? false,
       with_msg: options?.withMsg,
       expanded_statuses: options?.expandedStatuses ?? true,
       event_types: options?.eventTypes,
@@ -208,7 +223,7 @@ export class MessageAttempt {
       endpoint_id: options?.endpointId,
       before: options?.before,
       after: options?.after,
-      with_content: options?.withContent,
+      with_content: options?.withContent ?? false,
       expanded_statuses: options?.expandedStatuses ?? true,
       event_types: options?.eventTypes,
     });
@@ -250,7 +265,7 @@ export class MessageAttempt {
       status: options?.status,
       before: options?.before,
       after: options?.after,
-      with_content: options?.withContent,
+      with_content: options?.withContent ?? false,
       expanded_statuses: options?.expandedStatuses ?? true,
       event_types: options?.eventTypes,
     });

@@ -8,13 +8,16 @@ use svix::models::*;
 pub struct MessagePollerPollOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
+
     /// Filters messages sent with this event type (optional).
     #[arg(long)]
     pub event_type: Option<String>,
+
     /// Filters messages sent with this channel (optional).
     #[arg(long)]
     pub channel: Option<String>,
@@ -36,7 +39,7 @@ impl From<MessagePollerPollOptions> for svix::api::MessagePollerPollOptions {
             iterator,
             event_type,
             channel,
-            after: after.map(|dt| dt.to_rfc3339()),
+            after,
         }
     }
 }
@@ -58,7 +61,8 @@ impl From<MessagePollerConsumerSeekOptions> for svix::api::MessagePollerConsumer
 pub struct MessagePollerConsumerPollOptions {
     /// Limit the number of returned items
     #[arg(long)]
-    pub limit: Option<i32>,
+    pub limit: Option<u64>,
+
     /// The iterator returned from a prior invocation
     #[arg(long)]
     pub iterator: Option<String>,
@@ -93,22 +97,22 @@ pub enum MessagePollerCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"deliverAt\": \"2030-01-01T00:00:00Z\",
+    \"headers\": {\"key\": \"...\"},
     \"eventId\": \"unique-identifier\",
     \"eventType\": \"user.signup\",
-    \"headers\": {\"key\": \"...\"},
-    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"payload\": {
       \"email\": \"test@example.com\",
       \"type\": \"user.created\",
       \"username\": \"test_user\"
     },
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"tags\": [\"...\"],
-    \"timestamp\": \"2030-01-01T00:00:00Z\"
+    \"deliverAt\": \"2030-01-01T00:00:00Z\"
   }],
-  \"done\": true,
-  \"iterator\": \"...\"
+  \"iterator\": \"...\",
+  \"done\": true
 }\n")]
     Poll {
         app_id: String,
@@ -153,22 +157,22 @@ pub enum MessagePollerCommands {
     #[command(after_help = "Example response:
 {
   \"data\": [{
-    \"channels\": [\"project_123\",\"group_2\"],
-    \"deliverAt\": \"2030-01-01T00:00:00Z\",
+    \"headers\": {\"key\": \"...\"},
     \"eventId\": \"unique-identifier\",
     \"eventType\": \"user.signup\",
-    \"headers\": {\"key\": \"...\"},
-    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
     \"payload\": {
       \"email\": \"test@example.com\",
       \"type\": \"user.created\",
       \"username\": \"test_user\"
     },
+    \"channels\": [\"project_123\",\"group_2\"],
+    \"id\": \"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2\",
+    \"timestamp\": \"2030-01-01T00:00:00Z\",
     \"tags\": [\"...\"],
-    \"timestamp\": \"2030-01-01T00:00:00Z\"
+    \"deliverAt\": \"2030-01-01T00:00:00Z\"
   }],
-  \"done\": true,
-  \"iterator\": \"...\"
+  \"iterator\": \"...\",
+  \"done\": true
 }\n")]
     ConsumerPoll {
         app_id: String,

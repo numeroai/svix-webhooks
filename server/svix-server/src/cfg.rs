@@ -107,17 +107,14 @@ fn validate_operational_webhook_url(url: &str) -> Result<(), ValidationError> {
 }
 
 #[derive(Clone, Debug, Deserialize, Validate)]
-#[validate(
-    schema(function = "validate_config_complete"),
-    skip_on_field_errors = false
-)]
+#[validate(schema(function = "validate_config_complete", skip_on_field_errors = false))]
 pub struct ConfigurationInner {
     /// The address to listen on
     pub listen_address: SocketAddr,
 
     /// The address to send operational webhooks to. When None, operational webhooks will not be
     /// sent. When Some, the API server with the given URL will be used to send operational webhooks.
-    #[validate(custom = "validate_operational_webhook_url")]
+    #[validate(custom(function = "validate_operational_webhook_url"))]
     pub operational_webhook_address: Option<String>,
 
     /// The main secret used by Svix. Used for client-side encryption of sensitive data, etc.
@@ -149,6 +146,10 @@ pub struct ConfigurationInner {
     pub opentelemetry_sample_ratio: Option<f64>,
     /// The service name to use for OpenTelemetry. If not provided, it defaults to "svix_server".
     pub opentelemetry_service_name: String,
+    /// Whether to additionally send log events to the configured OpenTelemetry collector. Disabled
+    /// by default. If the OpenTelemetry address is not set, this will do nothing. When disabled,
+    /// logs are only ever written to stdout.
+    pub opentelemetry_logs_enabled: bool,
     /// Whether to enable the logging of the databases at the configured log level. This may be
     /// useful for analyzing their response times.
     pub db_tracing: bool,
@@ -219,6 +220,12 @@ pub struct ConfigurationInner {
     /// Should this instance run the message worker
     pub worker_enabled: bool,
 
+    /// Should this instance run the expired message cleaner, which nulls payloads and deletes
+    /// message contents for messages past their expiration. Message rows themselves are kept
+    /// regardless, to preserve pagination, and can be deleted with the `prune` command.
+    #[serde(default = "default_true")]
+    pub expired_message_cleaner_enabled: bool,
+
     /// Subnets to whitelist for outbound webhooks. Note that allowing endpoints in private IP space
     /// is a security risk and should only be allowed if you are using the service internally or for
     /// testing purposes. Should be specified in CIDR notation, e.g., `[127.0.0.1/32, 172.17.0.0/16, 192.168.0.0/16]`
@@ -249,8 +256,20 @@ pub struct ConfigurationInner {
     /// Should this instance run background migrations
     pub background_migrations_enabled: bool,
 
+    /// Enable migration task for old redis queue tasks.
+    ///
+    /// Defaults to `true`. Can be safely set to `false` if redis contains no
+    /// (more) pre-v0.64.0 queue tasks.
+    /// Has no effect if the queue backend is not redis.
+    #[serde(default = "default_true")]
+    pub enable_redis_v1_v2_queue_migration: bool,
+
     #[serde(flatten)]
     pub internal: InternalConfig,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize)]

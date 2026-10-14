@@ -11,7 +11,7 @@ import com.svix.models.OperationalWebhookEndpointIn;
 import com.svix.models.OperationalWebhookEndpointOut;
 import com.svix.models.OperationalWebhookEndpointSecretIn;
 import com.svix.models.OperationalWebhookEndpointSecretOut;
-import com.svix.models.OperationalWebhookEndpointUpdate;
+import com.svix.models.OperationalWebhookEndpointUpsertIn;
 
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
@@ -92,9 +92,9 @@ public class OperationalWebhookEndpoint {
     }
 
     /** Create or update an operational webhook endpoint. */
-    public OperationalWebhookEndpointOut update(
+    public OperationalWebhookEndpointOut upsert(
             final String endpointId,
-            final OperationalWebhookEndpointUpdate operationalWebhookEndpointUpdate)
+            final OperationalWebhookEndpointUpsertIn operationalWebhookEndpointUpsertIn)
             throws IOException, ApiException {
         HttpUrl.Builder url =
                 this.client
@@ -106,7 +106,7 @@ public class OperationalWebhookEndpoint {
                 "PUT",
                 url.build(),
                 null,
-                operationalWebhookEndpointUpdate,
+                operationalWebhookEndpointUpsertIn,
                 OperationalWebhookEndpointOut.class);
     }
 
@@ -143,7 +143,7 @@ public class OperationalWebhookEndpoint {
     /**
      * Rotates an operational webhook endpoint's signing secret.
      *
-     * <p>The previous secret will remain valid for the next 24 hours.
+     * <p>The previous secret will remain valid for the specified grace period (default 24 hours).
      */
     public void rotateSecret(
             final String endpointId,
@@ -158,7 +158,7 @@ public class OperationalWebhookEndpoint {
     /**
      * Rotates an operational webhook endpoint's signing secret.
      *
-     * <p>The previous secret will remain valid for the next 24 hours.
+     * <p>The previous secret will remain valid for the specified grace period (default 24 hours).
      */
     public void rotateSecret(
             final String endpointId,
@@ -195,7 +195,7 @@ public class OperationalWebhookEndpoint {
     }
 
     /** Set the additional headers to be sent with the operational webhook. */
-    public void updateHeaders(
+    public void setHeaders(
             final String endpointId,
             final OperationalWebhookEndpointHeadersIn operationalWebhookEndpointHeadersIn)
             throws IOException, ApiException {

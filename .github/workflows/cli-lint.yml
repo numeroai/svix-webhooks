@@ -15,10 +15,11 @@ jobs:
     name: Check formatting
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
+          toolchain: nightly
           components: rustfmt
 
       - name: rustfmt
@@ -32,12 +33,21 @@ jobs:
         name: Checkout
 
       - name: Install cargo sort
-        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-sort
 
       - name: Run cargo sort
         run: cargo sort --workspace --check --check-format
+
+  hadolint:
+    name: Run Hadolint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: svix-cli/Dockerfile
 
   test-versions:
     name: CLI Lint
@@ -47,17 +57,14 @@ jobs:
         # keep this in sync with svix-cli/Cargo.toml MSRV
         rust: ["1.88.0", stable, beta]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - name: Regen openapi libs
-        run: ../regen_openapi.py
-
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: "svix-cli -> target"
           # only save the cache on the main branch
@@ -66,7 +73,16 @@ jobs:
           # include relevant information in the cache name
           prefix-key: "cli-${{ matrix.rust }}"
 
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: nextest
+
+      - name: Update lockfile
+        # If it's the MSRV job, rather than stable or beta
+        if: ${{ startsWith(matrix.rust, '1.') }}
+        run: cargo update
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
 
       - name: Clippy
         run: cargo clippy --locked --all-targets --all-features -- -D warnings

@@ -2,8 +2,6 @@
 import typing as t
 from dataclasses import dataclass
 
-from deprecated import deprecated
-
 from .. import models
 from ..models import (
     IntegrationIn,
@@ -12,7 +10,7 @@ from ..models import (
     IntegrationUpdate,
     ListResponseIntegrationOut,
 )
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
 
 
 @dataclass
@@ -58,7 +56,7 @@ class IntegrationRotateKeyOptions(BaseOptions):
         )
 
 
-class IntegrationAsync(ApiBase):
+class IntegrationAsync(ApiBaseAsync):
     async def list(
         self, app_id: str, options: IntegrationListOptions = (IntegrationListOptions())
     ) -> ListResponseIntegrationOut:
@@ -152,21 +150,8 @@ class IntegrationAsync(ApiBase):
         )
         return IntegrationKeyOut.model_validate(response.json())
 
-    @deprecated
-    async def get_key(self, app_id: str, integ_id: str) -> IntegrationKeyOut:
-        """Get an integration's key."""
-        response = await self._request_asyncio(
-            method="get",
-            path="/api/v1/app/{app_id}/integration/{integ_id}/key",
-            path_params={
-                "app_id": app_id,
-                "integ_id": integ_id,
-            },
-        )
-        return IntegrationKeyOut.model_validate(response.json())
 
-
-class Integration(ApiBase):
+class Integration(ApiBaseSync):
     def list(
         self, app_id: str, options: IntegrationListOptions = (IntegrationListOptions())
     ) -> ListResponseIntegrationOut:
@@ -257,18 +242,5 @@ class Integration(ApiBase):
             },
             query_params=options._query_params(),
             header_params=options._header_params(),
-        )
-        return IntegrationKeyOut.model_validate(response.json())
-
-    @deprecated
-    def get_key(self, app_id: str, integ_id: str) -> IntegrationKeyOut:
-        """Get an integration's key."""
-        response = self._request_sync(
-            method="get",
-            path="/api/v1/app/{app_id}/integration/{integ_id}/key",
-            path_params={
-                "app_id": app_id,
-                "integ_id": integ_id,
-            },
         )
         return IntegrationKeyOut.model_validate(response.json())

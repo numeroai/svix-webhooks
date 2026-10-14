@@ -4,11 +4,11 @@ require "json"
 
 module Svix
   class IntegrationUpdate
+    attr_accessor :name
     # The set of feature flags the integration will have access to.
     attr_accessor :feature_flags
-    attr_accessor :name
 
-    ALL_FIELD ||= ["feature_flags", "name"].freeze
+    ALL_FIELD ||= ["name", "feature_flags"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -29,22 +29,22 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["feature_flags"] = attributes["featureFlags"]
       attrs["name"] = attributes["name"]
+      attrs["feature_flags"] = attributes["featureFlags"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["featureFlags"] = Svix::serialize_primitive(@feature_flags) if @feature_flags
-      out["name"] = Svix::serialize_primitive(@name) if @name
+      out["name"] = Svix::serialize_primitive(@name) unless @name.nil?
+      out["featureFlags"] = Svix::serialize_primitive(@feature_flags) unless @feature_flags.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

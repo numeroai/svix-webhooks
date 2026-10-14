@@ -4,18 +4,20 @@ package svix
 import (
 	"context"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type IngestEndpoint struct {
 	client *internal.SvixHttpClient
 }
 
-func newIngestEndpoint(client *internal.SvixHttpClient) *IngestEndpoint {
-	return &IngestEndpoint{
-		client: client,
-	}
+func newIngestEndpoint(client *internal.SvixHttpClient) IngestEndpoint {
+	return IngestEndpoint{client}
+}
+
+func (ingestEndpoint IngestEndpoint) Transformation() IngestEndpointTransformation {
+	return newIngestEndpointTransformation(ingestEndpoint.client)
 }
 
 type IngestEndpointListOptions struct {
@@ -37,24 +39,25 @@ type IngestEndpointRotateSecretOptions struct {
 }
 
 // List ingest endpoints.
-func (ingestEndpoint *IngestEndpoint) List(
+func (ingestEndpoint IngestEndpoint) List(
 	ctx context.Context,
 	sourceId string,
 	o *IngestEndpointListOptions,
 ) (*models.ListResponseIngestEndpointOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"source_id": sourceId,
 	}
 	queryMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
-		internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
-		internal.SerializeParamToMap("order", o.Order, queryMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := IngestEndpointListOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("limit", o.Limit, queryMap, &err)
+	internal.SerializeParamToMap("iterator", o.Iterator, queryMap, &err)
+	internal.SerializeParamToMap("order", o.Order, queryMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[any, models.ListResponseIngestEndpointOut](
 		ctx,
@@ -69,23 +72,24 @@ func (ingestEndpoint *IngestEndpoint) List(
 }
 
 // Create an ingest endpoint.
-func (ingestEndpoint *IngestEndpoint) Create(
+func (ingestEndpoint IngestEndpoint) Create(
 	ctx context.Context,
 	sourceId string,
 	ingestEndpointIn models.IngestEndpointIn,
 	o *IngestEndpointCreateOptions,
 ) (*models.IngestEndpointOut, error) {
+	var err error
 	pathMap := map[string]string{
 		"source_id": sourceId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := IngestEndpointCreateOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.IngestEndpointIn, models.IngestEndpointOut](
 		ctx,
@@ -100,7 +104,7 @@ func (ingestEndpoint *IngestEndpoint) Create(
 }
 
 // Get an ingest endpoint.
-func (ingestEndpoint *IngestEndpoint) Get(
+func (ingestEndpoint IngestEndpoint) Get(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
@@ -122,17 +126,17 @@ func (ingestEndpoint *IngestEndpoint) Get(
 }
 
 // Create or update an ingest endpoint.
-func (ingestEndpoint *IngestEndpoint) Update(
+func (ingestEndpoint IngestEndpoint) Upsert(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
-	ingestEndpointUpdate models.IngestEndpointUpdate,
+	ingestEndpointUpsertIn models.IngestEndpointUpsertIn,
 ) (*models.IngestEndpointOut, error) {
 	pathMap := map[string]string{
 		"source_id":   sourceId,
 		"endpoint_id": endpointId,
 	}
-	return internal.ExecuteRequest[models.IngestEndpointUpdate, models.IngestEndpointOut](
+	return internal.ExecuteRequest[models.IngestEndpointUpsertIn, models.IngestEndpointOut](
 		ctx,
 		ingestEndpoint.client,
 		"PUT",
@@ -140,21 +144,22 @@ func (ingestEndpoint *IngestEndpoint) Update(
 		pathMap,
 		nil,
 		nil,
-		&ingestEndpointUpdate,
+		&ingestEndpointUpsertIn,
 	)
 }
 
 // Delete an ingest endpoint.
-func (ingestEndpoint *IngestEndpoint) Delete(
+func (ingestEndpoint IngestEndpoint) Delete(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"source_id":   sourceId,
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[any, any](
+	_, err = internal.ExecuteRequest[any, any](
 		ctx,
 		ingestEndpoint.client,
 		"DELETE",
@@ -171,7 +176,7 @@ func (ingestEndpoint *IngestEndpoint) Delete(
 //
 // This is used to verify the authenticity of the webhook.
 // For more information please refer to [the consuming webhooks docs](https://docs.svix.com/consuming-webhooks/).
-func (ingestEndpoint *IngestEndpoint) GetSecret(
+func (ingestEndpoint IngestEndpoint) GetSecret(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
@@ -194,28 +199,29 @@ func (ingestEndpoint *IngestEndpoint) GetSecret(
 
 // Rotates an ingest endpoint's signing secret.
 //
-// The previous secret will remain valid for the next 24 hours.
-func (ingestEndpoint *IngestEndpoint) RotateSecret(
+// The previous secret will remain valid for the specified grace period (default 24 hours).
+func (ingestEndpoint IngestEndpoint) RotateSecret(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
 	ingestEndpointSecretIn models.IngestEndpointSecretIn,
 	o *IngestEndpointRotateSecretOptions,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"source_id":   sourceId,
 		"endpoint_id": endpointId,
 	}
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return err
-		}
+	if o == nil {
+		opts := IngestEndpointRotateSecretOptions{}
+		o = &opts
 	}
-	_, err := internal.ExecuteRequest[models.IngestEndpointSecretIn, any](
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return err
+	}
+	_, err = internal.ExecuteRequest[models.IngestEndpointSecretIn, any](
 		ctx,
 		ingestEndpoint.client,
 		"POST",
@@ -229,7 +235,7 @@ func (ingestEndpoint *IngestEndpoint) RotateSecret(
 }
 
 // Get the additional headers to be sent with the ingest.
-func (ingestEndpoint *IngestEndpoint) GetHeaders(
+func (ingestEndpoint IngestEndpoint) GetHeaders(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
@@ -251,17 +257,18 @@ func (ingestEndpoint *IngestEndpoint) GetHeaders(
 }
 
 // Set the additional headers to be sent to the endpoint.
-func (ingestEndpoint *IngestEndpoint) UpdateHeaders(
+func (ingestEndpoint IngestEndpoint) SetHeaders(
 	ctx context.Context,
 	sourceId string,
 	endpointId string,
 	ingestEndpointHeadersIn models.IngestEndpointHeadersIn,
 ) error {
+	var err error
 	pathMap := map[string]string{
 		"source_id":   sourceId,
 		"endpoint_id": endpointId,
 	}
-	_, err := internal.ExecuteRequest[models.IngestEndpointHeadersIn, any](
+	_, err = internal.ExecuteRequest[models.IngestEndpointHeadersIn, any](
 		ctx,
 		ingestEndpoint.client,
 		"PUT",
@@ -270,52 +277,6 @@ func (ingestEndpoint *IngestEndpoint) UpdateHeaders(
 		nil,
 		nil,
 		&ingestEndpointHeadersIn,
-	)
-	return err
-}
-
-// Get the transformation code associated with this ingest endpoint.
-func (ingestEndpoint *IngestEndpoint) GetTransformation(
-	ctx context.Context,
-	sourceId string,
-	endpointId string,
-) (*models.IngestEndpointTransformationOut, error) {
-	pathMap := map[string]string{
-		"source_id":   sourceId,
-		"endpoint_id": endpointId,
-	}
-	return internal.ExecuteRequest[any, models.IngestEndpointTransformationOut](
-		ctx,
-		ingestEndpoint.client,
-		"GET",
-		"/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation",
-		pathMap,
-		nil,
-		nil,
-		nil,
-	)
-}
-
-// Set or unset the transformation code associated with this ingest endpoint.
-func (ingestEndpoint *IngestEndpoint) SetTransformation(
-	ctx context.Context,
-	sourceId string,
-	endpointId string,
-	ingestEndpointTransformationPatch models.IngestEndpointTransformationPatch,
-) error {
-	pathMap := map[string]string{
-		"source_id":   sourceId,
-		"endpoint_id": endpointId,
-	}
-	_, err := internal.ExecuteRequest[models.IngestEndpointTransformationPatch, any](
-		ctx,
-		ingestEndpoint.client,
-		"PATCH",
-		"/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation",
-		pathMap,
-		nil,
-		nil,
-		&ingestEndpointTransformationPatch,
 	)
 	return err
 }

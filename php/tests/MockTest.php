@@ -31,7 +31,18 @@ use Svix\Models\MessageIn;
 use Svix\Models\MessageStatus;
 use Svix\Models\Ordering;
 use Svix\Models\ReplayIn;
+use Svix\Models\S3ConfigIn;
+use Svix\Models\SinkHttpConfigIn;
+use Svix\Models\SinkStatus;
 use Svix\Models\StatusCodeClass;
+use Svix\Models\SinkHttpConfigPatch;
+use Svix\Models\StreamSinkIn;
+use Svix\Models\StreamSinkInConfig;
+use Svix\Models\StreamSinkOut;
+use Svix\Models\StreamSinkOutConfig\Http as StreamSinkOutHttp;
+use Svix\Models\StreamSinkOutConfig\Poller as StreamSinkOutPoller;
+use Svix\Models\StreamSinkPatch;
+use Svix\Models\StreamSinkPatchConfig;
 use Svix\SvixClient;
 use Svix\SvixOptions;
 use Svix\Version;
@@ -49,6 +60,10 @@ const IntegrationOut = '{"id":"integ_1srOrx2ZWZBpBUvZwXKQmoEYga2","name":"Test I
 const MessageOut = '{"eventId":"unique-identifier","eventType":"user.signup","payload":{"email":"test@example.com","type":"user.created","username":"test_user"},"channels":["project_123","group_2"],"id":"msg_1srOrx2ZWZBpBUvZwXKQmoEYga2","timestamp":"2019-08-24T14:15:22Z","tags":["project_1337"]}';
 const ReplayOut = '{"id":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"running","task":"endpoint.replay","updatedAt":"2025-03-03T03:03:03.000000Z"}';
 const AppPortalAccessOut = '{"url": "https://app.svix.com/login#key=eyJhcHBJZCI6ICJhcHBfMXRSdFl","token": "appsk_kV3ts5tKPNJN4Dl25cMTfUNdmabxbX0O"}';
+const StreamSinkHttpOut = '{"id":"sink_1srOrx2ZWZBpBUvZwXKQmoEYga2","uid":"my-sink","status":"enabled","currentIterator":"eyJvZmZzZXQiOjB9","createdAt":"2019-08-24T14:15:22Z","updatedAt":"2019-08-24T14:15:22Z","batchSize":100,"maxWaitSecs":10,"metadata":{},"type":"http","config":{"url":"https://example.com/webhook","headers":{"headers":{},"sensitive":[]}}}';
+const StreamSinkPollerOut = '{"id":"sink_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"enabled","currentIterator":"eyJvZmZzZXQiOjB9","createdAt":"2019-08-24T14:15:22Z","updatedAt":"2019-08-24T14:15:22Z","batchSize":100,"maxWaitSecs":10,"metadata":{},"type":"poller","config":{}}';
+const StreamSinkPollerOutNoConfig = '{"id":"sink_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"enabled","currentIterator":"eyJvZmZzZXQiOjB9","createdAt":"2019-08-24T14:15:22Z","updatedAt":"2019-08-24T14:15:22Z","batchSize":100,"maxWaitSecs":10,"metadata":{},"type":"poller"}';
+const StreamSinkPollerOutNullConfig = '{"id":"sink_1srOrx2ZWZBpBUvZwXKQmoEYga2","status":"enabled","currentIterator":"eyJvZmZzZXQiOjB9","createdAt":"2019-08-24T14:15:22Z","updatedAt":"2019-08-24T14:15:22Z","batchSize":100,"maxWaitSecs":10,"metadata":{},"type":"poller","config":null}';
 
 
 class MockTest extends TestCase
@@ -97,7 +112,10 @@ class MockTest extends TestCase
         $svx->application->list();
 
         $getReq = $this->requestHistory[0]['request'];
-        $this->assertMatchesRegularExpression('/^svix-libs\/[0-9.]+\/php php\/[0-9.]+ [^ ]+\/[^ ]+$/', $getReq->getHeaderLine('User-Agent'));
+        $this->assertMatchesRegularExpression(
+            '/^svix-libs\/[0-9.]+(-[a-z]+.[0-9]+)?\/php php\/[0-9.]+ [^ ]+\/[^ ]+$/',
+            $getReq->getHeaderLine('User-Agent')
+        );
         $this->assertEquals('Bearer super_secret', $getReq->getHeaderLine('Authorization'));
         $this->assertIsString($getReq->getHeaderLine('svix-req-id'));
     }
@@ -140,7 +158,7 @@ class MockTest extends TestCase
         $req1 = $this->requestHistory[0]['request'];
         $query = $req1->getUri()->getQuery();
         // channel=asd&after=2025-08-27T17:43:50+00:00&event_types=ev1,eventtype-2
-        $this->assertEquals('channel=asd&after=2025-08-27T17%3A43%3A50%2B00%3A00&expanded_statuses=true&event_types=ev1%2Ceventtype-2', $query);
+        $this->assertEquals('channel=asd&after=2025-08-27T17%3A43%3A50%2B00%3A00&with_content=false&expanded_statuses=true&event_types=ev1%2Ceventtype-2', $query);
     }
 
     public function testDateSerialization(): void
@@ -187,7 +205,7 @@ class MockTest extends TestCase
         // POST
         $svx->application->create(ApplicationIn::create('asd'));
         // PUT
-        $svx->application->update('app_id', ApplicationIn::create('asd'));
+        $svx->application->upsert('app_id', ApplicationIn::create('asd'));
         // PATCH
         $svx->application->patch('app_id', ApplicationPatch::create()->withName('asd'));
 
@@ -286,7 +304,7 @@ class MockTest extends TestCase
 
         $req = $this->requestHistory[0]['request'];
         $query = $req->getUri()->getQuery();
-        $this->assertEquals('status=0&status_code_class=200&expanded_statuses=true', $query);
+        $this->assertEquals('status=0&status_code_class=200&with_content=false&expanded_statuses=true', $query);
     }
 
     public function testStringEnumBodySerialization(): void
@@ -403,6 +421,28 @@ class MockTest extends TestCase
         $this->assertEquals('https://custom.svix.com/api/v1/app', $customRequest->getUri()->__toString());
     }
 
+    public function testServerUrlTrailingSlashesAreStripped(): void
+    {
+        $cases = [
+            'https://custom.svix.com/' => 'https://custom.svix.com/api/v1/app',
+            'https://custom.svix.com///' => 'https://custom.svix.com/api/v1/app',
+            'https://custom.svix.com/prefix/' => 'https://custom.svix.com/prefix/api/v1/app',
+            'https://custom.svix.com/prefix' => 'https://custom.svix.com/prefix/api/v1/app',
+        ];
+
+        foreach ($cases as $serverUrl => $expectedUrl) {
+            $this->requestHistory = [];
+            $this->mockHandler->append(new Response(200, [], ListResAppOut));
+            $svx = new \Svix\Svix("token.part.us", new SvixOptions(serverUrl: $serverUrl), $this->httpClient);
+            $svx->application->list();
+            $this->assertEquals(
+                $expectedUrl,
+                $this->requestHistory[0]['request']->getUri()->__toString(),
+                "server url {$serverUrl}"
+            );
+        }
+    }
+
     public function testRetryOn500Response(): void
     {
         // Queue 3 x 500 responses to trigger retries, then a final 500 that should throw
@@ -514,5 +554,133 @@ class MockTest extends TestCase
         $rawBody = $req->getBody()->getContents();
 
         $this->assertEquals('{"eventType":"user.signup","payload":{},"transformationsParams":{"rawPayload":"<xml> not json<\/xml>","headers":{"content-type":"application\/xml"}}}', $rawBody);
+    }
+
+    public function testStructEnumBodySerialization(): void
+    {
+        $this->mockHandler->append(
+            new Response(200, [], StreamSinkHttpOut),
+            new Response(200, [], StreamSinkPollerOut),
+            new Response(200, [], StreamSinkHttpOut),
+        );
+
+        $svx = new \Svix\Svix("super_secret", httpClient: $this->httpClient);
+
+        $svx->streaming->sink->create(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            StreamSinkIn::create(
+                StreamSinkInConfig::http(
+                    SinkHttpConfigIn::create('https://example.com/webhook')
+                        ->withHeaders(['X-Custom' => 'yes'])
+                )
+            )->withUid('my-sink')
+        );
+
+        $svx->streaming->sink->create(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            StreamSinkIn::create(StreamSinkInConfig::poller())
+        );
+
+        $svx->streaming->sink->create(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            StreamSinkIn::create(
+                StreamSinkInConfig::amazonS3(S3ConfigIn::create('my-bucket')->withRegion('us-east-1'))
+            )
+        );
+
+        $httpBody = $this->requestHistory[0]['request']->getBody()->getContents();
+        $pollerBody = $this->requestHistory[1]['request']->getBody()->getContents();
+        $s3Body = $this->requestHistory[2]['request']->getBody()->getContents();
+
+        $this->assertEquals(
+            '{"type":"http","config":{"url":"https:\/\/example.com\/webhook","headers":{"X-Custom":"yes"}},"uid":"my-sink"}',
+            $httpBody
+        );
+        $this->assertEquals('{"type":"poller","config":{}}', $pollerBody);
+        $this->assertEquals(
+            '{"type":"amazonS3","config":{"bucket":"my-bucket","region":"us-east-1"}}',
+            $s3Body
+        );
+    }
+
+    public function testStructEnumBodyDeserialization(): void
+    {
+        $this->mockHandler->append(
+            new Response(200, [], StreamSinkHttpOut),
+            new Response(200, [], StreamSinkPollerOut),
+        );
+
+        $svx = new \Svix\Svix("super_secret", httpClient: $this->httpClient);
+
+        $httpSink = $svx->streaming->sink->get(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            'sink_1srOrx2ZWZBpBUvZwXKQmoEYga2'
+        );
+        $this->assertInstanceOf(StreamSinkOut::class, $httpSink);
+        $this->assertEquals('sink_1srOrx2ZWZBpBUvZwXKQmoEYga2', $httpSink->id);
+        $this->assertEquals('my-sink', $httpSink->uid);
+        $this->assertEquals(SinkStatus::ENABLED, $httpSink->status);
+        $this->assertInstanceOf(StreamSinkOutHttp::class, $httpSink->config);
+        $this->assertEquals('https://example.com/webhook', $httpSink->config->http->url);
+
+        $pollerSink = $svx->streaming->sink->get(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            'sink_1srOrx2ZWZBpBUvZwXKQmoEYga2'
+        );
+        $this->assertInstanceOf(StreamSinkOutPoller::class, $pollerSink->config);
+    }
+
+    public function testStructEnumPatchOmitsUnsetNulls(): void
+    {
+        $this->mockHandler->append(
+            new Response(200, [], StreamSinkPollerOut),
+            new Response(200, [], StreamSinkHttpOut),
+            new Response(200, [], StreamSinkPollerOut),
+        );
+
+        $svx = new \Svix\Svix("super_secret", httpClient: $this->httpClient);
+
+        $svx->streaming->sink->patch(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            'sink_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            StreamSinkPatch::create(StreamSinkPatchConfig::poller())
+        );
+
+        $svx->streaming->sink->patch(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            'sink_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            StreamSinkPatch::create(
+                StreamSinkPatchConfig::http(SinkHttpConfigPatch::create())
+            )
+        );
+
+        $svx->streaming->sink->patch(
+            'stream_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            'sink_1srOrx2ZWZBpBUvZwXKQmoEYga2',
+            StreamSinkPatch::create(StreamSinkPatchConfig::poller())
+                ->withUid(null)
+        );
+
+        $pollerBody = $this->requestHistory[0]['request']->getBody()->getContents();
+        $httpBody = $this->requestHistory[1]['request']->getBody()->getContents();
+        $nullUidBody = $this->requestHistory[2]['request']->getBody()->getContents();
+
+        $this->assertEquals('{"type":"poller","config":{}}', $pollerBody);
+        $this->assertEquals('{"type":"http","config":{}}', $httpBody);
+        $this->assertEquals('{"type":"poller","config":{},"uid":null}', $nullUidBody);
+        $this->assertStringNotContainsString('batchSize', $pollerBody);
+        $this->assertStringNotContainsString('status', $pollerBody);
+        $this->assertStringNotContainsString('metadata', $pollerBody);
+    }
+
+    public function testStructEnumPollerEmptyConfigDeserialization(): void
+    {
+        $fromEmpty = StreamSinkOut::fromJson(StreamSinkPollerOut);
+        $fromMissing = StreamSinkOut::fromJson(StreamSinkPollerOutNoConfig);
+        $fromNull = StreamSinkOut::fromJson(StreamSinkPollerOutNullConfig);
+
+        $this->assertInstanceOf(StreamSinkOutPoller::class, $fromEmpty->config);
+        $this->assertInstanceOf(StreamSinkOutPoller::class, $fromMissing->config);
+        $this->assertInstanceOf(StreamSinkOutPoller::class, $fromNull->config);
     }
 }

@@ -9,7 +9,7 @@ from ..models import (
     StreamEventTypeOut,
     StreamEventTypePatch,
 )
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
 
 
 @dataclass
@@ -59,7 +59,7 @@ class StreamingEventTypeDeleteOptions(BaseOptions):
         )
 
 
-class StreamingEventTypeAsync(ApiBase):
+class StreamingEventTypeAsync(ApiBaseAsync):
     async def list(
         self, options: StreamingEventTypeListOptions = (StreamingEventTypeListOptions())
     ) -> ListResponseStreamEventTypeOut:
@@ -102,7 +102,7 @@ class StreamingEventTypeAsync(ApiBase):
         )
         return StreamEventTypeOut.model_validate(response.json())
 
-    async def update(
+    async def upsert(
         self, name: str, stream_event_type_in: StreamEventTypeIn
     ) -> StreamEventTypeOut:
         """Create or update or create a event type for Streams."""
@@ -151,7 +151,7 @@ class StreamingEventTypeAsync(ApiBase):
         return StreamEventTypeOut.model_validate(response.json())
 
 
-class StreamingEventType(ApiBase):
+class StreamingEventType(ApiBaseSync):
     def list(
         self, options: StreamingEventTypeListOptions = (StreamingEventTypeListOptions())
     ) -> ListResponseStreamEventTypeOut:
@@ -194,7 +194,7 @@ class StreamingEventType(ApiBase):
         )
         return StreamEventTypeOut.model_validate(response.json())
 
-    def update(
+    def upsert(
         self, name: str, stream_event_type_in: StreamEventTypeIn
     ) -> StreamEventTypeOut:
         """Create or update or create a event type for Streams."""

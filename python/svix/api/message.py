@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from ..models import (
+    BulkExpungeContentsIn,
+    BulkExpungeContentsOut,
     ExpungeAllContentsOut,
     ListResponseMessageOut,
     MessageIn,
@@ -11,7 +13,7 @@ from ..models import (
     MessagePrecheckIn,
     MessagePrecheckOut,
 )
-from .common import ApiBase, BaseOptions, serialize_params
+from .common import ApiBaseAsync, ApiBaseSync, BaseOptions, serialize_params
 from .message_poller import (
     MessagePoller,
     MessagePollerAsync,
@@ -31,7 +33,10 @@ class MessageListOptions(BaseOptions):
     after: t.Optional[datetime] = None
     """Only include items created after a certain date."""
     with_content: t.Optional[bool] = None
-    """When `true` message payloads are included in the response."""
+    """When `true` message payloads are included in the response.
+
+Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+without specifying this parameter."""
     tag: t.Optional[str] = None
     """Filter messages matching the provided tag."""
     event_types: t.Optional[t.List[str]] = None
@@ -45,7 +50,7 @@ class MessageListOptions(BaseOptions):
                 "channel": self.channel,
                 "before": self.before,
                 "after": self.after,
-                "with_content": self.with_content,
+                "with_content": self.with_content or False,
                 "tag": self.tag,
                 "event_types": self.event_types,
             }
@@ -55,13 +60,16 @@ class MessageListOptions(BaseOptions):
 @dataclass
 class MessageCreateOptions(BaseOptions):
     with_content: t.Optional[bool] = None
-    """When `true`, message payloads are included in the response."""
+    """When `true`, message payloads are included in the response.
+
+Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+without specifying this parameter."""
     idempotency_key: t.Optional[str] = None
 
     def _query_params(self) -> t.Dict[str, str]:
         return serialize_params(
             {
-                "with_content": False,
+                "with_content": self.with_content or False,
             }
         )
 
@@ -88,12 +96,27 @@ class MessagePrecheckOptions(BaseOptions):
 @dataclass
 class MessageGetOptions(BaseOptions):
     with_content: t.Optional[bool] = None
-    """When `true` message payloads are included in the response."""
+    """When `true` message payloads are included in the response.
+
+Defaults to `false` in v2+ of the Svix SDKs, `true` in v1 or when manually making a request
+without specifying this parameter."""
 
     def _query_params(self) -> t.Dict[str, str]:
         return serialize_params(
             {
-                "with_content": self.with_content,
+                "with_content": self.with_content or False,
+            }
+        )
+
+
+@dataclass
+class MessageBulkExpungeContentOptions(BaseOptions):
+    idempotency_key: t.Optional[str] = None
+
+    def _header_params(self) -> t.Dict[str, str]:
+        return serialize_params(
+            {
+                "idempotency-key": self.idempotency_key,
             }
         )
 
@@ -142,10 +165,10 @@ def message_in_raw(
     )
 
 
-class MessageAsync(ApiBase):
+class MessageAsync(ApiBaseAsync):
     @property
     def poller(self) -> MessagePollerAsync:
-        return MessagePollerAsync(self._client)
+        return MessagePollerAsync(self._client, self._httpx_client)
 
     async def list(
         self, app_id: str, options: MessageListOptions = (MessageListOptions())
@@ -195,10 +218,7 @@ class MessageAsync(ApiBase):
             header_params=options._header_params(),
             json_body=message_in.model_dump_json(exclude_unset=True, by_alias=True),
         )
-        message_out = MessageOut.model_validate(response.json())
-        if options.with_content is not False:
-            message_out.payload = message_in.payload
-        return message_out
+        return MessageOut.model_validate(response.json())
 
     async def precheck(
         self,
@@ -249,7 +269,8 @@ class MessageAsync(ApiBase):
         """Delete the given message's payload.
 
         Useful in cases when a message was accidentally sent with sensitive content.
-        The message can't be replayed or resent once its payload has been deleted or expired."""
+        The message can't be replayed or resent once its payload has been deleted
+        (or has expired)."""
         await self._request_asyncio(
             method="delete",
             path="/api/v1/app/{app_id}/msg/{msg_id}/content",
@@ -258,6 +279,33 @@ class MessageAsync(ApiBase):
                 "msg_id": msg_id,
             },
         )
+
+    async def bulk_expunge_content(
+        self,
+        app_id: str,
+        bulk_expunge_contents_in: BulkExpungeContentsIn,
+        options: MessageBulkExpungeContentOptions = (
+            MessageBulkExpungeContentOptions()
+        ),
+    ) -> BulkExpungeContentsOut:
+        """Delete the payloads from the given messages under the current application
+
+        Useful in cases when a message was accidentally sent with sensitive content.
+        A message can't be replayed or resent once its payload has been deleted
+        (or has expired)."""
+        response = await self._request_asyncio(
+            method="post",
+            path="/api/v1/app/{app_id}/msg/bulk-expunge",
+            path_params={
+                "app_id": app_id,
+            },
+            query_params=options._query_params(),
+            header_params=options._header_params(),
+            json_body=bulk_expunge_contents_in.model_dump_json(
+                exclude_unset=True, by_alias=True
+            ),
+        )
+        return BulkExpungeContentsOut.model_validate(response.json())
 
     async def expunge_all_contents(
         self,
@@ -293,10 +341,10 @@ class MessageAsync(ApiBase):
         return ExpungeAllContentsOut.model_validate(response.json())
 
 
-class Message(ApiBase):
+class Message(ApiBaseSync):
     @property
     def poller(self) -> MessagePoller:
-        return MessagePoller(self._client)
+        return MessagePoller(self._client, self._httpx_client)
 
     def list(
         self, app_id: str, options: MessageListOptions = (MessageListOptions())
@@ -346,10 +394,7 @@ class Message(ApiBase):
             header_params=options._header_params(),
             json_body=message_in.model_dump_json(exclude_unset=True, by_alias=True),
         )
-        message_out = MessageOut.model_validate(response.json())
-        if options.with_content is not False:
-            message_out.payload = message_in.payload
-        return message_out
+        return MessageOut.model_validate(response.json())
 
     def precheck(
         self,
@@ -400,7 +445,8 @@ class Message(ApiBase):
         """Delete the given message's payload.
 
         Useful in cases when a message was accidentally sent with sensitive content.
-        The message can't be replayed or resent once its payload has been deleted or expired."""
+        The message can't be replayed or resent once its payload has been deleted
+        (or has expired)."""
         self._request_sync(
             method="delete",
             path="/api/v1/app/{app_id}/msg/{msg_id}/content",
@@ -409,6 +455,33 @@ class Message(ApiBase):
                 "msg_id": msg_id,
             },
         )
+
+    def bulk_expunge_content(
+        self,
+        app_id: str,
+        bulk_expunge_contents_in: BulkExpungeContentsIn,
+        options: MessageBulkExpungeContentOptions = (
+            MessageBulkExpungeContentOptions()
+        ),
+    ) -> BulkExpungeContentsOut:
+        """Delete the payloads from the given messages under the current application
+
+        Useful in cases when a message was accidentally sent with sensitive content.
+        A message can't be replayed or resent once its payload has been deleted
+        (or has expired)."""
+        response = self._request_sync(
+            method="post",
+            path="/api/v1/app/{app_id}/msg/bulk-expunge",
+            path_params={
+                "app_id": app_id,
+            },
+            query_params=options._query_params(),
+            header_params=options._header_params(),
+            json_body=bulk_expunge_contents_in.model_dump_json(
+                exclude_unset=True, by_alias=True
+            ),
+        )
+        return BulkExpungeContentsOut.model_validate(response.json())
 
     def expunge_all_contents(
         self,

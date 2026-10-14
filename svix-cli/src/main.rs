@@ -9,6 +9,7 @@ use self::{
     cmds::{
         api::{
             application::ApplicationArgs, authentication::AuthenticationArgs,
+            autoconfig_subscription::AutoconfigSubscriptionArgs, destination::DestinationArgs,
             endpoint::EndpointArgs, environment::EnvironmentArgs, event_type::EventTypeArgs,
             ingest::IngestArgs, integration::IntegrationArgs, message::MessageArgs,
             message_attempt::MessageAttemptArgs, operational_webhook::OperationalWebhookArgs,
@@ -18,6 +19,7 @@ use self::{
         open::OpenArgs,
         seed::SeedArgs,
         signature::SignatureArgs,
+        wizard::WizardArgs,
     },
     config::Config,
 };
@@ -78,10 +80,14 @@ enum RootCommands {
     Application(ApplicationArgs),
     /// Manage authentication tasks such as getting dashboard URLs
     Authentication(AuthenticationArgs),
+    /// Create and rotate AutoConfig subscriptions
+    AutoconfigSubscription(AutoconfigSubscriptionArgs),
     /// Generate the autocompletion script for the specified shell
     Completion { shell: Shell },
     /// List, create & modify connectors
     Connector(ConnectorArgs),
+    /// List, create & modify destinations
+    Destination(DestinationArgs),
     /// List, create & modify endpoints
     Endpoint(EndpointArgs),
     /// Import or export environments
@@ -116,6 +122,8 @@ enum RootCommands {
     ShowConfig,
     /// Get the version of the Svix CLI
     Version,
+    /// Guided setup flows for getting started with Svix
+    Wizard(WizardArgs),
 }
 
 #[tokio::main]
@@ -143,6 +151,7 @@ async fn main() -> Result<()> {
         RootCommands::Version => println!("{VERSION}"),
         RootCommands::Signature(args) => args.command.exec().await?,
         RootCommands::Open(args) => args.command.exec().await?,
+        RootCommands::Wizard(args) => args.command.exec().await?,
         // Remote API calls
         RootCommands::Application(args) => {
             let client = get_client(&cfg?)?;
@@ -153,7 +162,15 @@ async fn main() -> Result<()> {
             let client = get_client(&cfg)?;
             args.command.exec(&client, color_mode).await?;
         }
+        RootCommands::AutoconfigSubscription(args) => {
+            let client = get_client(&cfg?)?;
+            args.command.exec(&client, color_mode).await?;
+        }
         RootCommands::Connector(args) => {
+            let client = get_client(&cfg?)?;
+            args.command.exec(&client, color_mode).await?;
+        }
+        RootCommands::Destination(args) => {
             let client = get_client(&cfg?)?;
             args.command.exec(&client, color_mode).await?;
         }
@@ -220,7 +237,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn get_client(cfg: &Config) -> Result<svix::api::Svix> {
+pub(crate) fn get_client(cfg: &Config) -> Result<svix::api::Svix> {
     let token = cfg.auth_token.clone().ok_or_else(|| {
         anyhow::anyhow!("No auth token set. Try running `{BIN_NAME} login` to get started.")
     })?;

@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use http::StatusCode;
 use reqwest::Url;
 use serde::Deserialize;
-use svix::api::EventTypeOut;
+use svix::models::EventTypeOut;
 use svix_ksuid::KsuidLike;
 use svix_server::{
     cfg::ConfigurationInner,
@@ -139,7 +139,6 @@ fn start_svix_server_with_operational_webhooks(
     )
 }
 
-#[allow(deprecated)]
 #[tokio::test]
 async fn test_endpoint_create_update_and_delete() {
     let cfg = get_default_test_config();
@@ -300,7 +299,6 @@ async fn test_endpoint_create_update_and_delete() {
     };
 }
 
-#[allow(deprecated)]
 #[tokio::test]
 async fn test_message_attempt_operational_webhooks() {
     let mut cfg = get_default_test_config();

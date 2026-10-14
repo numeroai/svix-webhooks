@@ -4,18 +4,16 @@ package svix
 import (
 	"context"
 
-	"github.com/svix/svix-webhooks/go/internal"
-	"github.com/svix/svix-webhooks/go/models"
+	"github.com/svix/svix-webhooks/v2/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/models"
 )
 
 type Statistics struct {
 	client *internal.SvixHttpClient
 }
 
-func newStatistics(client *internal.SvixHttpClient) *Statistics {
-	return &Statistics{
-		client: client,
-	}
+func newStatistics(client *internal.SvixHttpClient) Statistics {
+	return Statistics{client}
 }
 
 type StatisticsAggregateAppStatsOptions struct {
@@ -46,7 +44,7 @@ type StatisticsAggregateAppStatsOptions struct {
 //	}
 //
 // ```
-func (statistics *Statistics) AggregateEventTypes(
+func (statistics Statistics) AggregateEventTypes(
 	ctx context.Context,
 ) (*models.AggregateEventTypesOut, error) {
 	return internal.ExecuteRequest[any, models.AggregateEventTypesOut](
@@ -85,19 +83,20 @@ func (statistics *Statistics) AggregateEventTypes(
 //	}
 //
 // ```
-func (statistics *Statistics) AggregateAppStats(
+func (statistics Statistics) AggregateAppStats(
 	ctx context.Context,
 	appUsageStatsIn models.AppUsageStatsIn,
 	o *StatisticsAggregateAppStatsOptions,
 ) (*models.AppUsageStatsOut, error) {
+	var err error
 	headerMap := map[string]string{}
-	if o != nil {
-		var err error
-
-		internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
-		if err != nil {
-			return nil, err
-		}
+	if o == nil {
+		opts := StatisticsAggregateAppStatsOptions{}
+		o = &opts
+	}
+	internal.SerializeParamToMap("idempotency-key", o.IdempotencyKey, headerMap, &err)
+	if err != nil {
+		return nil, err
 	}
 	return internal.ExecuteRequest[models.AppUsageStatsIn, models.AppUsageStatsOut](
 		ctx,

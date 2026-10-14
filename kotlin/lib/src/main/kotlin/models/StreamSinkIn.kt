@@ -13,23 +13,8 @@ import kotlinx.serialization.json.buildJsonObject
 
 @Serializable(with = StreamSinkInSerializer::class)
 data class StreamSinkIn(
-    /** How many events will be batched in a request to the Sink. */
-    val batchSize: UShort? = null,
-    /**
-     * A list of event types that filter which events are dispatched to the Sink. An empty list (or
-     * null) will not filter out any events.
-     */
-    val eventTypes: List<String>? = null,
-    /**
-     * How long to wait before a batch of events is sent, if the `batchSize` is not reached.
-     *
-     * For example, with a `batchSize` of 100 and `maxWaitSecs` of 10, we will send a request after
-     * 10 seconds or 100 events, whichever comes first.
-     *
-     * Note that we will never send an empty batch of events to the Sink.
-     */
-    val maxWaitSecs: UShort? = null,
-    val metadata: Map<String, String>? = null,
+    /** An optional unique identifier for the sink. */
+    val uid: String? = null,
     /**
      * Whether the sink will receive events.
      *
@@ -40,8 +25,24 @@ data class StreamSinkIn(
      * reenabled.
      */
     val status: SinkStatusIn? = null,
-    /** An optional unique identifier for the sink. */
-    val uid: String? = null,
+    /** How many events will be batched in a request to the Sink. */
+    val batchSize: UShort? = null,
+    /**
+     * How long to wait before a batch of events is sent, if the `batchSize` is not reached.
+     *
+     * For example, with a `batchSize` of 100 and `maxWaitSecs` of 10, we will send a request after
+     * 10 seconds or 100 events, whichever comes first.
+     *
+     * Note that we will never send an empty batch of events to the Sink.
+     */
+    val maxWaitSecs: UShort? = null,
+    /**
+     * A list of event types that filter which events are dispatched to the Sink. An empty list (or
+     * null) will not filter out any events.
+     */
+    val eventTypes: List<String>? = null,
+    val channels: List<String>? = null,
+    val metadata: Map<String, String>? = null,
     val config: StreamSinkInConfig,
 )
 
@@ -58,86 +59,98 @@ sealed class StreamSinkInConfig {
     }
 
     @VariantName("azureBlobStorage")
-    data class AzureBlobStorage(val azureBlobStorage: AzureBlobStorageConfig) :
+    data class AzureBlobStorage(val azureBlobStorage: AzureBlobStorageConfigIn) :
         StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(AzureBlobStorageConfig.serializer(), azureBlobStorage)
+            Json.encodeToJsonElement(AzureBlobStorageConfigIn.serializer(), azureBlobStorage)
     }
 
     @VariantName("otelTracing")
-    data class OtelTracing(val otelTracing: SinkOtelV1Config) : StreamSinkInConfig() {
+    data class OtelTracing(val otelTracing: OtelTracingConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(SinkOtelV1Config.serializer(), otelTracing)
+            Json.encodeToJsonElement(OtelTracingConfigIn.serializer(), otelTracing)
     }
 
     @VariantName("http")
-    data class Http(val http: SinkHttpConfig) : StreamSinkInConfig() {
-        override fun toJsonElement() = Json.encodeToJsonElement(SinkHttpConfig.serializer(), http)
+    data class Http(val http: SinkHttpConfigIn) : StreamSinkInConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(SinkHttpConfigIn.serializer(), http)
     }
 
     @VariantName("amazonS3")
-    data class AmazonS3(val amazonS3: S3Config) : StreamSinkInConfig() {
-        override fun toJsonElement() = Json.encodeToJsonElement(S3Config.serializer(), amazonS3)
+    data class AmazonS3(val amazonS3: S3ConfigIn) : StreamSinkInConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(S3ConfigIn.serializer(), amazonS3)
     }
 
     @VariantName("googleCloudStorage")
-    data class GoogleCloudStorage(val googleCloudStorage: GoogleCloudStorageConfig) :
+    data class GoogleCloudStorage(val googleCloudStorage: GoogleCloudStorageConfigIn) :
         StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(GoogleCloudStorageConfig.serializer(), googleCloudStorage)
+            Json.encodeToJsonElement(GoogleCloudStorageConfigIn.serializer(), googleCloudStorage)
     }
 
     @VariantName("googleCloudPubSub")
-    data class GoogleCloudPubSub(val googleCloudPubSub: GoogleCloudPubSubConfig) :
+    data class GoogleCloudPubSub(val googleCloudPubSub: GoogleCloudPubSubConfigIn) :
         StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(GoogleCloudPubSubConfig.serializer(), googleCloudPubSub)
+            Json.encodeToJsonElement(GoogleCloudPubSubConfigIn.serializer(), googleCloudPubSub)
     }
 
     @VariantName("sqs")
-    data class Sqs(val sqs: SqsConfig) : StreamSinkInConfig() {
-        override fun toJsonElement() = Json.encodeToJsonElement(SqsConfig.serializer(), sqs)
+    data class Sqs(val sqs: SqsConfigIn) : StreamSinkInConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(SqsConfigIn.serializer(), sqs)
     }
 
     @VariantName("sns")
-    data class Sns(val sns: SnsConfig) : StreamSinkInConfig() {
-        override fun toJsonElement() = Json.encodeToJsonElement(SnsConfig.serializer(), sns)
+    data class Sns(val sns: SnsConfigIn) : StreamSinkInConfig() {
+        override fun toJsonElement() = Json.encodeToJsonElement(SnsConfigIn.serializer(), sns)
     }
 
     @VariantName("bigQuery")
-    data class BigQuery(val bigQuery: BigQueryConfig) : StreamSinkInConfig() {
+    data class BigQuery(val bigQuery: BigQueryConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(BigQueryConfig.serializer(), bigQuery)
+            Json.encodeToJsonElement(BigQueryConfigIn.serializer(), bigQuery)
     }
 
     @VariantName("clickhouse")
-    data class Clickhouse(val clickhouse: ClickhouseConfig) : StreamSinkInConfig() {
+    data class Clickhouse(val clickhouse: ClickhouseConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(ClickhouseConfig.serializer(), clickhouse)
+            Json.encodeToJsonElement(ClickhouseConfigIn.serializer(), clickhouse)
     }
 
     @VariantName("eventBridge")
-    data class EventBridge(val eventBridge: EventBridgeConfig) : StreamSinkInConfig() {
+    data class EventBridge(val eventBridge: EventBridgeConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(EventBridgeConfig.serializer(), eventBridge)
+            Json.encodeToJsonElement(EventBridgeConfigIn.serializer(), eventBridge)
     }
 
     @VariantName("snowflake")
-    data class Snowflake(val snowflake: SnowflakeConfig) : StreamSinkInConfig() {
+    data class Snowflake(val snowflake: SnowflakeConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(SnowflakeConfig.serializer(), snowflake)
+            Json.encodeToJsonElement(SnowflakeConfigIn.serializer(), snowflake)
     }
 
     @VariantName("rabbitMq")
-    data class RabbitMq(val rabbitMq: RabbitMqConfig) : StreamSinkInConfig() {
+    data class RabbitMq(val rabbitMq: RabbitMqConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(RabbitMqConfig.serializer(), rabbitMq)
+            Json.encodeToJsonElement(RabbitMqConfigIn.serializer(), rabbitMq)
     }
 
     @VariantName("redshift")
-    data class Redshift(val redshift: RedshiftConfig) : StreamSinkInConfig() {
+    data class Redshift(val redshift: RedshiftConfigIn) : StreamSinkInConfig() {
         override fun toJsonElement() =
-            Json.encodeToJsonElement(RedshiftConfig.serializer(), redshift)
+            Json.encodeToJsonElement(RedshiftConfigIn.serializer(), redshift)
+    }
+
+    @VariantName("postgres")
+    data class Postgres(val postgres: PostgresConfigIn) : StreamSinkInConfig() {
+        override fun toJsonElement() =
+            Json.encodeToJsonElement(PostgresConfigIn.serializer(), postgres)
+    }
+
+    @VariantName("elasticSearch")
+    data class ElasticSearch(val elasticSearch: ElasticSearchConfigIn) : StreamSinkInConfig() {
+        override fun toJsonElement() =
+            Json.encodeToJsonElement(ElasticSearchConfigIn.serializer(), elasticSearch)
     }
 
     companion object {
@@ -147,28 +160,31 @@ sealed class StreamSinkInConfig {
                 "azureBlobStorage" to
                     { config ->
                         AzureBlobStorage(
-                            Json.decodeFromJsonElement(AzureBlobStorageConfig.serializer(), config)
+                            Json.decodeFromJsonElement(
+                                AzureBlobStorageConfigIn.serializer(),
+                                config,
+                            )
                         )
                     },
                 "otelTracing" to
                     { config ->
                         OtelTracing(
-                            Json.decodeFromJsonElement(SinkOtelV1Config.serializer(), config)
+                            Json.decodeFromJsonElement(OtelTracingConfigIn.serializer(), config)
                         )
                     },
                 "http" to
                     { config ->
-                        Http(Json.decodeFromJsonElement(SinkHttpConfig.serializer(), config))
+                        Http(Json.decodeFromJsonElement(SinkHttpConfigIn.serializer(), config))
                     },
                 "amazonS3" to
                     { config ->
-                        AmazonS3(Json.decodeFromJsonElement(S3Config.serializer(), config))
+                        AmazonS3(Json.decodeFromJsonElement(S3ConfigIn.serializer(), config))
                     },
                 "googleCloudStorage" to
                     { config ->
                         GoogleCloudStorage(
                             Json.decodeFromJsonElement(
-                                GoogleCloudStorageConfig.serializer(),
+                                GoogleCloudStorageConfigIn.serializer(),
                                 config,
                             )
                         )
@@ -176,44 +192,59 @@ sealed class StreamSinkInConfig {
                 "googleCloudPubSub" to
                     { config ->
                         GoogleCloudPubSub(
-                            Json.decodeFromJsonElement(GoogleCloudPubSubConfig.serializer(), config)
+                            Json.decodeFromJsonElement(
+                                GoogleCloudPubSubConfigIn.serializer(),
+                                config,
+                            )
                         )
                     },
                 "sqs" to
                     { config ->
-                        Sqs(Json.decodeFromJsonElement(SqsConfig.serializer(), config))
+                        Sqs(Json.decodeFromJsonElement(SqsConfigIn.serializer(), config))
                     },
                 "sns" to
                     { config ->
-                        Sns(Json.decodeFromJsonElement(SnsConfig.serializer(), config))
+                        Sns(Json.decodeFromJsonElement(SnsConfigIn.serializer(), config))
                     },
                 "bigQuery" to
                     { config ->
-                        BigQuery(Json.decodeFromJsonElement(BigQueryConfig.serializer(), config))
+                        BigQuery(Json.decodeFromJsonElement(BigQueryConfigIn.serializer(), config))
                     },
                 "clickhouse" to
                     { config ->
                         Clickhouse(
-                            Json.decodeFromJsonElement(ClickhouseConfig.serializer(), config)
+                            Json.decodeFromJsonElement(ClickhouseConfigIn.serializer(), config)
                         )
                     },
                 "eventBridge" to
                     { config ->
                         EventBridge(
-                            Json.decodeFromJsonElement(EventBridgeConfig.serializer(), config)
+                            Json.decodeFromJsonElement(EventBridgeConfigIn.serializer(), config)
                         )
                     },
                 "snowflake" to
                     { config ->
-                        Snowflake(Json.decodeFromJsonElement(SnowflakeConfig.serializer(), config))
+                        Snowflake(
+                            Json.decodeFromJsonElement(SnowflakeConfigIn.serializer(), config)
+                        )
                     },
                 "rabbitMq" to
                     { config ->
-                        RabbitMq(Json.decodeFromJsonElement(RabbitMqConfig.serializer(), config))
+                        RabbitMq(Json.decodeFromJsonElement(RabbitMqConfigIn.serializer(), config))
                     },
                 "redshift" to
                     { config ->
-                        Redshift(Json.decodeFromJsonElement(RedshiftConfig.serializer(), config))
+                        Redshift(Json.decodeFromJsonElement(RedshiftConfigIn.serializer(), config))
+                    },
+                "postgres" to
+                    { config ->
+                        Postgres(Json.decodeFromJsonElement(PostgresConfigIn.serializer(), config))
+                    },
+                "elasticSearch" to
+                    { config ->
+                        ElasticSearch(
+                            Json.decodeFromJsonElement(ElasticSearchConfigIn.serializer(), config)
+                        )
                     },
             )
 
@@ -227,23 +258,8 @@ sealed class StreamSinkInConfig {
 class StreamSinkInSerializer : KSerializer<StreamSinkIn> {
     @Serializable
     private data class StreamSinkInSurrogate(
-        /** How many events will be batched in a request to the Sink. */
-        val batchSize: UShort? = null,
-        /**
-         * A list of event types that filter which events are dispatched to the Sink. An empty list
-         * (or null) will not filter out any events.
-         */
-        val eventTypes: List<String>? = null,
-        /**
-         * How long to wait before a batch of events is sent, if the `batchSize` is not reached.
-         *
-         * For example, with a `batchSize` of 100 and `maxWaitSecs` of 10, we will send a request
-         * after 10 seconds or 100 events, whichever comes first.
-         *
-         * Note that we will never send an empty batch of events to the Sink.
-         */
-        val maxWaitSecs: UShort? = null,
-        val metadata: Map<String, String>? = null,
+        /** An optional unique identifier for the sink. */
+        val uid: String? = null,
         /**
          * Whether the sink will receive events.
          *
@@ -254,10 +270,26 @@ class StreamSinkInSerializer : KSerializer<StreamSinkIn> {
          * reenabled.
          */
         val status: SinkStatusIn? = null,
-        /** An optional unique identifier for the sink. */
-        val uid: String? = null,
+        /** How many events will be batched in a request to the Sink. */
+        val batchSize: UShort? = null,
+        /**
+         * How long to wait before a batch of events is sent, if the `batchSize` is not reached.
+         *
+         * For example, with a `batchSize` of 100 and `maxWaitSecs` of 10, we will send a request
+         * after 10 seconds or 100 events, whichever comes first.
+         *
+         * Note that we will never send an empty batch of events to the Sink.
+         */
+        val maxWaitSecs: UShort? = null,
+        /**
+         * A list of event types that filter which events are dispatched to the Sink. An empty list
+         * (or null) will not filter out any events.
+         */
+        val eventTypes: List<String>? = null,
+        val channels: List<String>? = null,
+        val metadata: Map<String, String>? = null,
         val type: String,
-        val config: JsonElement,
+        val config: JsonElement = buildJsonObject {},
     )
 
     override val descriptor: SerialDescriptor = StreamSinkInSurrogate.serializer().descriptor
@@ -265,12 +297,13 @@ class StreamSinkInSerializer : KSerializer<StreamSinkIn> {
     override fun serialize(encoder: Encoder, value: StreamSinkIn) {
         val surrogate =
             StreamSinkInSurrogate(
-                batchSize = value.batchSize,
-                eventTypes = value.eventTypes,
-                maxWaitSecs = value.maxWaitSecs,
-                metadata = value.metadata,
-                status = value.status,
                 uid = value.uid,
+                status = value.status,
+                batchSize = value.batchSize,
+                maxWaitSecs = value.maxWaitSecs,
+                eventTypes = value.eventTypes,
+                channels = value.channels,
+                metadata = value.metadata,
                 type = value.config.variantName,
                 config = value.config.toJsonElement(),
             )
@@ -280,12 +313,13 @@ class StreamSinkInSerializer : KSerializer<StreamSinkIn> {
     override fun deserialize(decoder: Decoder): StreamSinkIn {
         val surrogate = decoder.decodeSerializableValue(StreamSinkInSurrogate.serializer())
         return StreamSinkIn(
-            batchSize = surrogate.batchSize,
-            eventTypes = surrogate.eventTypes,
-            maxWaitSecs = surrogate.maxWaitSecs,
-            metadata = surrogate.metadata,
-            status = surrogate.status,
             uid = surrogate.uid,
+            status = surrogate.status,
+            batchSize = surrogate.batchSize,
+            maxWaitSecs = surrogate.maxWaitSecs,
+            eventTypes = surrogate.eventTypes,
+            channels = surrogate.channels,
+            metadata = surrogate.metadata,
             config = StreamSinkInConfig.fromTypeAndConfig(surrogate.type, surrogate.config),
         )
     }

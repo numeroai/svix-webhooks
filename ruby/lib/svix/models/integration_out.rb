@@ -4,15 +4,15 @@ require "json"
 
 module Svix
   class IntegrationOut
-    attr_accessor :created_at
-    # The set of feature flags the integration has access to.
-    attr_accessor :feature_flags
+    attr_accessor :name
     # The Integration's ID.
     attr_accessor :id
-    attr_accessor :name
+    attr_accessor :created_at
     attr_accessor :updated_at
+    # The set of feature flags the integration has access to.
+    attr_accessor :feature_flags
 
-    ALL_FIELD ||= ["created_at", "feature_flags", "id", "name", "updated_at"].freeze
+    ALL_FIELD ||= ["name", "id", "created_at", "updated_at", "feature_flags"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -33,28 +33,28 @@ module Svix
     def self.deserialize(attributes = {})
       attributes = attributes.transform_keys(&:to_s)
       attrs = Hash.new
-      attrs["created_at"] = DateTime.rfc3339(attributes["createdAt"]).to_time
-      attrs["feature_flags"] = attributes["featureFlags"]
-      attrs["id"] = attributes["id"]
       attrs["name"] = attributes["name"]
+      attrs["id"] = attributes["id"]
+      attrs["created_at"] = DateTime.rfc3339(attributes["createdAt"]).to_time
       attrs["updated_at"] = DateTime.rfc3339(attributes["updatedAt"]).to_time
+      attrs["feature_flags"] = attributes["featureFlags"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["createdAt"] = Svix::serialize_primitive(@created_at) if @created_at
-      out["featureFlags"] = Svix::serialize_primitive(@feature_flags) if @feature_flags
-      out["id"] = Svix::serialize_primitive(@id) if @id
-      out["name"] = Svix::serialize_primitive(@name) if @name
-      out["updatedAt"] = Svix::serialize_primitive(@updated_at) if @updated_at
+      out["name"] = Svix::serialize_primitive(@name) unless @name.nil?
+      out["id"] = Svix::serialize_primitive(@id) unless @id.nil?
+      out["createdAt"] = Svix::serialize_primitive(@created_at) unless @created_at.nil?
+      out["updatedAt"] = Svix::serialize_primitive(@updated_at) unless @updated_at.nil?
+      out["featureFlags"] = Svix::serialize_primitive(@feature_flags) unless @feature_flags.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

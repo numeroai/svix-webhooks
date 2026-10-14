@@ -4,7 +4,7 @@
 use std::{string::FromUtf8Error, time::Duration};
 
 use ::redis::RedisError;
-use axum::async_trait;
+use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -136,6 +136,7 @@ const RETRY_SCHEDULE: &[Duration] = &[
     Duration::from_millis(40),
 ];
 
+#[allow(clippy::double_must_use)] // macro nonsense
 #[async_trait]
 #[enum_dispatch(Cache)]
 pub trait CacheBehavior: Sync + Send {

@@ -25,22 +25,15 @@ import {
   IngestEndpointSecretOutSerializer,
 } from "../models/ingestEndpointSecretOut";
 import {
-  type IngestEndpointTransformationOut,
-  IngestEndpointTransformationOutSerializer,
-} from "../models/ingestEndpointTransformationOut";
-import {
-  type IngestEndpointTransformationPatch,
-  IngestEndpointTransformationPatchSerializer,
-} from "../models/ingestEndpointTransformationPatch";
-import {
-  type IngestEndpointUpdate,
-  IngestEndpointUpdateSerializer,
-} from "../models/ingestEndpointUpdate";
+  type IngestEndpointUpsertIn,
+  IngestEndpointUpsertInSerializer,
+} from "../models/ingestEndpointUpsertIn";
 import {
   type ListResponseIngestEndpointOut,
   ListResponseIngestEndpointOutSerializer,
 } from "../models/listResponseIngestEndpointOut";
 import type { Ordering } from "../models/ordering";
+import { IngestEndpointTransformation } from "./ingestEndpointTransformation";
 import { HttpMethod, SvixRequest, type SvixRequestContext } from "../request";
 
 export interface IngestEndpointListOptions {
@@ -62,6 +55,10 @@ export interface IngestEndpointRotateSecretOptions {
 
 export class IngestEndpoint {
   public constructor(private readonly requestCtx: SvixRequestContext) {}
+
+  public get transformation() {
+    return new IngestEndpointTransformation(this.requestCtx);
+  }
 
   /** List ingest endpoints. */
   public async list(
@@ -124,10 +121,10 @@ export class IngestEndpoint {
   }
 
   /** Create or update an ingest endpoint. */
-  public async update(
+  public async upsert(
     sourceId: string,
     endpointId: string,
-    ingestEndpointUpdate: IngestEndpointUpdate
+    ingestEndpointUpsertIn: IngestEndpointUpsertIn
   ): Promise<IngestEndpointOut> {
     const request = new SvixRequest(
       HttpMethod.PUT,
@@ -136,7 +133,9 @@ export class IngestEndpoint {
 
     request.setPathParam("source_id", sourceId);
     request.setPathParam("endpoint_id", endpointId);
-    request.setBody(IngestEndpointUpdateSerializer._toJsonObject(ingestEndpointUpdate));
+    request.setBody(
+      IngestEndpointUpsertInSerializer._toJsonObject(ingestEndpointUpsertIn)
+    );
 
     return await request.send(
       this.requestCtx,
@@ -184,7 +183,7 @@ export class IngestEndpoint {
   /**
    * Rotates an ingest endpoint's signing secret.
    *
-   * The previous secret will remain valid for the next 24 hours.
+   * The previous secret will remain valid for the specified grace period (default 24 hours).
    */
   public async rotateSecret(
     sourceId: string,
@@ -227,7 +226,7 @@ export class IngestEndpoint {
   }
 
   /** Set the additional headers to be sent to the endpoint. */
-  public async updateHeaders(
+  public async setHeaders(
     sourceId: string,
     endpointId: string,
     ingestEndpointHeadersIn: IngestEndpointHeadersIn
@@ -241,47 +240,6 @@ export class IngestEndpoint {
     request.setPathParam("endpoint_id", endpointId);
     request.setBody(
       IngestEndpointHeadersInSerializer._toJsonObject(ingestEndpointHeadersIn)
-    );
-
-    return await request.sendNoResponseBody(this.requestCtx);
-  }
-
-  /** Get the transformation code associated with this ingest endpoint. */
-  public async getTransformation(
-    sourceId: string,
-    endpointId: string
-  ): Promise<IngestEndpointTransformationOut> {
-    const request = new SvixRequest(
-      HttpMethod.GET,
-      "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation"
-    );
-
-    request.setPathParam("source_id", sourceId);
-    request.setPathParam("endpoint_id", endpointId);
-
-    return await request.send(
-      this.requestCtx,
-      IngestEndpointTransformationOutSerializer._fromJsonObject
-    );
-  }
-
-  /** Set or unset the transformation code associated with this ingest endpoint. */
-  public async setTransformation(
-    sourceId: string,
-    endpointId: string,
-    ingestEndpointTransformationPatch: IngestEndpointTransformationPatch
-  ): Promise<void> {
-    const request = new SvixRequest(
-      HttpMethod.PATCH,
-      "/ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation"
-    );
-
-    request.setPathParam("source_id", sourceId);
-    request.setPathParam("endpoint_id", endpointId);
-    request.setBody(
-      IngestEndpointTransformationPatchSerializer._toJsonObject(
-        ingestEndpointTransformationPatch
-      )
     );
 
     return await request.sendNoResponseBody(this.requestCtx);

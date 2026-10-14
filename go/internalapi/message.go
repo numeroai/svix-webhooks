@@ -2,15 +2,17 @@
 package internalapi
 
 import (
-	"github.com/svix/svix-webhooks/go/internal"
+	"github.com/svix/svix-webhooks/v2/go/internal"
 )
 
 type Message struct {
-	Pollerv2 *MessagePollerv2
+	client *internal.SvixHttpClient
 }
 
-func newMessage(client *internal.SvixHttpClient) *Message {
-	return &Message{
-		Pollerv2: newMessagePollerv2(client),
-	}
+func newMessage(client *internal.SvixHttpClient) Message {
+	return Message{client}
+}
+
+func (message Message) Pollerv2() MessagePollerv2 {
+	return newMessagePollerv2(message.client)
 }

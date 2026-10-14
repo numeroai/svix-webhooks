@@ -6,10 +6,10 @@ module Svix
   class EndpointTransformationOut
     attr_accessor :code
     attr_accessor :enabled
-    attr_accessor :updated_at
     attr_accessor :variables
+    attr_accessor :updated_at
 
-    ALL_FIELD ||= ["code", "enabled", "updated_at", "variables"].freeze
+    ALL_FIELD ||= ["code", "enabled", "variables", "updated_at"].freeze
     private_constant :ALL_FIELD
 
     def initialize(attributes = {})
@@ -35,24 +35,24 @@ module Svix
       attrs = Hash.new
       attrs["code"] = attributes["code"]
       attrs["enabled"] = attributes["enabled"]
-      attrs["updated_at"] = DateTime.rfc3339(attributes["updatedAt"]).to_time if attributes["updatedAt"]
       attrs["variables"] = attributes["variables"]
+      attrs["updated_at"] = DateTime.rfc3339(attributes["updatedAt"]).to_time if attributes["updatedAt"]
       new(attrs)
     end
 
     def serialize
       out = Hash.new
-      out["code"] = Svix::serialize_primitive(@code) if @code
-      out["enabled"] = Svix::serialize_primitive(@enabled) if @enabled
-      out["updatedAt"] = Svix::serialize_primitive(@updated_at) if @updated_at
-      out["variables"] = Svix::serialize_primitive(@variables) if @variables
+      out["code"] = Svix::serialize_primitive(@code) unless @code.nil?
+      out["enabled"] = Svix::serialize_primitive(@enabled) unless @enabled.nil?
+      out["variables"] = Svix::serialize_primitive(@variables) unless @variables.nil?
+      out["updatedAt"] = Svix::serialize_primitive(@updated_at) unless @updated_at.nil?
       out
     end
 
     # Serializes the object to a json string
     # @return String
-    def to_json
-      JSON.dump(serialize)
+    def to_json(*args)
+      serialize.to_json(*args)
     end
   end
 end

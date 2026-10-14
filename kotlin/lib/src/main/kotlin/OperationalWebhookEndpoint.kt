@@ -8,7 +8,7 @@ import com.svix.kotlin.models.OperationalWebhookEndpointIn
 import com.svix.kotlin.models.OperationalWebhookEndpointOut
 import com.svix.kotlin.models.OperationalWebhookEndpointSecretIn
 import com.svix.kotlin.models.OperationalWebhookEndpointSecretOut
-import com.svix.kotlin.models.OperationalWebhookEndpointUpdate
+import com.svix.kotlin.models.OperationalWebhookEndpointUpsertIn
 import com.svix.kotlin.models.Ordering
 import okhttp3.Headers
 
@@ -65,20 +65,20 @@ class OperationalWebhookEndpoint(private val client: SvixHttpClient) {
     }
 
     /** Create or update an operational webhook endpoint. */
-    suspend fun update(
+    suspend fun upsert(
         endpointId: String,
-        operationalWebhookEndpointUpdate: OperationalWebhookEndpointUpdate,
+        operationalWebhookEndpointUpsertIn: OperationalWebhookEndpointUpsertIn,
     ): OperationalWebhookEndpointOut {
         val url =
             client.newUrlBuilder().encodedPath("/api/v1/operational-webhook/endpoint/$endpointId")
 
         return client.executeRequest<
-            OperationalWebhookEndpointUpdate,
+            OperationalWebhookEndpointUpsertIn,
             OperationalWebhookEndpointOut,
         >(
             "PUT",
             url.build(),
-            reqBody = operationalWebhookEndpointUpdate,
+            reqBody = operationalWebhookEndpointUpsertIn,
         )
     }
 
@@ -106,7 +106,7 @@ class OperationalWebhookEndpoint(private val client: SvixHttpClient) {
     /**
      * Rotates an operational webhook endpoint's signing secret.
      *
-     * The previous secret will remain valid for the next 24 hours.
+     * The previous secret will remain valid for the specified grace period (default 24 hours).
      */
     suspend fun rotateSecret(
         endpointId: String,
@@ -139,7 +139,7 @@ class OperationalWebhookEndpoint(private val client: SvixHttpClient) {
     }
 
     /** Set the additional headers to be sent with the operational webhook. */
-    suspend fun updateHeaders(
+    suspend fun setHeaders(
         endpointId: String,
         operationalWebhookEndpointHeadersIn: OperationalWebhookEndpointHeadersIn,
     ) {

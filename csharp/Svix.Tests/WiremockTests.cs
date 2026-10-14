@@ -66,9 +66,30 @@ namespace Svix.Tests
             );
             Assert.Equal(1, stub.LogEntries.Count);
             Assert.Equal(
-                "?event_types=val1%2Cval2%2Cval3",
+                "?with_content=false&event_types=val1%2Cval2%2Cval3",
                 stub.LogEntries[0].RequestMessage.RawQuery
             );
+        }
+
+        [Theory]
+        [InlineData("", "/api/v1/app/app1")]
+        [InlineData("/", "/api/v1/app/app1")]
+        [InlineData("///", "/api/v1/app/app1")]
+        [InlineData("/proxy", "/proxy/api/v1/app/app1")]
+        [InlineData("/proxy/", "/proxy/api/v1/app/app1")]
+        [InlineData("/proxy///", "/proxy/api/v1/app/app1")]
+        [InlineData("/proxy//nested/", "/proxy//nested/api/v1/app/app1")]
+        public void ServerUrlTrailingSlashesAreIgnored(string suffix, string expectedPath)
+        {
+            stub.Given(Request.Create().WithPath(expectedPath).UsingGet())
+                .RespondWith(Response.Create().WithStatusCode(200).WithBody(applicationOutJsonStr));
+
+            var svx = new SvixClient("", new SvixOptions(baseUrl + suffix));
+            var application = svx.Application.Get("app1");
+
+            Assert.Equal("app_2raC7cFHmm6rLPcBjbVgeGQOnzr", application.Id);
+            Assert.Single(stub.LogEntries);
+            Assert.Equal(expectedPath, stub.LogEntries[0].RequestMessage.Path);
         }
 
         [Fact]
@@ -133,7 +154,7 @@ namespace Svix.Tests
             );
 
             string expected_json_body =
-                """{"metadata":{"key1":"val1","key2":"val2"},"name":"app"}""";
+                """{"name":"app","metadata":{"key1":"val1","key2":"val2"}}""";
             Assert.Equal(1, stub.LogEntries.Count);
             Assert.Equal(expected_json_body, stub.LogEntries[0].RequestMessage.Body);
         }
@@ -261,7 +282,7 @@ namespace Svix.Tests
             client.Message.List("app_id", new MessageListOptions { Tag = "test#test" });
             Assert.Equal(1, stub.LogEntries.Count);
             Assert.EndsWith(
-                "/api/v1/app/app_id/msg?tag=test%23test",
+                "/api/v1/app/app_id/msg?with_content=false&tag=test%23test",
                 stub.LogEntries[0].RequestMessage.Url
             );
         }
@@ -317,17 +338,6 @@ namespace Svix.Tests
             Assert.True(loadedFromJson.Config.GetContent().GetType() == typeof(CronConfig));
             Assert.Equal("asd", ((CronConfig)loadedFromJson.Config.GetContent()).Payload);
             Assert.Equal("* * * * *", ((CronConfig)loadedFromJson.Config.GetContent()).Schedule);
-        }
-
-        [Fact]
-        public void OpWebhookModels()
-        {
-            var jsonString =
-                """{"data":{"data":{"appStats":[{"appId":"app_1srOrx2ZWZBpBUvZwXKQmoEYga2","appUid":null,"messageDestinations":343}]},"status":"finished","task":"application.stats","taskId":"qtask_1srOrx2ZWZBpBUvZwXKQmoEYga2"},"type":"background_task.finished"}""";
-            var loadedFromJson = JsonConvert.DeserializeObject<BackgroundTaskFinishedEvent>(
-                jsonString
-            );
-            Assert.Equal(jsonString, JsonConvert.SerializeObject(loadedFromJson));
         }
 
         [Fact]
@@ -407,10 +417,53 @@ namespace Svix.Tests
                 new MessageIn { EventType = "user.signup", Payload = payload }
             );
 
-            Assert.Equal(response.Payload, payload);
+            Assert.Equal(response.Payload, JsonConvert.DeserializeObject("""{"m": "FILTERED"}"""));
 
             Assert.Equal(1, stub.LogEntries.Count);
             Assert.Equal("?with_content=false", stub.LogEntries[0].RequestMessage.RawQuery);
+        }
+
+        [Fact]
+        public void AbsentContentFieldInResponseStructEnum()
+        {
+            var strmId = "strm_31Dc0DD72P5AddYUguyBd";
+            var sinkId = "sink_31Dc11sPYY9aLDkwPuGMa";
+            var responseJson = """
+                    {
+                        "batchSize": 1,
+                        "channels": [],
+                        "createdAt": "2026-09-07T16:32:02.696Z",
+                        "currentIterator": "string",
+                        "eventTypes": [],
+                        "failureReason": null,
+                        "id": "sink_2yZwUhtgs5Ai8T9yRQJXA",
+                        "maxWaitSecs": 1,
+                        "metadata": {
+                            "additionalProperty": "string"
+                        },
+                        "nextRetryAt": "2026-09-07T16:32:02.696Z",
+                        "status": "enabled",
+                        "uid": "unique-identifier",
+                        "updatedAt": "2026-09-07T16:32:02.696Z",
+                        "type": "poller"
+                    }
+                """;
+            stub.Given(
+                    Request.Create().WithPath($"/api/v1/stream/{strmId}/sink/{sinkId}").UsingGet()
+                )
+                .RespondWith(Response.Create().WithStatusCode(200).WithBody(responseJson));
+
+            var response = client.Streaming.Sink.Get(strmId, sinkId);
+
+            Assert.Equal(response.Uid, "unique-identifier");
+
+            var isPoller = false;
+            response.Config.Switch(onPoller: () =>
+            {
+                isPoller = true;
+            });
+
+            Assert.True(isPoller);
         }
     }
 }

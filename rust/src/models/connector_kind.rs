@@ -3,11 +3,8 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(
-    Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum ConnectorKind {
-    #[default]
     #[serde(rename = "Custom")]
     Custom,
     #[serde(rename = "AgenticCommerceProtocol")]
@@ -16,14 +13,20 @@ pub enum ConnectorKind {
     CloseCrm,
     #[serde(rename = "CustomerIO")]
     CustomerIo,
+    #[serde(rename = "DatadogTracing")]
+    DatadogTracing,
     #[serde(rename = "Discord")]
     Discord,
+    #[serde(rename = "GrafanaCloudTracing")]
+    GrafanaCloudTracing,
     #[serde(rename = "Hubspot")]
     Hubspot,
     #[serde(rename = "Inngest")]
     Inngest,
     #[serde(rename = "Loops")]
     Loops,
+    #[serde(rename = "NewRelicTracing")]
+    NewRelicTracing,
     #[serde(rename = "Otel")]
     Otel,
     #[serde(rename = "Resend")]
@@ -53,10 +56,13 @@ impl fmt::Display for ConnectorKind {
             Self::AgenticCommerceProtocol => "AgenticCommerceProtocol",
             Self::CloseCrm => "CloseCRM",
             Self::CustomerIo => "CustomerIO",
+            Self::DatadogTracing => "DatadogTracing",
             Self::Discord => "Discord",
+            Self::GrafanaCloudTracing => "GrafanaCloudTracing",
             Self::Hubspot => "Hubspot",
             Self::Inngest => "Inngest",
             Self::Loops => "Loops",
+            Self::NewRelicTracing => "NewRelicTracing",
             Self::Otel => "Otel",
             Self::Resend => "Resend",
             Self::Salesforce => "Salesforce",
